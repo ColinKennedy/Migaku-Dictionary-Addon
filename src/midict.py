@@ -8,7 +8,7 @@ import math
 from anki.hooks import runHook
 from aqt.qt import *
 from aqt.utils import openLink, tooltip
-from anki.utils import isMac, isWin, isLin
+from anki.utils import is_mac, is_win, is_lin
 from anki.lang import _
 from aqt.webview import AnkiWebView
 import re
@@ -32,6 +32,7 @@ import codecs
 from .forvodl import Forvo
 import ntpath
 from .miutils import miInfo
+from PyQt6.QtSvgWidgets import QSvgWidget
 
 class MIDict(AnkiWebView):
 
@@ -734,14 +735,14 @@ class ClipThread(QObject):
     pageRefreshDuringBulkMediaImport = pyqtSignal()
 
     def __init__(self, mw, path):   
-        if isMac:   
+        if is_mac:   
             import ssl  
             ssl._create_default_https_context = ssl._create_unverified_context  
             sys.path.insert(0, join(dirname(__file__), 'keyboardMac'))  
             from Quartz import CGEventGetIntegerValueField, kCGKeyboardEventKeycode 
             self.kCGKeyboardEventKeycode = kCGKeyboardEventKeycode  
             self.CGEventGetIntegerValueField = CGEventGetIntegerValueField  
-        elif isLin: 
+        elif is_lin: 
             sys.path.insert(0, join(dirname(__file__), 'linux'))    
         sys.path.insert(0, join(dirname(__file__))) 
         from pynput import keyboard 
@@ -767,10 +768,10 @@ class ClipThread(QObject):
         return event    
 
     def run(self):  
-        if isWin:   
+        if is_win:   
             self.listener = self.keyboard.Listener( 
                 on_press =self.on_press, on_release= self.on_release, migaku = self.mw, suppress= True) 
-        elif isMac: 
+        elif is_mac: 
             self.listener = self.keyboard.Listener( 
                 on_press =self.on_press, on_release= self.on_release, migaku = self.mw, darwin_intercept= self.darwinIntercept) 
         else:   
@@ -858,7 +859,7 @@ class ClipThread(QObject):
 
     def moveExtensionMp3ToMediaFolder(self, source, filename):
         suffix = ''     
-        if isWin:   
+        if is_win:   
             suffix = '.exe' 
         ffmpeg = join(dirname(__file__), 'user_files', 'ffmpeg', 'ffmpeg' + suffix)
         path = join(self.mw.col.media.dir(), filename) 
@@ -883,15 +884,15 @@ class ClipThread(QObject):
                 image.save(fullpath)
                 self.image.emit([fullpath, filename]) 
             elif clip.endswith('.mp3'):
-                if not isLin:
-                    if isMac:
+                if not is_lin:
+                    if is_mac:
                         try:
                             clip = str(self.mw.app.clipboard().mimeData().urls()[0].url())
                         except:
                             return
                     if clip.startswith('file:///') and clip.endswith('.mp3'):
                         try:
-                            if isMac:
+                            if is_mac:
                                 path = clip.replace('file://', '', 1)
                             else:
                                 path = clip.replace('file:///', '', 1)
@@ -1116,7 +1117,7 @@ class DictInterface(QWidget):
     def hideEvent(self, event):
         self.saveSizeAndPos()
         shortcut = '(Ctrl+W)'
-        if isMac:
+        if is_mac:
             shortcut = '⌘W'
         self.mw.openMiDict.setText("Open Dictionary " + shortcut)
         event.accept()
@@ -1150,17 +1151,17 @@ class DictInterface(QWidget):
             self.currentTarget.show()
         if self.config['tooltips']:
             self.dictGroups.setToolTip('Select the dictionary group.')
-        if not isWin:
+        if not is_win:
             self.dictGroups.setFixedSize(108,38)
         else: 
             self.dictGroups.setFixedSize(110,38)
         if self.nightModeToggler.day:
-            if not isWin:
+            if not is_win:
                 self.dictGroups.setStyleSheet(self.getMacComboStyle())
             else:
                 self.dictGroups.setStyleSheet('')
         else:
-            if not isWin:
+            if not is_win:
                 self.dictGroups.setStyleSheet(self.getMacNightComboStyle())
             else:   
                 self.dictGroups.setStyleSheet(self.getComboStyle())
@@ -1222,7 +1223,7 @@ class DictInterface(QWidget):
         
         layoutH.addWidget(self.search)
         layoutH.addWidget(self.searchButton)
-        if not isWin:
+        if not is_win:
             self.dictGroups.setFixedSize(108,38)
             self.search.setFixedSize(104, 38)
             self.sType.setFixedSize(92,38)
@@ -1362,7 +1363,7 @@ class DictInterface(QWidget):
 
     def loadDay(self):
         self.setPalette(self.ogPalette)
-        if not isWin:
+        if not is_win:
             self.setStyleSheet(self.getMacOtherStyles())
             self.dictGroups.setStyleSheet(self.getMacComboStyle())
             self.sType.setStyleSheet(self.getMacComboStyle())
@@ -1380,7 +1381,7 @@ class DictInterface(QWidget):
 
 
     def loadNight(self):
-        if not isWin:
+        if not is_win:
             self.setStyleSheet(self.getMacNightStyles())
             self.dictGroups.setStyleSheet(self.getMacNightComboStyle())
             self.sType.setStyleSheet(self.getMacNightComboStyle())

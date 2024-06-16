@@ -102,7 +102,7 @@ class HistoryBrowser(QWidget):
 
     def setColors(self):
         if self.dictInt.nightModeToggler.day:
-            if isMac:
+            if is_mac:
                 self.tableView.setStyleSheet(self.dictInt.getMacTableStyle())
             else:
                 self.tableView.setStyleSheet('')
