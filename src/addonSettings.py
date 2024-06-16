@@ -59,7 +59,8 @@ class SettingsGui(QTabWidget):
             self.resize(1034, 550)
         else:
             self.resize(920, 550)
-        self.setContextMenuPolicy(Qt.NoContextMenu)
+        #self.setContextMenuPolicy(Qt.NoContextMenu)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         self.setWindowTitle("Migaku Dictionary Settings (Ver. " + verNumber + ")")
         self.addonPath = path
         self.setWindowIcon(QIcon(join(self.addonPath, 'icons', 'migaku.png')))
@@ -235,13 +236,13 @@ class SettingsGui(QTabWidget):
         groupTemplates = QTableWidget()
         groupTemplates.setColumnCount(3)
         tableHeader = groupTemplates.horizontalHeader()
-        tableHeader.setSectionResizeMode(0, QHeaderView.Stretch)
-        tableHeader.setSectionResizeMode(1, QHeaderView.Fixed)
-        tableHeader.setSectionResizeMode(2, QHeaderView.Fixed)
+        tableHeader.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        tableHeader.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
+        tableHeader.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
         groupTemplates.setRowCount(0)
         groupTemplates.setSortingEnabled(False)
         groupTemplates.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        groupTemplates.setSelectionBehavior(QAbstractItemView.SelectRows)
+        groupTemplates.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         if macLin:
             groupTemplates.setColumnWidth(1, 50)
             groupTemplates.setColumnWidth(2, 40)
@@ -394,8 +395,8 @@ class SettingsGui(QTabWidget):
 
     def getLineSeparator(self):
         line = QFrame();
-        line.setFrameShape(QFrame.VLine)
-        line.setFrameShadow(QFrame.Plain)
+        line.setFrameShape(QFrame.Shape.VLine)
+        line.setFrameShadow(QFrame.Shadow.Plain)
         line.setStyleSheet('QFrame[frameShape="5"]{color: #D5DFE5;}')
         return line
 
@@ -610,17 +611,17 @@ class SettingsGui(QTabWidget):
 
         migakuInfo = QLabel("Migaku:")
         migakuInfoSite = self.getSVGWidget('migaku.svg')
-        migakuInfoSite.setCursor(QCursor(Qt.PointingHandCursor))
+        migakuInfoSite.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
         migakuInfoYT = self.getSVGWidget('Youtube.svg')
-        migakuInfoYT.setCursor(QCursor(Qt.PointingHandCursor))
+        migakuInfoYT.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
         migakuInfoTW = self.getSVGWidget('Twitter.svg')
-        migakuInfoTW.setCursor(QCursor(Qt.PointingHandCursor))
+        migakuInfoTW.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
 
         migakuPatreonIcon = self.getSVGWidget('Patreon.svg')
-        migakuPatreonIcon.setCursor(QCursor(Qt.PointingHandCursor))
+        migakuPatreonIcon.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         migakuAboutLinksHL3.addWidget(migakuInfo)
         migakuAboutLinksHL3.addWidget(migakuInfoSite)
         migakuAboutLinksHL3.addWidget(migakuInfoYT)
@@ -640,7 +641,7 @@ class SettingsGui(QTabWidget):
         migakuContactText.setWordWrap(True)
 
         gitHubIcon = self.getSVGWidget('Github.svg')
-        gitHubIcon.setCursor(QCursor(Qt.PointingHandCursor))
+        gitHubIcon.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         
         migakuThanks = QGroupBox()
         migakuThanks.setTitle('A Word of Thanks')

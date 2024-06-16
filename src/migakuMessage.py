@@ -76,10 +76,11 @@ def miMessage(text, parent=False):
     mb.layout().addWidget(wide, 0, 2)
     mb.layout().setColumnStretch(0, 3)
     mb.layout().addWidget(cb, 1, 1)
-    b = mb.addButton(QMessageBox.Ok)
+    
+    b = mb.addButton(QMessageBox.StandardButton.Ok)
     b.setFixedSize(100, 30)
     b.setDefault(True)
-    mb.exec_()
+    mb.exec()
     wv.deleteLater()
     if cb.isChecked():
         return True

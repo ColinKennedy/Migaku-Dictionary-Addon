@@ -1,7 +1,7 @@
 import aqt
 import json
 import zipfile
-import sip
+#from .sipbuild import sip
 import re
 import operator
 import shutil
@@ -131,7 +131,7 @@ class DictionaryManagerWidget(QWidget):
 
     def info(self, text):
         dlg = QMessageBox(QMessageBox.Information, 'Migaku Dictioanry', text, QMessageBox.Ok, self)
-        return dlg.exec_()
+        return dlg.exec()
 
 
     def get_string(self, text, default_text=''):
@@ -140,7 +140,7 @@ class DictionaryManagerWidget(QWidget):
         dlg.setLabelText(text + ':')
         dlg.setTextValue(default_text)
         dlg.resize(350, dlg.sizeHint().height())
-        ok = dlg.exec_()
+        ok = dlg.exec()
         txt = dlg.textValue()
         return txt, ok
 
@@ -162,8 +162,8 @@ class DictionaryManagerWidget(QWidget):
 
         for lang in langs:
             lang_item = QTreeWidgetItem([lang])
-            lang_item.setData(0, Qt.UserRole+0, lang)
-            lang_item.setData(0, Qt.UserRole+1, None)
+            lang_item.setData(0, Qt.ItemDataRole.UserRole+0, lang)
+            lang_item.setData(0, Qt.ItemDataRole.UserRole+1, None)
             
             self.dict_tree.addTopLevelItem(lang_item)
 
@@ -171,8 +171,8 @@ class DictionaryManagerWidget(QWidget):
                 dict_name = db.cleanDictName(d)
                 dict_name = dict_name.replace('_', ' ')
                 dict_item = QTreeWidgetItem([dict_name])
-                dict_item.setData(0, Qt.UserRole+0, lang)
-                dict_item.setData(0, Qt.UserRole+1, d)
+                dict_item.setData(0, Qt.ItemDataRole.UserRole+0, lang)
+                dict_item.setData(0, Qt.ItemDataRole.UserRole+1, d)
                 lang_item.addChild(dict_item)
 
             lang_item.setExpanded(True)
@@ -194,8 +194,8 @@ class DictionaryManagerWidget(QWidget):
         dict_ = None
 
         if curr_item:
-            lang = curr_item.data(0, Qt.UserRole+0)
-            dict_ = curr_item.data(0, Qt.UserRole+1)
+            lang = curr_item.data(0, Qt.ItemDataRole.UserRole+0)
+            dict_ = curr_item.data(0, Qt.ItemDataRole.UserRole+1)
 
         return lang, dict_
 
@@ -249,8 +249,8 @@ class DictionaryManagerWidget(QWidget):
             return
 
         lang_item = QTreeWidgetItem([name])
-        lang_item.setData(0, Qt.UserRole+0, name)
-        lang_item.setData(0, Qt.UserRole+1, None)
+        lang_item.setData(0, Qt.ItemDataRole.UserRole+0, name)
+        lang_item.setData(0, Qt.ItemDataRole.UserRole+1, None)
 
         self.dict_tree.addTopLevelItem(lang_item)
         self.dict_tree.setCurrentItem(lang_item)
@@ -262,7 +262,7 @@ class DictionaryManagerWidget(QWidget):
         lang_item = self.get_current_lang_item()
         if lang_item is None:
             return
-        lang_name = lang_item.data(0, Qt.UserRole+0)
+        lang_name = lang_item.data(0, Qt.ItemDataRole.UserRole+0)
 
         dlg = QMessageBox(QMessageBox.Question, 'Migaku Dictioanry',
                           'Do you really want to remove the language "%s"?\n\nAll settings and dictionaries for it will be removed.' % lang_name,
@@ -289,7 +289,7 @@ class DictionaryManagerWidget(QWidget):
         except OSError:
             pass
 
-        sip.delete(lang_item)
+        #sip.delete(lang_item)
 
 
     def set_freq_data(self):
@@ -319,7 +319,7 @@ class DictionaryManagerWidget(QWidget):
         lang_item = self.get_current_lang_item()
         if lang_item is None:
             return
-        lang_name = lang_item.data(0, Qt.UserRole+0)
+        lang_name = lang_item.data(0, Qt.ItemDataRole.UserRole+0)
 
         FreqConjWebWindow.execute_modal(lang_name, FreqConjWebWindow.Mode.Freq)
 
@@ -351,7 +351,7 @@ class DictionaryManagerWidget(QWidget):
         lang_item = self.get_current_lang_item()
         if lang_item is None:
             return
-        lang_name = lang_item.data(0, Qt.UserRole+0)
+        lang_name = lang_item.data(0, Qt.ItemDataRole.UserRole+0)
 
         FreqConjWebWindow.execute_modal(lang_name, FreqConjWebWindow.Mode.Conj)
 
@@ -360,7 +360,7 @@ class DictionaryManagerWidget(QWidget):
         lang_item = self.get_current_lang_item()
         if lang_item is None:
             return
-        lang_name = lang_item.data(0, Qt.UserRole+0)
+        lang_name = lang_item.data(0, Qt.ItemDataRole.UserRole+0)
 
         path = QFileDialog.getOpenFileName(self, 'Select the dictionary you want to import',
                                            os.path.expanduser('~'), 'ZIP Files (*.zip);;All Files (*.*)')[0]
@@ -377,8 +377,8 @@ class DictionaryManagerWidget(QWidget):
             return
 
         dict_item = QTreeWidgetItem([dict_name.replace('_', ' ')])
-        dict_item.setData(0, Qt.UserRole+0, lang_name)
-        dict_item.setData(0, Qt.UserRole+1, dict_name)
+        dict_item.setData(0, Qt.ItemDataRole.UserRole+0, lang_name)
+        dict_item.setData(0, Qt.ItemDataRole.UserRole+1, dict_name)
 
         lang_item.addChild(dict_item)
         self.dict_tree.setCurrentItem(dict_item)
@@ -388,7 +388,7 @@ class DictionaryManagerWidget(QWidget):
         lang_item = self.get_current_lang_item()
         if lang_item is None:
             return
-        lang_name = lang_item.data(0, Qt.UserRole+0)
+        lang_name = lang_item.data(0, Qt.ItemDataRole.UserRole+0)
 
         DictionaryWebInstallWizard.execute_modal(lang_name)
         self.reload_tree_widget()
@@ -400,7 +400,7 @@ class DictionaryManagerWidget(QWidget):
         dict_item = self.get_current_dict_item()
         if dict_item is None:
             return
-        dict_name = dict_item.data(0, Qt.UserRole+1)
+        dict_name = dict_item.data(0, Qt.ItemDataRole.UserRole+1)
         dict_display = dict_item.data(0, Qt.DisplayRole)
 
         dlg = QMessageBox(QMessageBox.Question, 'Migaku Dictioanry',
@@ -412,7 +412,7 @@ class DictionaryManagerWidget(QWidget):
             return
 
         db.deleteDict(dict_name)
-        sip.delete(dict_item)
+        #sip.delete(dict_item)
 
 
     def set_term_header(self):

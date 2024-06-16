@@ -930,8 +930,8 @@ class DictInterface(QWidget):
         self.setAutoFillBackground(True);
         self.ogPalette = self.getPalette(QColor('#F0F0F0'))
         self.nightPalette = self.getPalette(QColor('#272828'))
-        self.blackBase = self.getFontColor(Qt.black)
-        self.blackBase = self.getFontColor(Qt.white)
+        self.blackBase = self.getFontColor(Qt.GlobalColor.black)
+        self.blackBase = self.getFontColor(Qt.GlobalColor.white)
         self.mw = mw
         self.parent = parent
         self.iconpath = join(path, 'icons')
@@ -952,12 +952,12 @@ class DictInterface(QWidget):
 
     def getFontColor(self, color):
         pal = QPalette()
-        pal.setColor(QPalette.Base, color)
+        #pal.setColor(QPalette.ColorRole.Base, color)
         return pal
 
     def getPalette(self, color):
         pal = QPalette()
-        pal.setColor(QPalette.Background, color)
+        #pal.setColor(QPalette.ColorRole.Background, color)
         return pal
 
     def getStretchLay(self):
@@ -1456,9 +1456,9 @@ class DictInterface(QWidget):
         if not self.mw.dictSettings:
             self.mw.dictSettings = SettingsGui(self.mw, self.addonPath, self.openDictionarySettings)
         self.mw.dictSettings.show()
-        if self.mw.dictSettings.windowState() == Qt.WindowMinimized:
+        if self.mw.dictSettings.windowState() == Qt.WindowState.WindowMinimized:
                 # Window is minimised. Restore it.
-               self.mw.dictSettings.setWindowState(Qt.WindowNoState)
+               self.mw.dictSettings.setWindowState(Qt.WindowState.WindowNoState)
         self.mw.dictSettings.setFocus()
         self.mw.dictSettings.activateWindow()
    
@@ -1482,7 +1482,7 @@ class DictInterface(QWidget):
 
     def alignCenter(self, dictGroups):
         for i in range(0, dictGroups.count()):
-            dictGroups.model().item(i).setTextAlignment(Qt.AlignCenter)
+            dictGroups.model().item(i).setTextAlignment(Qt.AlignmentFlag.AlignCenter)
 
     def setupDictGroups(self, dictGroups = False):
         if not dictGroups:
@@ -1494,12 +1494,12 @@ class DictInterface(QWidget):
         dictGroups.addItems(ug)
         dictGroups.addItem('──────')
         dictGroups.model().item(dictGroups.count() - 1).setEnabled(False)
-        dictGroups.model().item(dictGroups.count() - 1).setTextAlignment(Qt.AlignCenter)
+        dictGroups.model().item(dictGroups.count() - 1).setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         defaults = ['All', 'Google Images', 'Forvo']
         dictGroups.addItems(defaults)
         dictGroups.addItem('──────')
         dictGroups.model().item(dictGroups.count() - 1).setEnabled(False)
-        dictGroups.model().item(dictGroups.count() - 1).setTextAlignment(Qt.AlignCenter)
+        dictGroups.model().item(dictGroups.count() - 1).setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         dg = sorted(list(self.defaultGroups.keys()))
         dictGroups.addItems(dg)
         current = self.config['currentGroup']
@@ -1542,8 +1542,8 @@ class DictInterface(QWidget):
     def ensureVisible(self):
         if not self.isVisible():
             self.show()
-        if self.windowState() == Qt.WindowMinimized:
-            self.setWindowState(Qt.WindowNoState)
+        if self.windowState() == Qt.WindowState.WindowMinimized:
+            self.setWindowState(Qt.WindowState.WindowNoState)
         self.setFocus()
         self.activateWindow()
 

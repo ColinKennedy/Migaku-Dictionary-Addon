@@ -32,9 +32,11 @@ from aqt.previewer import Previewer
 import requests
 import time
 import os
+from aqt.qt import debug;
 
 
 def window_loaded():
+
     mw.MigakuDictConfig = mw.addonManager.getConfig(__name__)
     mw.MigakuExportingDefinitions = False
     mw.dictSettings = False
@@ -233,13 +235,13 @@ def window_loaded():
         adder = mw.migakuDictionary.dict.addWindow
         cardWindow = adder.scrollArea
         if not is_win:
-            cardWindow.setWindowState(cardWindow.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
+            cardWindow.setWindowState(cardWindow.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
             cardWindow.raise_()  
         else:
-            cardWindow.setWindowFlags(cardWindow.windowFlags() | Qt.WindowStaysOnTopHint)
+            cardWindow.setWindowFlags(cardWindow.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
             cardWindow.show()
             if not adder.alwaysOnTop:
-                cardWindow.setWindowFlags(cardWindow.windowFlags() & ~Qt.WindowStaysOnTopHint)
+                cardWindow.setWindowFlags(cardWindow.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint)
                 cardWindow.show()
 
     def trySearch(term):    
@@ -253,13 +255,13 @@ def window_loaded():
     def showAfterGlobalSearch():
         mw.migakuDictionary.activateWindow()
         if not is_win:
-            mw.migakuDictionary.setWindowState(mw.migakuDictionary.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
+            mw.migakuDictionary.setWindowState(mw.migakuDictionary.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
             mw.migakuDictionary.raise_()  
         else:
-            mw.migakuDictionary.setWindowFlags(mw.migakuDictionary.windowFlags() | Qt.WindowStaysOnTopHint)
+            mw.migakuDictionary.setWindowFlags(mw.migakuDictionary.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
             mw.migakuDictionary.show()
             if not mw.migakuDictionary.alwaysOnTop:
-                mw.migakuDictionary.setWindowFlags(mw.migakuDictionary.windowFlags() & ~Qt.WindowStaysOnTopHint)
+                mw.migakuDictionary.setWindowFlags(mw.migakuDictionary.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint)
                 mw.migakuDictionary.show()
 
     def attemptAddCard(add):
@@ -477,10 +479,10 @@ def window_loaded():
             oh1.addWidget(origin)
             oh2.addWidget(QLabel('Output Field:'))
             oh2.addWidget(destination)
-            oLayout.addStretch()
+            oLayout.add()
             oLayout.addLayout(oh1)
             oLayout.addLayout(oh2)
-            oLayout.addStretch()
+            oLayout.add()
             oLayout.setContentsMargins(6,0, 6, 0)
             layout.addLayout(oLayout)
             dlay = QHBoxLayout()
@@ -499,10 +501,10 @@ def window_loaded():
             bh1.addWidget(addType)
             bh2.addWidget(QLabel('Max Per Dict:'))
             bh2.addWidget(howMany)
-            bLayout.addStretch()
+            bLayout.add()
             bLayout.addLayout(bh1)
             bLayout.addLayout(bh2)
-            bLayout.addStretch()
+            bLayout.add()
             bLayout.setContentsMargins(6,0, 6, 0)
             layout.addLayout(bLayout)
             layout.addWidget(ex)

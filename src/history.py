@@ -22,13 +22,13 @@ class HistoryModel(QAbstractTableModel):
     def columnCount(self, index=QModelIndex()):
         return 2
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
 
         if not 0 <= index.row() < len(self.history):
             return None
-        if role == Qt.DisplayRole or role == Qt.EditRole:
+        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             term = self.history[index.row()][0]
             date = self.history[index.row()][1]
             
@@ -38,10 +38,10 @@ class HistoryModel(QAbstractTableModel):
                 return date
         return None
 
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if role != Qt.DisplayRole:
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if role != Qt.ItemDataRole.DisplayRole:
             return None
-        if orientation == Qt.Vertical:
+        if orientation == Qt.Orientation.Vertical:
             return section + 1;
         return None
 
@@ -70,7 +70,7 @@ class HistoryModel(QAbstractTableModel):
 
 class HistoryBrowser(QWidget):
     def __init__(self, historyModel, parent):
-        super(HistoryBrowser, self).__init__(parent, Qt.Window)
+        super(HistoryBrowser, self).__init__(parent, Qt.WindowType.Window)
         self.setAutoFillBackground(True)
         self.resize(300, 200)
         self.tableView = QTableView()
@@ -89,9 +89,9 @@ class HistoryBrowser(QWidget):
 
     def setupTable(self):
         tableHeader = self.tableView.horizontalHeader()
-        tableHeader.setSectionResizeMode(0, QHeaderView.Stretch)
-        tableHeader.setSectionResizeMode(1, QHeaderView.Stretch)
-        self.tableView.setSelectionBehavior(QAbstractItemView.SelectRows)
+        tableHeader.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        tableHeader.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self.tableView.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.tableView.horizontalHeader().hide()
 
     def searchAgain(self): 
