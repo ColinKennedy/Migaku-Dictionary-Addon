@@ -21,6 +21,7 @@ from .cardExporter import CardExporter
 import time
 from . import dictdb
 import aqt
+from aqt import gui_hooks
 from .miJapaneseHandler import miJHandler
 from urllib.request import Request, urlopen
 import requests
@@ -59,6 +60,11 @@ class MIDict(AnkiWebView):
         self.reviewer = False
         self.threadpool = QThreadPool()
         self.customFontsLoaded = []
+
+        gui_hooks.editor_did_init.append(self.on_editor_loaded)
+
+    def on_editor_loaded(self, editor):
+        self.currentEditor = editor
 
     def resetConfiguration(self, config):
         self.config = config
@@ -543,7 +549,6 @@ class MIDict(AnkiWebView):
  
     def sendToField(self, name, definition):
         if self.reviewer and self.reviewer.card:
-
             if name == 'Google Images':
                 tFields = self.config['GoogleImageFields']
                 addType =  self.config['GoogleImageAddType']
@@ -579,22 +584,33 @@ class MIDict(AnkiWebView):
         if self.currentEditor and self.currentEditor.note:
             if name == 'Google Images':
                 tFields = self.config['GoogleImageFields']
-                addType =  self.config['GoogleImageAddType']
+                addType = self.config['GoogleImageAddType']
             elif name == 'Forvo':
                 tFields = self.config['ForvoFields']
-                addType =  self.config['ForvoAddType']
+                addType = self.config['ForvoAddType']
             else:
                 tFields, addType = self.db.getAddTypeAndFields(name)
-            note = self.currentEditor.note
 
-            items = note.items()
-            for idx, item in enumerate(items):
-                noteField = item[0]
-                if noteField in tFields:
-                    if self.jSend:
-                        self.currentEditor.web.eval(self.dictInt.insertHTMLJS % (self.dictInt.jHandler.attemptFieldGenerate(definition, noteField, note.model()['name'], note).replace('"', '\\"'), str(idx), addType))
+            note = self.currentEditor.note
+            
+            for field_name in tFields:
+                field_index = next((i for i, f in enumerate(note.keys()) if f == field_name), None)
+                if field_index is not None:
+                    current_value = note.fields[field_index]
+                    
+                    if addType == 'overwrite':
+                        new_value = definition
+                    elif addType == 'add':
+                        new_value = current_value + '<br><br>' + definition
+                    elif addType == 'no':
+                        if current_value.strip():
+                            new_value = current_value
+                        else:
+                            new_value = definition
                     else:
-                        self.currentEditor.web.eval(self.dictInt.insertHTMLJS % (definition.replace('"', '\\"'), str(idx), addType))
+                        new_value = definition
+                    note.fields[field_index] = new_value
+            self.currentEditor.loadNote()
 
     def getOverwriteChecks(self, dictCount,dictName):
         if dictName == 'Google Images':
