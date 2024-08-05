@@ -3,7 +3,7 @@
 
 from aqt import dialogs
 from aqt.qt import *
-from anki.utils import is_mac, is_lin, is_win
+from anki.utils import isMac, isLin, isWin
 from aqt.utils import ensureWidgetInScreenBoundaries
 from os.path import join, exists
 from shutil import copyfile
@@ -188,7 +188,7 @@ class CardExporter():
     def setColors(self):
         if self.dictInt.nightModeToggler.day :
             self.scrollArea.setPalette(self.dictInt.ogPalette)
-            if is_mac:
+            if isMac:
                 self.templateCB.setStyleSheet(self.dictInt.getMacComboStyle())
                 self.deckCB.setStyleSheet(self.dictInt.getMacComboStyle())
                 self.definitions.setStyleSheet(self.dictInt.getMacTableStyle())
@@ -198,7 +198,7 @@ class CardExporter():
                 self.definitions.setStyleSheet('')
         else:
             self.scrollArea.setPalette(self.dictInt.nightPalette)
-            if is_mac: 
+            if isMac: 
                 self.templateCB.setStyleSheet(self.dictInt.getMacNightComboStyle())
                 self.deckCB.setStyleSheet(self.dictInt.getMacNightComboStyle())
             else:
@@ -485,7 +485,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
 
     def getDefinitions(self):
         macLin = False
-        if is_mac  or is_lin:
+        if isMac  or isLin:
             macLin = True
         definitions = QTableWidget()
         definitions.setMinimumHeight(100)

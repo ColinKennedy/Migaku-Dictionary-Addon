@@ -9,7 +9,7 @@ from aqt.qt import *
 from aqt import mw
 from .dictionaryWebInstallWizard import DictionaryWebInstallWizard
 from .freqConjWebWindow import FreqConjWebWindow
-
+from PyQt6.QtWidgets import QMessageBox
 
 
 class DictionaryManagerWidget(QWidget):
@@ -401,14 +401,19 @@ class DictionaryManagerWidget(QWidget):
         if dict_item is None:
             return
         dict_name = dict_item.data(0, Qt.ItemDataRole.UserRole+1)
-        dict_display = dict_item.data(0, Qt.DisplayRole)
+        dict_display = dict_item.data(0, Qt.ItemDataRole.DisplayRole)
 
-        dlg = QMessageBox(QMessageBox.Question, 'Migaku Dictioanry',
-                          'Do you really want to remove the dictionary "%s"?' % dict_display,
-                          QMessageBox.Yes | QMessageBox.No, self)
-        r = dlg.exec_()
+        dlg = QMessageBox(
+            QMessageBox.Icon.Question,
+            'Migaku Dictionary',
+            f'Do you really want to remove the dictionary "{dict_display}"?',
+            buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            parent=self
+        )
 
-        if r != QMessageBox.Yes:
+        r = dlg.exec()
+
+        if r != QMessageBox.StandardButton.Yes:
             return
 
         db.deleteDict(dict_name)

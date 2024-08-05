@@ -15,7 +15,7 @@ import os, uuid
 from aqt import mw
 from anki.collection import Collection
 from threading import Timer
-from anki.utils import is_win
+from anki.utils import isWin
 
 def getNextBatchOfCards(self, start, incrementor):
     return self.db.all("SELECT c.ivl, n.flds, c.ord, n.mid FROM cards AS c INNER JOIN notes AS n ON c.nid = n.id WHERE c.type != 0 ORDER BY c.ivl LIMIT %s, %s;"%(start, incrementor))
@@ -39,7 +39,7 @@ class MigakuHTTPHandler(tornado.web.RequestHandler):
         self.addCondensedAudioInProgressMessage = self.application.addCondensedAudioInProgressMessage
         self.removeCondensedAudioInProgressMessage  = self.application.removeCondensedAudioInProgressMessage
         suffix = ''     
-        if is_win:   
+        if isWin:   
             suffix = '.exe' 
         self.ffmpeg = join(self.addonDirectory, 'user_files', 'ffmpeg', 'ffmpeg' + suffix)
 

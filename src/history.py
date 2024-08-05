@@ -7,6 +7,7 @@ from aqt.qt import *
 from aqt.utils import askUser, showInfo
 import datetime
 from .miutils import miInfo, miAsk
+from anki.utils import isMac, isLin, isWin
 
 class HistoryModel(QAbstractTableModel):
 
@@ -102,7 +103,7 @@ class HistoryBrowser(QWidget):
 
     def setColors(self):
         if self.dictInt.nightModeToggler.day:
-            if is_mac:
+            if isMac:
                 self.tableView.setStyleSheet(self.dictInt.getMacTableStyle())
             else:
                 self.tableView.setStyleSheet('')

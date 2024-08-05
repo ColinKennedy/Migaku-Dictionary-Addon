@@ -33,6 +33,7 @@ import requests
 import time
 import os
 from aqt.qt import debug;
+from PyQt6.QtCore import Qt
 
 
 def window_loaded():
@@ -105,13 +106,13 @@ def window_loaded():
                 browser.form.searchEdit.lineEdit().setText(text)
                 browser.onSearchActivated()
                 browser.activateWindow()
-                if not is_win:
-                    browser.setWindowState(browser.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
+                if not isWin:
+                    browser.setWindowState(browser.windowState() & ~Qt.WindowState.Minimized| Qt.WindowState.WindowActive)
                     browser.raise_()  
                 else:
-                    browser.setWindowFlags(browser.windowFlags() | Qt.WindowStaysOnTopHint)
+                    browser.setWindowFlags(browser.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
                     browser.show()
-                    browser.setWindowFlags(browser.windowFlags() & ~Qt.WindowStaysOnTopHint)
+                    browser.setWindowFlags(browser.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint)
                     browser.show()
 
 
@@ -122,7 +123,7 @@ def window_loaded():
         char = str(key)
         if char not in mw.currentlyPressed:
                 mw.currentlyPressed.append(char)
-        if is_win:
+        if isWin:
             if 'Key.ctrl_l' in mw.currentlyPressed and "'c'" in mw.currentlyPressed and'Key.space'  in mw.currentlyPressed:
                 mw.hkThread.handleSystemSearch()
                 mw.currentlyPressed = []
@@ -138,7 +139,7 @@ def window_loaded():
             elif 'Key.ctrl_l' in mw.currentlyPressed and 'Key.shift' in mw.currentlyPressed and "'v'" in mw.currentlyPressed:
                 mw.hkThread.handleImageExport()
                 mw.currentlyPressed = []
-        elif is_lin:
+        elif isLin:
             if 'Key.ctrl' in mw.currentlyPressed and "'c'" in mw.currentlyPressed and'Key.space'  in mw.currentlyPressed:
                 mw.hkThread.handleSystemSearch()
                 mw.currentlyPressed = []
@@ -234,7 +235,7 @@ def window_loaded():
     def showCardExporterWindow():
         adder = mw.migakuDictionary.dict.addWindow
         cardWindow = adder.scrollArea
-        if not is_win:
+        if not isWin:
             cardWindow.setWindowState(cardWindow.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
             cardWindow.raise_()  
         else:
@@ -254,7 +255,7 @@ def window_loaded():
 
     def showAfterGlobalSearch():
         mw.migakuDictionary.activateWindow()
-        if not is_win:
+        if not isWin:
             mw.migakuDictionary.setWindowState(mw.migakuDictionary.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
             mw.migakuDictionary.raise_()  
         else:
@@ -274,8 +275,8 @@ def window_loaded():
         if not mw.dictSettings:
             mw.dictSettings = SettingsGui(mw, addon_path, openDictionarySettings)
         mw.dictSettings.show()
-        if mw.dictSettings.windowState() == Qt.WindowMinimized:
-            mw.dictSettings.setWindowState(Qt.WindowNoState)
+        if mw.dictSettings.windowState() == Qt.WindowState.WindowMinimized:
+            mw.dictSettings.setWindowState(Qt.WindowState.WindowNoState)
         mw.dictSettings.setFocus()
         mw.dictSettings.activateWindow()
 
@@ -292,7 +293,7 @@ def window_loaded():
             file =  fh.read()
         return file
 
-    if is_mac:
+    if isMac:
         welcomeScreen = getMacWelcomeScreen()
     else:
         welcomeScreen = getWelcomeScreen()
@@ -301,7 +302,7 @@ def window_loaded():
         if terms and isinstance(terms, str):
             terms = [terms]
         shortcut = '(Ctrl+W)'
-        if is_mac:
+        if isMac:
             shortcut = '⌘W'
         if not mw.migakuDictionary:
             mw.migakuDictionary = DictInterface(mw.miDictDB, mw, addon_path, welcomeScreen, terms = terms)
@@ -540,7 +541,7 @@ def window_loaded():
         progressWidget.setWindowTitle("Generating Definitions...")
         progressWidget.setWindowModality(Qt.ApplicationModal)
         bar = QProgressBar(progressWidget)
-        if is_mac:
+        if isMac:
             bar.setFixedSize(380, 50)
         else:
             bar.setFixedSize(390, 50)
@@ -872,11 +873,11 @@ def window_loaded():
         if mw.migakuDictionary and mw.migakuDictionary.isVisible():
             mw.migakuDictionary.dict.checkEditorClose(self.editor)
 
-    Browser._onRowChanged = wrap(Browser._onRowChanged, setBrowserEditor)
+    Browser.on_all_or_selected_rows_changed = wrap(Browser.on_all_or_selected_rows_changed, setBrowserEditor)
 
-    AddCards._reject = wrap(AddCards._reject, checkCurrentEditor)
-    EditCurrent._saveAndClose = wrap(EditCurrent._saveAndClose, checkCurrentEditor)
-    Browser._closeWindow = wrap(Browser._closeWindow, checkCurrentEditor)
+    #AddCards._reject = wrap(AddCards._reject, checkCurrentEditor)
+    #EditCurrent._saveAndClose = wrap(EditCurrent._saveAndClose, checkCurrentEditor)
+    #Browser._closeWindow = wrap(Browser._closeWindow, checkCurrentEditor)
 
     def addEditActivated(self, event = False):
         if mw.migakuDictionary and mw.migakuDictionary.isVisible():

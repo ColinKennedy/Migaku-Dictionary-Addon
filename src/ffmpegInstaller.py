@@ -1,7 +1,7 @@
 import os
 import stat
 import requests
-from anki.utils import is_mac, is_win, is_lin
+from anki.utils import isMac, isWin, isLin
 from anki.hooks import addHook
 from os.path import join, exists, dirname
 from .miutils import miInfo
@@ -18,12 +18,12 @@ class FFMPEGInstaller:
         self.addonPath = dirname(__file__)
         self.ffmpegDir = join(self.addonPath, 'user_files', 'ffmpeg')
         self.ffmpegFilename = "ffmpeg"
-        if is_win:
+        if isWin:
             self.ffmpegFilename += ".exe"
             self.downloadURL = "http://dicts.migaku.io/ffmpeg/windows"
-        elif is_lin:
+        elif isLin:
             self.downloadURL = "http://dicts.migaku.io/ffmpeg/linux"
-        elif is_mac:
+        elif isMac:
             self.downloadURL = "http://dicts.migaku.io/ffmpeg/macos"
         self.ffmpegPath = join(self.ffmpegDir, self.ffmpegFilename)
         self.tempPath = join(self.addonPath, 'temp', 'ffmpeg')
@@ -101,7 +101,7 @@ class FFMPEGInstaller:
             progressBar.deleteLater()
 
     def makeExecutable(self):
-        if not is_win:
+        if not isWin:
             try:
                 st = os.stat(self.ffmpegPath)
                 os.chmod(self.ffmpegPath, st.st_mode | stat.S_IEXEC)

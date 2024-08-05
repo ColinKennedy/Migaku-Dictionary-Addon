@@ -7,7 +7,8 @@ import aqt
 
 from .migaku_wizard import *
 from . import webConfig
-
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QTextCursor
 
 addon_path = os.path.dirname(__file__)
 
@@ -42,7 +43,7 @@ class DictionaryWebInstallWizard(MiWizard):
     @classmethod
     def execute_modal(cls, force_lang=None):
         wizard = cls(force_lang)
-        return wizard.exec_()
+        return wizard.exec()
 
 
 
@@ -148,15 +149,15 @@ class DictionarySelectPage(MiWizardPage):
 
         for li in range(dict_root.childCount()):
             lang_item = dict_root.child(li)
-            language = lang_item.data(0, Qt.UserRole+0)
+            language = lang_item.data(0, Qt.ItemDataRole.UserRole+0)
             dictionaries = []
 
             def scan_tree(item):
                 for di in range(item.childCount()):
                     dict_item = item.child(di)
-                    dictionary = dict_item.data(0, Qt.UserRole+1)
+                    dictionary = dict_item.data(0, Qt.ItemDataRole.UserRole+1)
                     if dictionary:
-                        if dict_item.checkState(0) == Qt.Checked:
+                        if dict_item.checkState(0) == Qt.CheckState.Checked:
                             dictionaries.append(dictionary)
                     else:
                         scan_tree(dict_item)
@@ -196,8 +197,8 @@ class DictionarySelectPage(MiWizardPage):
                 text += ' (' + name_native + ')'
 
             lang_item = QTreeWidgetItem([text])
-            lang_item.setData(0, Qt.UserRole+0, language)
-            lang_item.setData(0, Qt.UserRole+1, None)
+            lang_item.setData(0, Qt.ItemDataRole.UserRole+0, language)
+            lang_item.setData(0, Qt.ItemDataRole.UserRole+1, None)
 
             self.dict_tree.addTopLevelItem(lang_item)
 
@@ -214,9 +215,9 @@ class DictionarySelectPage(MiWizardPage):
                         dictionary_text += ' - ' + dictionary_description
 
                     dict_item = QTreeWidgetItem([dictionary_text])
-                    dict_item.setCheckState(0, Qt.Unchecked)
-                    dict_item.setData(0, Qt.UserRole+0, None)
-                    dict_item.setData(0, Qt.UserRole+1, dictionary)
+                    dict_item.setCheckState(0, Qt.CheckState.Unchecked)
+                    dict_item.setData(0, Qt.ItemDataRole.UserRole+0, None)
+                    dict_item.setData(0, Qt.ItemDataRole.UserRole+1, dictionary)
 
                     parent_item.addChild(dict_item)
 
@@ -232,8 +233,8 @@ class DictionarySelectPage(MiWizardPage):
                     text += ' (' + to_name_native + ')'
 
                 to_lang_item = QTreeWidgetItem([text])
-                to_lang_item.setData(0, Qt.UserRole+0, None)
-                to_lang_item.setData(0, Qt.UserRole+1, None)
+                to_lang_item.setData(0, Qt.ItemDataRole.UserRole+0, None)
+                to_lang_item.setData(0, Qt.ItemDataRole.UserRole+1, None)
 
                 lang_item.addChild(to_lang_item)
 
@@ -396,7 +397,7 @@ class DictionaryInstallPage(MiWizardPage):
                         furl = self.construct_url(furl)
                         dl_resp = client.get(furl)
                         if dl_resp.status_code == 200:
-                            fdata = client.streamContent(dl_resp)
+                            fdata = client.stream_content(dl_resp)
                             dst_path = os.path.join(freq_path, '%s.json' % lname)
                             with open(dst_path, 'wb') as f:
                                 f.write(fdata)
@@ -411,7 +412,7 @@ class DictionaryInstallPage(MiWizardPage):
                         curl = self.construct_url(curl)
                         dl_resp = client.get(curl)
                         if dl_resp.status_code == 200:
-                            cdata = client.streamContent(dl_resp)
+                            cdata = client.stream_content(dl_resp)
                             dst_path = os.path.join(conj_path, '%s.json' % lname)
                             with open(dst_path, 'wb') as f:
                                 f.write(cdata)
@@ -434,7 +435,7 @@ class DictionaryInstallPage(MiWizardPage):
                     if dl_resp.status_code == 200:
                         update_dict_progress(0.5)
                         self.log_update.emit(' Importing...')
-                        ddata = client.streamContent(dl_resp)
+                        ddata = client.stream_content(dl_resp)
                         try:
                             importDict(lname, io.BytesIO(ddata), dname)
                         except ValueError as e:
@@ -509,7 +510,7 @@ class DictionaryInstallPage(MiWizardPage):
 
 
     def add_log(self, txt):
-        self.log_box.moveCursor(QTextCursor.End)
+        self.log_box.moveCursor(QTextCursor.MoveOperation.End)
         if not self.log_box.document().isEmpty():
             self.log_box.insertPlainText('\n')    
         self.log_box.insertPlainText(txt)

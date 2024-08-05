@@ -7,7 +7,7 @@ import math
 from anki.hooks import addHook, wrap
 from aqt.qt import *
 from aqt.utils import openLink, tooltip, showInfo, askUser
-from anki.utils import is_mac, is_win, is_lin
+from anki.utils import isMac, isWin, isLin
 from anki.lang import _
 from aqt.webview import AnkiWebView
 import re
@@ -55,7 +55,7 @@ class SettingsGui(QTabWidget):
         self.googleCountries = ["Afghanistan" ,"Albania","Algeria","American Samoa","Andorra","Angola","Anguilla","Antarctica","Antigua and Barbuda","Argentina","Armenia","Aruba","Australia","Austria","Azerbaijan","Bahamas","Bahrain","Bangladesh","Barbados","Belarus","Belgium","Belize","Benin","Bermuda","Bhutan","Bolivia","Bosnia and Herzegovina","Botswana","Bouvet Island","Brazil","British Indian Ocean Territory","Brunei Darussalam","Bulgaria","Burkina Faso","Burundi","Cambodia","Cameroon","Canada","Cape Verde","Cayman Islands","Central African Republic","Chad","Chile","China","Christmas Island","Cocos (Keeling) Islands","Colombia","Comoros","Congo","Congo, the Democratic Republic of the","Cook Islands","Costa Rica","Cote D'ivoire","Croatia (Hrvatska)","Cuba","Cyprus","Czech Republic","Denmark","Djibouti","Dominica","Dominican Republic","East Timor","Ecuador","Egypt","El Salvador","Equatorial Guinea","Eritrea","Estonia","Ethiopia","European Union","Falkland Islands (Malvinas)","Faroe Islands","Fiji","Finland","France","France, Metropolitan","French Guiana","French Polynesia","French Southern Territories","Gabon","Gambia","Georgia","Germany","Ghana","Gibraltar","Greece","Greenland","Grenada","Guadeloupe","Guam","Guatemala","Guinea","Guinea-Bissau","Guyana","Haiti","Heard Island and Mcdonald Islands","Holy See (Vatican City State)","Honduras","Hong Kong","Hungary","Iceland","India","Indonesia","Iran, Islamic Republic of","Iraq","Ireland","Israel","Italy","Jamaica","Japan","Jordan","Kazakhstan","Kenya","Kiribati","Korea, Democratic People's Republic of","Korea, Republic of","Kuwait","Kyrgyzstan","Lao People's Democratic Republic","Latvia","Lebanon","Lesotho","Liberia","Libyan Arab Jamahiriya","Liechtenstein","Lithuania","Luxembourg","Macao","Macedonia, the Former Yugosalv Republic of","Madagascar","Malawi","Malaysia","Maldives","Mali","Malta","Marshall Islands","Martinique","Mauritania","Mauritius","Mayotte","Mexico","Micronesia, Federated States of","Moldova, Republic of","Monaco","Mongolia","Montserrat","Morocco","Mozambique","Myanmar","Namibia","Nauru","Nepal","Netherlands","Netherlands Antilles","New Caledonia","New Zealand","Nicaragua","Niger","Nigeria","Niue","Norfolk Island","Northern Mariana Islands","Norway","Oman","Pakistan","Palau","Palestinian Territory","Panama","Papua New Guinea","Paraguay","Peru","Philippines","Pitcairn","Poland","Portugal","Puerto Rico","Qatar","Reunion","Romania","Russian Federation","Rwanda","Saint Helena","Saint Kitts and Nevis","Saint Lucia","Saint Pierre and Miquelon","Saint Vincent and the Grenadines","Samoa","San Marino","Sao Tome and Principe","Saudi Arabia","Senegal","Serbia and Montenegro","Seychelles","Sierra Leone","Singapore","Slovakia","Slovenia","Solomon Islands","Somalia","South Africa","South Georgia and the South Sandwich Islands","Spain","Sri Lanka","Sudan","Suriname","Svalbard and Jan Mayen","Swaziland","Sweden","Switzerland","Syrian Arab Republic","Taiwan","Tajikistan","Tanzania, United Republic of","Thailand","Togo","Tokelau","Tonga","Trinidad and Tobago","Tunisia","Turkey","Turkmenistan","Turks and Caicos Islands","Tuvalu","Uganda","Ukraine","United Arab Emirates","United Kingdom","United States","United States Minor Outlying Islands","Uruguay","Uzbekistan","Vanuatu","Venezuela","Vietnam","Virgin Islands, British","Virgin Islands, U.S.","Wallis and Futuna","Western Sahara","Yemen","Yugoslavia","Zambia","Zimbabwe"]
         self.forvoLanguages = ["Afrikaans", "Ancient Greek", "Arabic", "Armenian", "Azerbaijani", "Bashkir", "Basque", "Belarusian", "Bengali", "Bulgarian", "Cantonese", "Catalan", "Chuvash", "Croatian", "Czech", "Danish", "Dutch", "English", "Esperanto", "Estonian", "Finnish", "French", "Galician","German", "Greek", "Hakka", "Hebrew", "Hindi", "Hungarian", "Icelandic", "Indonesian", "Interlingua", "Irish", "Italian", "Japanese", "Kabardian", "Korean", "Kurdish", "Latin", "Latvian", "Lithuanian", "Low German", "Luxembourgish", "Mandarin Chinese", "Mari", "Min Nan", "Northern Sami", "Norwegian Bokmål", "Persian", "Polish", "Portuguese", "Punjabi", "Romanian", "Russian", "Serbian", "Slovak", "Slovenian", "Spanish", "Swedish", "Tagalog", "Tatar", "Thai", "Turkish", "Ukrainian", "Urdu", "Uyghur", "Venetian", "Vietnamese", "Welsh", "Wu Chinese", "Yiddish"]
         self.setMinimumSize(850, 550)
-        if not is_win:
+        if not isWin:
             self.resize(1034, 550)
         else:
             self.resize(920, 550)
@@ -231,7 +231,7 @@ class SettingsGui(QTabWidget):
 
     def getGroupTemplateTable(self):
         macLin = False
-        if is_mac  or is_lin:
+        if isMac  or isLin:
             macLin = True
         groupTemplates = QTableWidget()
         groupTemplates.setColumnCount(3)
@@ -260,7 +260,7 @@ class SettingsGui(QTabWidget):
             self.dictGroups.setRowCount(rc + 1)
             self.dictGroups.setItem(rc, 0, QTableWidgetItem(groupName))
             editButton =  QPushButton("Edit");
-            if is_win:
+            if isWin:
                 editButton.setFixedWidth(40)
             else:
                 editButton.setFixedWidth(50)
@@ -268,7 +268,7 @@ class SettingsGui(QTabWidget):
             editButton.clicked.connect(self.editGroupRow(rc))
             self.dictGroups.setCellWidget(rc, 1, editButton)   
             deleteButton =  QPushButton("X");
-            if is_win:
+            if isWin:
                 deleteButton.setFixedWidth(40)
             else:
                 deleteButton.setFixedWidth(40)
@@ -308,7 +308,7 @@ class SettingsGui(QTabWidget):
             self.exportTemplates.setRowCount(rc + 1)
             self.exportTemplates.setItem(rc, 0, QTableWidgetItem(template))
             editButton =  QPushButton("Edit");
-            if is_win:
+            if isWin:
                 editButton.setFixedWidth(40)
             else:
                 editButton.setFixedWidth(50)
@@ -316,7 +316,7 @@ class SettingsGui(QTabWidget):
             editButton.clicked.connect(self.editTempRow(rc))
             self.exportTemplates.setCellWidget(rc, 1, editButton)   
             deleteButton =  QPushButton("X");
-            if is_win:
+            if isWin:
                 deleteButton.setFixedWidth(40)
             else:
                 deleteButton.setFixedWidth(40)

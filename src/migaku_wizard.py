@@ -1,4 +1,6 @@
 from aqt.qt import *
+from PyQt6.QtWidgets import QSizePolicy, QLayout
+from PyQt6.QtGui import QPalette
 
 
 class MiWizardPage(QWidget):
@@ -57,8 +59,8 @@ class MiWizard(QDialog):
         self.setLayout(lyt)
 
         page_frame = QFrame()
-        page_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        page_frame.setBackgroundRole(QPalette.Base)
+        page_frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        page_frame.setBackgroundRole(QPalette.ColorRole.Base)
         page_frame.setAutoFillBackground(True)
         lyt.addWidget(page_frame)
 
@@ -68,7 +70,7 @@ class MiWizard(QDialog):
         page_hlyt.addLayout(pixmap_lyt)
 
         self._pixmap_lbl = QLabel()
-        self._pixmap_lbl.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self._pixmap_lbl.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         pixmap_lyt.addWidget(self._pixmap_lbl)
         pixmap_lyt.addStretch()        
 
@@ -79,30 +81,34 @@ class MiWizard(QDialog):
         page_vlyt.addWidget(self._header_lbl)
 
         self._pages_lyt = QHBoxLayout()
-        self._pages_lyt.setSizeConstraint(QLayout.SetMaximumSize)
+        self._pages_lyt.setSizeConstraint(QLayout.SizeConstraint.SetMaximumSize)
         page_vlyt.addLayout(self._pages_lyt)
 
         btn_lyt = QHBoxLayout()
         lyt.addLayout(btn_lyt)
         style = self.style()
-        margins = (style.pixelMetric(QStyle.PM_LayoutLeftMargin), style.pixelMetric(QStyle.PM_LayoutTopMargin),
-                   style.pixelMetric(QStyle.PM_LayoutRightMargin), style.pixelMetric(QStyle.PM_LayoutBottomMargin))
+        margins = (
+            style.pixelMetric(QStyle.PixelMetric.PM_LayoutLeftMargin),
+            style.pixelMetric(QStyle.PixelMetric.PM_LayoutTopMargin),
+            style.pixelMetric(QStyle.PixelMetric.PM_LayoutRightMargin),
+            style.pixelMetric(QStyle.PixelMetric.PM_LayoutBottomMargin)
+        )
         btn_lyt.setContentsMargins(*margins)
 
         btn_lyt.addStretch()
 
         self._btn_back = QPushButton()
-        self._btn_back.setFocusPolicy(Qt.NoFocus)
+        self._btn_back.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._btn_back.clicked.connect(self.back)
         btn_lyt.addWidget(self._btn_back)
 
         self._btn_next = QPushButton()
-        self._btn_next.setFocusPolicy(Qt.NoFocus)
+        self._btn_next.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._btn_next.clicked.connect(self.next)
         btn_lyt.addWidget(self._btn_next)
 
         self._btn_cancel = QPushButton()
-        self._btn_cancel.setFocusPolicy(Qt.NoFocus)
+        self._btn_cancel.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._btn_cancel.clicked.connect(self.cancel)
         btn_lyt.addWidget(self._btn_cancel)
 
@@ -113,7 +119,7 @@ class MiWizard(QDialog):
         page_lyt = page.layout()
         if page_lyt:
             page_lyt.setContentsMargins(0, 0, 0, 0)
-        page.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        page.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._pages_lyt.addWidget(page)
         self.set_page_back(page, back_page)
         self.set_page_next(page, next_page)

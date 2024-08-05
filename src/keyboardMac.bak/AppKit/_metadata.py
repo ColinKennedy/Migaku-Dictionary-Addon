@@ -3510,7 +3510,7 @@ try:
     r(b'NSWindow', b'windowNumberAtPoint:belowWindowWithNumber:', {'arguments': {2: {'type': sel32or64(b'{_NSPoint=ff}', b'{CGPoint=dd}')}}})
     r(b'NSWindow', b'windowRef', {'retval': {'type': '^{OpaqueWindowPtr=}'}})
     r(b'NSWindow', b'worksWhenModal', {'retval': {'type': 'Z'}})
-    r(b'NSWindowController', b'is_windowLoaded', {'retval': {'type': 'Z'}})
+    r(b'NSWindowController', b'isWindowLoaded', {'retval': {'type': 'Z'}})
     r(b'NSWindowController', b'setDocumentEdited:', {'arguments': {2: {'type': 'Z'}}})
     r(b'NSWindowController', b'setShouldCascadeWindows:', {'arguments': {2: {'type': 'Z'}}})
     r(b'NSWindowController', b'setShouldCloseDocument:', {'arguments': {2: {'type': 'Z'}}})

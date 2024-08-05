@@ -7,7 +7,7 @@ import math
 from anki.hooks import addHook
 from aqt.qt import *
 from aqt.utils import openLink, tooltip, showInfo, askUser
-from anki.utils import is_mac, is_win, is_lin
+from anki.utils import isMac, isWin, isLin
 from anki.lang import _
 import re
 import os
@@ -155,7 +155,7 @@ class TemplateEditor(QDialog):
 
     def getDictFieldsTable(self):
         macLin = False
-        if is_mac  or is_lin:
+        if isMac  or isLin:
             macLin = True
         dictFields = QTableWidget()
         dictFields.setColumnCount(3)

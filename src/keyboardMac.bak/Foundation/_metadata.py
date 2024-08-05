@@ -7775,7 +7775,7 @@ try:
     r(b"NSPredicate", b"predicateWithValue:", {"arguments": {2: {"type": "Z"}}})
     r(b"NSProcessInfo", b"automaticTerminationSupportEnabled", {"retval": {"type": b"Z"}})
     r(b"NSProcessInfo", b"isLowPowerModeEnabled", {"retval": {"type": b"Z"}})
-    r(b"NSProcessInfo", b"is_macCatalystApp", {"retval": {"type": b"Z"}})
+    r(b"NSProcessInfo", b"isMacCatalystApp", {"retval": {"type": b"Z"}})
     r(
         b"NSProcessInfo",
         b"isOperatingSystemAtLeastVersion:",
