@@ -10,7 +10,7 @@ addonId = 1655992655
 dledIds = []
 
 
-def shutdownDB( parent, mgr, ids, on_done, client):
+def shutdownDB( parent, mgr, ids, on_done, client, force_enable=True):
     global dledIds 
     dledIds = ids
     if addonId in ids and hasattr(mw, 'miDictDB'):
