@@ -288,7 +288,7 @@ class SettingsGui(QTabWidget):
         if groupName in dictGroups:
             group = dictGroups[groupName]  
             dictEditor = DictGroupEditor(self.mw, self, self.getDictionaryNames(), group, groupName)
-            dictEditor.exec_()
+            dictEditor.exec()
 
     def removeGroup(self, row ):
         if miAsk('Are you sure you would like to remove this dictionary group? This action will happen immediately and is not un-doable.', self):
@@ -347,7 +347,7 @@ class SettingsGui(QTabWidget):
             template = exportTemplates[templateName]  
             templateEditor = TemplateEditor(self.mw, self, self.getDictionaryNames(), template, templateName)
             templateEditor.loadTemplateEditor(template, templateName)
-            templateEditor.exec_()
+            templateEditor.exec()
 
     def getDictionaryNames(self):
         dictList = self.mw.miDictDB.getAllDictsWithLang()
@@ -381,11 +381,11 @@ class SettingsGui(QTabWidget):
     def addGroup(self):
         dictEditor = DictGroupEditor(self.mw, self, self.getDictionaryNames())
         dictEditor.clearGroupEditor(True)
-        dictEditor.exec_()
+        dictEditor.exec()
 
     def addTemplate(self):
         templateEditor = TemplateEditor(self.mw, self, self.getDictionaryNames())
-        templateEditor.exec_()
+        templateEditor.exec()
 
     def miQLabel(self, text, width):
         label = QLabel(text)

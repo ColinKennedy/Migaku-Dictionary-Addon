@@ -539,7 +539,7 @@ def window_loaded():
         progressWidget.setFixedSize(400, 70)
         progressWidget.setWindowIcon(QIcon(join(addon_path, 'icons', 'migaku.png')))
         progressWidget.setWindowTitle("Generating Definitions...")
-        progressWidget.setWindowModality(Qt.ApplicationModal)
+        progressWidget.setWindowModality(Qt.WindowModality.ApplicationModal)
         bar = QProgressBar(progressWidget)
         if isMac:
             bar.setFixedSize(380, 50)
@@ -547,7 +547,7 @@ def window_loaded():
             bar.setFixedSize(390, 50)
         bar.move(10,10)
         per = QLabel(bar)
-        per.setAlignment(Qt.AlignCenter)
+        per.setAlignment(Qt.AlignmentFlag.AlignCenter)
         progressWidget.show()
         return progressWidget, bar;
 
@@ -862,7 +862,7 @@ def window_loaded():
     ogReroute = aqt.editor.Editor.onBridgeCmd 
     aqt.editor.Editor.onBridgeCmd = bridgeReroute
 
-    def setBrowserEditor(browser, c , p):
+    def setBrowserEditor(browser):
         if mw.migakuDictionary and mw.migakuDictionary.isVisible():
             if browser.editor.note:
                 mw.migakuDictionary.dict.setCurrentEditor(browser.editor, 'Browser')

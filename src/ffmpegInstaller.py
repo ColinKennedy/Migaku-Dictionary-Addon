@@ -36,7 +36,7 @@ class FFMPEGInstaller:
         progressWidget.setWindowTitle(title)
         textDisplay.setText(initialText)
         progressWidget.setFixedSize(500, 100)
-        progressWidget.setWindowModality(Qt.ApplicationModal)
+        progressWidget.setWindowModality(Qt.WindowModality.ApplicationModal)
         bar = QProgressBar(progressWidget)
         layout = QVBoxLayout()
         layout.addWidget(textDisplay)

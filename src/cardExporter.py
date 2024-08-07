@@ -84,8 +84,8 @@ class CardExporter():
         self.window = QWidget()
         self.scrollArea = QScrollArea()
         self.scrollArea.setWidget(self.window)
-        self.scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.scrollArea.setWidgetResizable(True)
         self.window.setAutoFillBackground(True);
         self.dictInt = dictInt
@@ -152,7 +152,7 @@ class CardExporter():
 
     def maybeSetToAlwaysOnTop(self):
         if self.alwaysOnTop:
-            self.scrollArea.setWindowFlags(self.scrollArea.windowFlags() | Qt.WindowStaysOnTopHint)
+            self.scrollArea.setWindowFlags(self.scrollArea.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
             self.scrollArea.show()
 
     def attemptAutoAdd(self, bulkExport):
@@ -493,15 +493,15 @@ Please review your template and notetype combination."""), level='wrn', day = se
         tableHeader = definitions.horizontalHeader()
         vHeader = definitions.verticalHeader()
         vHeader.setDefaultSectionSize(50);
-        vHeader.setSectionResizeMode(QHeaderView.ResizeToContents)
-        tableHeader.setSectionResizeMode(0, QHeaderView.Fixed)
+        vHeader.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        tableHeader.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
         definitions.setColumnWidth(1, 100)
-        tableHeader.setSectionResizeMode(1, QHeaderView.Stretch)
-        tableHeader.setSectionResizeMode(2, QHeaderView.Fixed)
+        tableHeader.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        tableHeader.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
         definitions.setRowCount(0)
         definitions.setSortingEnabled(False)
-        definitions.setEditTriggers(QTableWidget.NoEditTriggers)
-        definitions.setSelectionBehavior(QAbstractItemView.SelectRows)
+        definitions.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        definitions.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         definitions.setColumnWidth(2, 40)
         tableHeader.hide()
         return definitions
@@ -668,7 +668,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         if self.imageMap:
             self.imageMap.setText('')
             screenshot = QPixmap(path)
-            screenshot = screenshot.scaled(200,200, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            screenshot = screenshot.scaled(200, 200, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
             self.imageMap.setPixmap(screenshot)
 
 
@@ -715,8 +715,8 @@ Please review your template and notetype combination."""), level='wrn', day = se
      
     def focusWindow(self):
         self.scrollArea.show()
-        if self.scrollArea.windowState() == Qt.WindowMinimized:
-            self.scrollArea.setWindowState(Qt.WindowNoState)
+        if self.scrollArea.windowState() == Qt.WindowState.WindowMinimized:
+            self.scrollArea.setWindowState(Qt.WindowState.WindowNoState)
         self.scrollArea.setFocus()
         self.scrollArea.activateWindow()
 
@@ -733,7 +733,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
 
 
     def definitionSettingsWidget(self):
-        settingsWidget = QWidget(self.scrollArea, Qt.Window)
+        settingsWidget = QWidget(self.scrollArea, Qt.WindowType.Window)
         layout = QVBoxLayout()
         dict1 = QComboBox()
         dict2 = QComboBox()
@@ -1078,11 +1078,11 @@ Please review your template and notetype combination."""), level='wrn', day = se
         progressWidget.setLayout(layout) 
         bar.move(10,10)
         per = QLabel(bar)
-        per.setAlignment(Qt.AlignCenter)
+        per.setAlignment(Qt.AlignmentFlag.AlignCenter)
         progressWidget.setFixedSize(500, 100)
-        progressWidget.setWindowModality(Qt.ApplicationModal)
+        progressWidget.setWindowModality(Qt.WindowModality.ApplicationModal)
         if self.alwaysOnTop:
-            progressWidget.setWindowFlags(progressWidget.windowFlags() | Qt.WindowStaysOnTopHint)
+            progressWidget.setWindowFlags(progressWidget.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
         screenGeometry = QApplication.desktop().screenGeometry();
         x = (screenGeometry.width() - progressWidget.width()) / 2;
         y = (screenGeometry.height() - progressWidget.height()) / 2;

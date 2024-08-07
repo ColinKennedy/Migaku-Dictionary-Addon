@@ -984,10 +984,10 @@ class DictInterface(QWidget):
 
     def setAlwaysOnTop(self):
         if self.alwaysOnTop:
-            self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
+            self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
             self.show()
         else:
-            self.setWindowFlags(self.windowFlags() & ~Qt.WindowStaysOnTopHint);
+            self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint)
             self.show()
 
     def reloadConfig(self, config):
@@ -1052,7 +1052,7 @@ class DictInterface(QWidget):
 
     def maybeSetToAlwaysOnTop(self):
         if self.alwaysOnTop:
-            self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
+            self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
             self.show()
 
     def initTooltips(self):
@@ -1628,7 +1628,7 @@ class DictInterface(QWidget):
     def getMacNightStyles(self):
         return '''
             QLabel {color: white;}
-            QLineEdit {color: black;} 
+            QLineEdit {color: white;} 
             QPushButton {border: 1px solid gray; border-radius: 5px; color: white; background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #272828, stop: 1 black);} 
             QPushButton:hover{background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #272828, stop: 1 black); border: 1px solid white;}"
             '''
