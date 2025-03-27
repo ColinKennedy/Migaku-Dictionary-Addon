@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 # 
 
+import collections
+import typing
+
 from aqt import dialogs
 from aqt.qt import *
 from anki.utils import isMac, isLin, isWin
@@ -13,9 +16,32 @@ from anki.notes import Note
 from anki import sound
 import re
 
+
+class _DefinitionSetting(typing.NamedDict):
+    name: str
+    limit: int
+
+
+class _Template(typing.TypedDict):
+    audio: str
+    image: str
+    sentence: str
+    word: str
+
+
+class _Card(typing.TypedDict):
+    audio: str
+    image: str
+    primary: str
+    secondary: str
+    total: int
+    unknowns: list[str]
+
+
 class MITextEdit(QTextEdit):
-    def __init__(self, parent = None, dictInt = None):
-        super(MITextEdit, self).__init__(parent)
+    def __init__(self, parent: QWidget | None = None, dictInt: midict.DictInterface | None = None):
+        super().__init__(parent)
+
         self.dictInt = dictInt
         self.setAcceptRichText(False)
 
@@ -638,7 +664,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
                 self.definitionList.pop(idx)
                 break
 
-    def addDefinition(self, dictName, word, definition):
+    def addDefinition(self, dictName: str, word: str, definition: str) -> None:
         self.focusWindow()
         if len(definition) > 40:
             shortDef = definition.replace('<br>', ' ')[:40] + '...'
@@ -661,8 +687,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         if self.wordLE.text() == '':
             self.wordLE.setText(word)
 
-
-    def exportImage(self, path, name):
+    def exportImage(self, path: str, name: str) -> None:
         self.imgName = name
         self.imgPath = path
         if self.imageMap:
@@ -672,38 +697,39 @@ Please review your template and notetype combination."""), level='wrn', day = se
             self.imageMap.setPixmap(screenshot)
 
 
-    def exportAudio(self, path, tag,  name):
+    def exportAudio(self, path: str, tag: str, name: str) -> None:
         self.audioTag = tag
         self.audioName = name
         self.audioPath = path
         self.audioMap.setText(tag)
         self.audioPlay.show()
 
-    def moveAudioToMediaFolder(self):
+    def moveAudioToMediaFolder(self) -> None:
         if self.audioPath and self.audioName:
             if exists(self.audioPath): 
                 path = join(self.mw.col.media.dir(), self.audioName)
                 if not exists(path): 
                     copyfile(self.audioPath, path)
 
-    def playAudio(self):
+    def playAudio(self) -> None:
         if self.audioPath:
             self.audioPlayer.play(self.audioPath)
 
-    def exportSentence(self, sentence):
+    def exportSentence(self, sentence: str) -> None:
         self.focusWindow()
         self.sentenceLE.setHtml(sentence)
 
-    def exportSecondary(self, secondary):
+    def exportSecondary(self, secondary: str) -> None:
         self.secondaryLE.setHtml(secondary)
 
-    def removeFromDefinitionList(self, dictName, shortDef):
+    def removeFromDefinitionList(self, dictName: str, shortDef: str) -> None:
         for idx, entry in enumerate(self.definitionList):
             if entry[0] == dictName and entry[1] == shortDef:
                 self.definitionList.pop(idx)
                 break
 
-    def removeDefinition(self):
+    def removeDefinition(self) -> None:
+        # TODO: @ColinKennedy Remove later
         try:
             row = self.definitions.selectionModel().currentIndex().row()
             dictName = self.definitions.item(row, 0).text()
@@ -713,15 +739,14 @@ Please review your template and notetype combination."""), level='wrn', day = se
         except: 
             return
      
-    def focusWindow(self):
+    def focusWindow(self) -> None:
         self.scrollArea.show()
         if self.scrollArea.windowState() == Qt.WindowState.WindowMinimized:
             self.scrollArea.setWindowState(Qt.WindowState.WindowNoState)
         self.scrollArea.setFocus()
         self.scrollArea.activateWindow()
 
-    def getDictionaryNameToTableNameDictionary(self):
-        import collections
+    def getDictionaryNameToTableNameDictionary(self) -> dict[str, str]:
         dictToTable = collections.OrderedDict()
         dictToTable['None'] = 'None'
         dictToTable['Forvo'] = 'Forvo'
@@ -732,7 +757,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         return dictToTable
 
 
-    def definitionSettingsWidget(self):
+    def definitionSettingsWidget(self) -> None:
         settingsWidget = QWidget(self.scrollArea, Qt.WindowType.Window)
         layout = QVBoxLayout()
         dict1 = QComboBox()
@@ -808,9 +833,17 @@ Please review your template and notetype combination."""), level='wrn', day = se
         settingsWidget.setLayout(layout)
         settingsWidget.show()
 
-
-    def saveDefinitionSettings(self, settingsWidget, dict1, limit1, dict2, limit2, dict3, limit3):
-        definitionSettings = []
+    def saveDefinitionSettings(
+        self,
+        settingsWidget: QWidget,
+        dict1: str,
+        limit1: int,
+        dict2: str,
+        limit2: int,
+        dict3: str,
+        limit3: int,
+    ):
+        definitionSettings: list[_DefinitionSetting] = []
         definitionSettings.append({ "name": dict1, "limit" : limit1})
         definitionSettings.append({ "name": dict2, "limit" : limit2})
         definitionSettings.append({ "name": dict3, "limit" : limit3})
@@ -821,7 +854,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         settingsWidget.close()
         settingsWidget.deleteLater()
 
-    def cleanHTML(self, text):
+    def cleanHTML(self, text: str) -> str:
         # Switch bold style to <b>
         text = re.sub(r'(<span style=\"[^\"]*?)font-weight:600;(.*?\">.*?</span>)', r'<b>\1\2</b>', text, flags=re.S)
         text = re.sub(r'(<span style=\"[^\"]*?)font-style:italic;(.*?\">.*?</span>)', r'<i>\1\2</i>', text, flags=re.S)
@@ -844,7 +877,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         return text
 
 
-    def addTextCard(self, card):
+    def addTextCard(self, card: _Card) -> None:
         templateName = self.templateCB.currentText()
         sentence = card["primary"]
         word = ""
@@ -880,7 +913,12 @@ Please review your template and notetype combination."""), level='wrn', day = se
                 else:
                     print("Invalid field values")
 
-    def getFieldsValuesForTextCard(self, t, wordText, sentenceText):
+    def getFieldsValuesForTextCard(
+        self,
+        t: _Template,
+        wordText: str,
+        sentenceText: str,
+    ) -> tuple[dict[str, list[str]], str]:
         tagsField = ''
         fields = {}
         if sentenceText != '':
@@ -901,7 +939,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
             tagsField = tagsText
         return fields, tagsField
 
-    def bulkTextExport(self, cards):
+    def bulkTextExport(self, cards: typing.Sequence[_Card]) -> None:
         self.bulkTextImporting = True
         total = len(cards)
         importingMessage = "Importing {} of "+ str(total) + " cards."
@@ -918,7 +956,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         self.bulkTextImporting = False
         self.closeProgressBar(progressWidget)
      
-    def addMediaCard(self, card):
+    def addMediaCard(self, card: _Card) -> None:
         templateName = self.templateCB.currentText()
         word = ""
         unknowns = card["unknownWords"]
@@ -954,7 +992,12 @@ Please review your template and notetype combination."""), level='wrn', day = se
                 else:
                     print("Invalid field values")
 
-    def getFieldsValuesForMediaCard(self, t, wordText, card):
+    def getFieldsValuesForMediaCard(
+        self,
+        t: _Template,
+        wordText: str,
+        card: _Card,
+    ) -> tuple[dict[str, list[str]], str]:
         sentenceText = card["primary"]
         secondaryText = card["secondary"]
         imageFile = card["image"]
@@ -1005,9 +1048,9 @@ Please review your template and notetype combination."""), level='wrn', day = se
                     fields[audioField] = [audio]
                 else: 
                     fields[audioField].append(audio)
-        return fields, tagsField;
+        return fields, tagsField
 
-    def bulkMediaExport(self, card):
+    def bulkMediaExport(self, card: _Card) -> None:
         if self.mw.MigakuBulkMediaExportWasCancelled:
             return
         if not self.bulkMediaExportProgressWindow:
@@ -1020,6 +1063,8 @@ Please review your template and notetype combination."""), level='wrn', day = se
         else:
             importingMessage = "Importing {} of "+ str(self.bulkMediaExportProgressWindow.total) + " cards."
         self.addMediaCard(card)
+
+        # TODO: @ColinKennedy remove this try/except later
         try:
             if self.mw.MigakuBulkMediaExportWasCancelled or not self.bulkMediaExportProgressWindow:
                 if self.bulkMediaExportProgressWindow:
@@ -1040,17 +1085,21 @@ Please review your template and notetype combination."""), level='wrn', day = se
         except:
             pass
 
-    def bulkMediaExportCancelledByBrowserRefresh(self):
-        if self.bulkMediaExportProgressWindow:
-            currentValue = self.bulkMediaExportProgressWindow.currentValue
-            miInfo("Importing cards from the extension has been cancelled from within the browser.\n\n {} cards were imported.".format(currentValue))
-            self.closeProgressBar(self.bulkMediaExportProgressWindow)
-            self.bulkMediaExportProgressWindow = False
-            self.mw.MigakuBulkMediaExportWasCancelled = False
-            
+    def bulkMediaExportCancelledByBrowserRefresh(self) -> None:
+        if not self.bulkMediaExportProgressWindow:
+            return
 
+        currentValue = self.bulkMediaExportProgressWindow.currentValue
+        miInfo("Importing cards from the extension has been cancelled from within the browser.\n\n {} cards were imported.".format(currentValue))
+        self.closeProgressBar(self.bulkMediaExportProgressWindow)
+        self.bulkMediaExportProgressWindow = False
+        self.mw.MigakuBulkMediaExportWasCancelled = False
 
-    def getProgressBar(self, title, initialText):
+    def getProgressBar(
+        self,
+        title: str,
+        initialText: str,
+    ) -> tuple[QWidget, QProgressBar, QLabel]:
         progressWidget = QWidget()
         progressWidget.closedBecauseFinishedImporting = False
         def closedProgressBar(event):
@@ -1091,9 +1140,9 @@ Please review your template and notetype combination."""), level='wrn', day = se
         progressWidget.setFocus()
         progressWidget.closeEvent = closedProgressBar
         self.mw.app.processEvents()
-        return progressWidget, bar, textDisplay;
+        return progressWidget, bar, textDisplay
 
-    def closeProgressBar(self, progressBar):
+    def closeProgressBar(self, progressBar: QProgressBar | None) -> None:
         if progressBar:
             progressBar.closedBecauseFinishedImporting = True
             progressBar.close()

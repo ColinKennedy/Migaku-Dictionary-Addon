@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import typing
+
 import sqlite3
 import os.path
 from aqt.utils import showInfo
@@ -9,49 +11,66 @@ import json
 addon_path = os.path.dirname(__file__)
 from aqt import mw
 
-class DictDB:
-    conn = None
-    c = None
 
-    def __init__(self):
+AddType = typing.Literal["add"] | typing.Literal["no"]
+
+
+@typing.final
+class DictDB:
+    def __init__(self) -> None:
+        super().__init__()
+
         db_file = os.path.join(mw.pm.addonFolder(), addon_path, "user_files", "db", "dictionaries.sqlite")
-        self.conn=sqlite3.connect(db_file, check_same_thread=False)
-        self.c = self.conn.cursor()
+        self.conn: sqlite3.Connection = sqlite3.connect(db_file, check_same_thread=False)
+        cursor = self.conn.cursor()
+
+        if not cursor:
+            raise RuntimeError(f'Database "{db_file}" has no cursor. Cannot connect!')
+
+        self.c = cursor
         self.c.execute("PRAGMA foreign_keys = ON")
         self.c.execute("PRAGMA case_sensitive_like=ON;")
 
-    def connect(self):
+    def connect(self) -> None:
         self.oldConnection = self.c
         db_file = os.path.join(mw.pm.addonFolder(), addon_path, "user_files", "db", "dictionaries.sqlite")
         self.conn=sqlite3.connect(db_file)
-        self.c = self.conn.cursor()
+
+        cursor = self.conn.cursor()
+
+        if not cursor:
+            raise RuntimeError(f'Database "{db_file}" has no cursor. Cannot connect!')
+
+        self.c = cursor
         self.c.execute("PRAGMA foreign_keys = ON")
         self.c.execute("PRAGMA case_sensitive_like=ON;")
 
-    def reload(self):
+    def reload(self) -> None:
         self.c.close()
         self.c = self.oldConnection
 
-    def closeConnection(self):
+    def closeConnection(self) -> None:
         self.c.close()
-        self = False
 
-    def getLangId(self, lang):
+    def getLangId(self, lang: str) -> int | None:
         self.c.execute('SELECT id FROM langnames WHERE langname = ?;',  (lang,))
+
+        # TODO: Remove try/except
         try:
             (lid,) = self.c.fetchone()
+
             return lid
         except:
             return None
     
-    def deleteDict(self, d):
+    def deleteDict(self, d) -> None:
         self.dropTables(d)
         d_clean = self.cleanDictName(d)
         self.c.execute('DELETE FROM dictnames WHERE dictname = ?;', (d_clean,))
         self.commitChanges()
         self.c.execute("VACUUM;")
        
-    def getDictsByLanguage(self, lang):
+    def getDictsByLanguage(self, lang: str) -> list:
         lid = self.getLangId(lang)
         self.c.execute('SELECT dictname FROM dictnames WHERE lid = ?;',  (lid,))
         try:
@@ -64,13 +83,13 @@ class DictDB:
         except:
             return []
 
-    def addDict(self, dictname, lang, termHeader):
+    def addDict(self, dictname: str, lang: str, termHeader: str) -> None:
         lid = self.getLangId(lang)
         self.c.execute('INSERT INTO dictnames (dictname, lid, fields, addtype, termHeader, duplicateHeader) VALUES (?, ?, "[]", "add", ?, 0);', (dictname, lid, termHeader))
         self.createDB(self.formatDictName(lid, dictname))
         self.commitChanges()
 
-    def formatDictName(self, lid, name):
+    def formatDictName(self, lid: typing.Any, name: str) -> str:
         return 'l' + str(lid) + 'name' + name
 
     def deleteLanguage(self, langname):
@@ -174,11 +193,11 @@ class DictDB:
                 dictsByLang[lang] = dicts
         return dictsByLang
 
-    def cleanDictName(self, name):
+    def cleanDictName(self, name: str) -> None:
         return re.sub(r'l\d+name', '', name)
 
 
-    def getDuplicateSetting(self, name):
+    def getDuplicateSetting(self, name: str):
         self.c.execute('SELECT duplicateHeader, termHeader  FROM dictnames WHERE dictname=?', (name, ))
         try:
             (duplicateHeader,termHeader) = self.c.fetchone()
@@ -186,10 +205,8 @@ class DictDB:
         except:
             return None
 
-    def getDefEx(self, sT):
-        if sT in ['Definition', 'Example']:
-            return True
-        return False
+    def getDefEx(self, sT: str) -> bool:
+        return sT in ['Definition', 'Example']
 
     def applySearchType(self,terms, sT):
         for idx, term in enumerate(terms):
@@ -339,10 +356,10 @@ class DictDB:
                 break
         return results,  duplicateHeader, termHeader;
 
-    def cleanLT(self,text):
+    def cleanLT(self, text: str) -> str:
         return re.sub(r'<((?:[^b][^r])|(?:[b][^r]))', r'&lt;\1', str(text))
 
-    def createDB(self, text):
+    def createDB(self, text: str) -> None:
         self.c.execute('CREATE TABLE  IF NOT EXISTS  ' + text +'(term CHAR(40) NOT NULL, altterm CHAR(40), pronunciation CHAR(100), pos CHAR(40), definition TEXT, examples TEXT, audio TEXT, frequency MEDIUMINT, starCount TEXT);')
         self.c.execute("CREATE INDEX IF NOT EXISTS it" + text +" ON " + text +" (term);")
         self.c.execute("CREATE INDEX IF NOT EXISTS itp" + text +" ON " + text +" ( term, pronunciation );")
@@ -350,41 +367,48 @@ class DictDB:
         self.c.execute("CREATE INDEX IF NOT EXISTS iap" + text +" ON " + text +" ( altterm, pronunciation );")
         self.c.execute("CREATE INDEX IF NOT EXISTS ia" + text +" ON " + text +" (pronunciation);")
 
-    def importToDict(self, dictName, dictionaryData):
+    def importToDict(self, dictName: str, dictionaryData) -> None:
         self.c.executemany('INSERT INTO ' + dictName + ' (term, altterm, pronunciation, pos, definition, examples, audio, frequency, starCount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);', dictionaryData)
 
-    def dropTables(self, text):
+    def dropTables(self, text: str) -> None:
         self.c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE ?;" , (text, ))
         dicts = self.c.fetchall()
         for name in dicts:
             self.c.execute("DROP TABLE " + name[0] + " ;")
 
-    def setFieldsSetting(self, name, fields):
+    def setFieldsSetting(self, name: str, fields) -> None:
         self.c.execute('UPDATE dictnames SET fields = ? WHERE dictname=?', (fields, name))
         self.commitChanges()
 
-    def setAddType(self, name, addType):
+    def setAddType(self, name: str, addType: str) -> None:
         self.c.execute('UPDATE dictnames SET addtype = ? WHERE dictname=?', (addType, name))
         self.commitChanges()
 
-    def getFieldsSetting(self, name):
+    def getFieldsSetting(self, name: str) -> None:
         self.c.execute('SELECT fields FROM dictnames WHERE dictname=?', (name, ))
+
+        # TODO: Remove try/except
         try:
             (fields,) = self.c.fetchone()
+
             return json.loads(fields)
         except:
             return None
 
-    def getAddTypeAndFields(self, dictName):
+    def getAddTypeAndFields(self, dictName: str) -> None:
         self.c.execute('SELECT fields, addtype FROM dictnames WHERE dictname=?', (dictName, ))
+
+        # TODO: Remove try/except
         try:
             (fields, addType) = self.c.fetchone()
+
             return json.loads(fields), addType;
         except:
             return None
 
-    def getDupHeaders(self):
+    def getDupHeaders(self) -> dict | None:
         self.c.execute('SELECT dictname, duplicateHeader FROM dictnames')
+        # TODO: Remove try/except
         try:
             dictHeaders = self.c.fetchall()
             results = {}
@@ -395,12 +419,13 @@ class DictDB:
         except:
             return None
 
-    def setDupHeader(self,duplicateHeader, name):
+    def setDupHeader(self, duplicateHeader: str, name: str) -> None:
         self.c.execute('UPDATE dictnames SET duplicateHeader = ? WHERE dictname=?', (duplicateHeader, name))
         self.commitChanges()
 
-    def getTermHeaders(self):
+    def getTermHeaders(self) -> dict | None:
         self.c.execute('SELECT dictname, termHeader FROM dictnames')
+        # TODO: Remove try/except
         try:
             dictHeaders = self.c.fetchall()
             results = {}
@@ -411,21 +436,24 @@ class DictDB:
         except:
             return None
 
-    def getAddType(self, name):
+    def getAddType(self, name: str) -> AddType | None:
         self.c.execute('SELECT addtype FROM dictnames WHERE dictname=?', (name, ))
+        # TODO: Remove try/except
         try:
             (addType,) = self.c.fetchone()
             return addType
         except:
             return None
 
-    def getDictTermHeader(self, dictname):
+    def getDictTermHeader(self, dictname: str):
         self.c.execute('SELECT termHeader FROM dictnames WHERE dictname=?', (dictname, ))
+        # TODO: Check
+        print(f"DEBUGPRINT[1]: dictdb.py:450: self.c.fetchone()[0]={self.c.fetchone()[0]}")
         return self.c.fetchone()[0]
 
-    def setDictTermHeader(self, dictname, termheader):
+    def setDictTermHeader(self, dictname: str, termheader: str) -> None:
         self.c.execute('UPDATE dictnames SET termHeader = ? WHERE dictname=?', (termheader, dictname))
         self.commitChanges()
 
-    def commitChanges(self):
+    def commitChanges(self) -> None:
         self.conn.commit()

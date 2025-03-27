@@ -1,9 +1,14 @@
-import sys
-import json 
+import json
 import re
+import sys
+import typing
+
+from . import typer
 from .miutils import miInfo
+
 from os.path import join, exists, dirname
 sys.path.insert(0, join(dirname(__file__)))
+
 from aqt.qt import QThread, pyqtSignal
 import asyncio
 import tornado.ioloop
@@ -17,6 +22,16 @@ from anki.collection import Collection
 from threading import Timer
 from anki.utils import isWin
 
+
+class _Field(typing.TypedDict):
+    name: str
+    ord: int
+
+
+class _File(typing.TypedDict):
+    body: str
+
+
 def getNextBatchOfCards(self, start, incrementor):
     return self.db.all("SELECT c.ivl, n.flds, c.ord, n.mid FROM cards AS c INNER JOIN notes AS n ON c.nid = n.id WHERE c.type != 0 ORDER BY c.ivl LIMIT %s, %s;"%(start, incrementor))
 
@@ -26,12 +41,12 @@ Collection.getNextBatchOfCards = getNextBatchOfCards
 
 class MigakuHTTPHandler(tornado.web.RequestHandler):
 
-    def set_default_headers(self):
+    def set_default_headers(self) -> None:
         self.set_header("Access-Control-Allow-Origin", "*")
         self.set_header("Access-Control-Allow-Headers", "x-requested-with")
         self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
 
-    def initialize(self):
+    def initialize(self) -> None:
         self.mw = self.application.settings.get('mw')
         self.addonDirectory = dirname(__file__)
         self.tempDirectory = join(self.addonDirectory, "temp")
@@ -47,7 +62,7 @@ class MigakuHTTPHandler(tornado.web.RequestHandler):
         version = int(self.get_body_argument("version", default=False))
         return self.application.checkVersion(version)
 
-    def getConfig(self):
+    def getConfig(self) -> typer.Configuration:
         return self.mw.addonManager.getConfig(__name__)
 
 
@@ -56,12 +71,10 @@ class ImportHandler(MigakuHTTPHandler):
     def get(self):
         self.finish("ImportHandler")
 
-    def ffmpegExists(self):
-        if exists(self.ffmpeg):
-            return True
-        return False
+    def ffmpegExists(self) -> bool:
+        return exists(self.ffmpeg)
 
-    def removeTempFiles(self):
+    def removeTempFiles(self) -> None:
         tmpdir = self.tempDirectory
         filelist = [ f for f in os.listdir(tmpdir)]
         for f in filelist:
@@ -75,8 +88,12 @@ class ImportHandler(MigakuHTTPHandler):
                     os.remove(innerPath)
                 os.rmdir(path)
 
-    def condenseAudioUsingFFMPEG(self, filename, timestamp, config):
-        print("FFMPEG REACHED")
+    def condenseAudioUsingFFMPEG(
+        self,
+        filename: str,
+        timestamp: str,
+        config: typer.Configuration,
+    ) -> None:
         wavDir = join(self.tempDirectory, timestamp)
         if exists(wavDir):
             config = self.getConfig()
@@ -85,10 +102,8 @@ class ImportHandler(MigakuHTTPHandler):
             wavs.sort()
             wavListFilePath = join(wavDir, "list.txt")
             wavListFile = open(wavListFilePath,"w+")
-            print(filename)
             filename = self.cleanFilename(filename+ "\n") + "-condensed.mp3"
             mp3path = join(mp3dir, filename)
-            print(wavs)
             for wav in wavs:
                 wavListFile.write("file '{}'\n".format(join(wavDir, wav)))
             wavListFile.close()
@@ -98,10 +113,11 @@ class ImportHandler(MigakuHTTPHandler):
             if not config.get('disableCondensed', False):
                 self.alert( "A Condensed Audio File has been generated.\n\n The file: " + filename + "\nhas been created in dir: " + mp3dir)
 
-    def cleanFilename(self, filename):
+    def cleanFilename(self, filename: str) -> str:
         return re.sub(r"[\n:'\":/\|?*><!]","", filename).strip()
 
-    def post(self):
+    def post(self) -> None:
+        # TODO: @ColinKennedy - dedent this
         if self.checkVersion():
             config = self.getConfig()
             previousBulkTimeStamp = self.application.settings.get('previousBulkTimeStamp')
@@ -173,7 +189,7 @@ class ImportHandler(MigakuHTTPHandler):
                         imageFile = self.request.files['image'][0]
                         imageFileName = imageFile["filename"]
                         self.copyFileToTempDir(imageFile, imageFileName)
-                    cardToExport ={
+                    cardToExport = {
                         "primary" : primary,
                         "secondary" : secondary,
                         "unknownWords" : unknownWords,
@@ -187,90 +203,110 @@ class ImportHandler(MigakuHTTPHandler):
                     return
         self.finish("Invalid Request")
                 
-    def handleAudioFileInRequestAndReturnFilename(self, copyFileFunction):
+    def handleAudioFileInRequestAndReturnFilename(
+        self,
+        copyFileFunction: typing.Callable[[_File, str], None],
+    ) -> str | None:
         if "audio" in self.request.files:
             audioFile = self.request.files['audio'][0]
             audioFileName = audioFile["filename"]
             copyFileFunction(audioFile, audioFileName)
             return audioFileName
-        else:
-            return False
-            
-    def parseBoolean(self, bulk):
+
+        # TODO: @ColinKennedy consider return None
+        return False
+
+    def parseBoolean(self, bulk: bool | typing.Literal["false"]) -> bool:
         if bulk == "false" or  bulk is False :
             return False 
         return True
 
-    def copyFileToTempDir(self, file, filename):
+    def copyFileToTempDir(self, handler: _File, filename: str) -> None:
         filePath = join(self.tempDirectory, filename)
         fh = open(filePath, 'wb')
-        fh.write(file['body'])
+        fh.write(handler['body'])
 
-    def copyFileToCondensedAudioDir(self, file, filename):
+    def copyFileToCondensedAudioDir(self, handler: _File, filename: str) -> None:
         directoryPath = join(self.tempDirectory, self.application.settings.get('previousBulkTimeStamp'))
         if not exists(directoryPath):
             os.mkdir(directoryPath)
+
         filePath = join(directoryPath, filename)
         fh = open(filePath, 'wb')
-        fh.write(file['body'])
+        fh.write(handler['body'])
 
 class LearningStatusHandler(MigakuHTTPHandler):
 
-    def get(self):
+    def get(self) -> None:
         self.finish("LearningStatusHandler")
    
-    def post(self):
-        if self.checkVersion():
-            fetchModels = self.get_body_argument("fetchModelsAndTemplates", default=False)
-            if fetchModels is not False:
-                self.finish(self.fetchModelsAndTemplates())
-                return
-            start = self.get_body_argument("start", default=False)
-            if start is not False:
-                incrementor = self.get_body_argument("incrementor", default=False)
-                self.finish(self.getCards(start, incrementor))
-                return
-        self.finish("Invalid Request")
+    def post(self) -> None:
+        if not self.checkVersion():
+            self.finish("Invalid Request")
 
-    def getFieldOrdinateDictionary(self, fieldEntries):
-        fieldOrdinates = {};
+        fetchModels = self.get_body_argument("fetchModelsAndTemplates", default=False)
+
+        if fetchModels is not False:
+            self.finish(self.fetchModelsAndTemplates())
+
+            return
+
+        start = self.get_body_argument("start", default=False)
+
+        if start is not False:
+            incrementor = self.get_body_argument("incrementor", default=False)
+            self.finish(self.getCards(start, incrementor))
+
+            return
+
+    def getFieldOrdinateDictionary(
+        self,
+        fieldEntries: typing.Iterable[_Field],
+    ) -> dict[str, int]:
+        fieldOrdinates: dict[str, int] = {};
         for field in fieldEntries:
           fieldOrdinates[field["name"]] = field["ord"];
         return fieldOrdinates;
 
-
-    def getFields(self, templateSide, fieldOrdinatesDict) :
+    def getFields(
+        self,
+        templateSide: str,
+        fieldOrdinatesDict: dict[str, str],
+    ) -> list[str] | None:
         pattern = r"{{([^#^\/][^}]*?)}}";
         matches = re.findall(pattern, templateSide);
         fields = self.getCleanedFieldArray(matches);
         fieldsOrdinates = self.getFieldOrdinates(fields, fieldOrdinatesDict);
         return fieldsOrdinates;
 
-
-    def getFieldOrdinates(self, fields, fieldOrdinates):
-        ordinates = [];
+    def getFieldOrdinates(
+        self,
+        fields: typing.Iterable[str],
+        fieldOrdinates: dict[str, str],
+    ) -> list[str]:
+        ordinates: list[str] = [];
         for field in fields:
             if field in fieldOrdinates:
                 ordinates.append(fieldOrdinates[field]);
         return ordinates;
   
 
-    def getCleanedFieldArray(self, fields):
-        noDupes = [];
+    def getCleanedFieldArray(self, fields: typing.Iterable[str]) -> list[str]:
+        noDupes: list[str] = [];
         for field in fields:
           fieldName = self.getCleanedFieldName(field).strip();
           if not fieldName in noDupes and fieldName not in ["FrontSide", "Tags", "Subdeck", "Type", "Deck", "Card"]:
                 noDupes.append(fieldName);
         return noDupes;
 
-    def getCleanedFieldName(self, field):
+    def getCleanedFieldName(self, field: str) -> str:
         if ":" in field:
           split = field.split(":");
           return split[len(split) - 1];
         return field;
   
 
-    def fetchModelsAndTemplates(self):
+    def fetchModelsAndTemplates(self) -> str:
         modelData = {}
         models = self.mw.col.models.all()
         for idx, model in enumerate(models):
@@ -309,7 +345,7 @@ class SearchHandler(MigakuHTTPHandler):
     def get(self):
         self.finish("SearchHandler")
    
-    def post(self):
+    def post(self) -> None:
         if self.checkVersion():
             terms = self.get_body_argument("terms", default=False)
             if terms is not False:
@@ -322,7 +358,7 @@ class MigakuHTTPServer(tornado.web.Application):
 
     PROTOCOL_VERSION = 2
 
-    def __init__(self, thread, mw):
+    def __init__(self, thread, mw: aqt.mw) -> None:
         self.mw = mw
         self.previousBulkTimeStamp = 0
         self.thread = thread
@@ -333,20 +369,20 @@ class MigakuHTTPServer(tornado.web.Application):
         settings = {'mw' : mw}
         super().__init__(handlers, **settings)
 
-    def run(self, port=12345):
+    def run(self, port: int=12345) -> None:
         self.listen(port)
         tornado.ioloop.IOLoop.instance().start()
 
-    def alert(self, message):
+    def alert(self, message: str) -> None:
         self.thread.alert(message)
 
-    def addCondensedAudioInProgressMessage(self):
+    def addCondensedAudioInProgressMessage(self) -> None:
         self.thread.addCondensedAudioInProgressMessage()
 
-    def removeCondensedAudioInProgressMessage(self):
+    def removeCondensedAudioInProgressMessage(self) -> None:
         self.thread.removeCondensedAudioInProgressMessage()
 
-    def checkVersion(self, version):
+    def checkVersion(self, version: int | typing.Literal[False]) -> bool:
         if version is False or version < self.PROTOCOL_VERSION:
             self.alert("Your Migaku Dictionary Version is newer than and incompatible with your Immerse with Migaku Browser Extension installation. Please ensure you are using the latest version of the add-on and extension to resolve this issue.")
             return False
@@ -361,36 +397,36 @@ class MigakuServerThread(QThread):
     exportingCondensed = pyqtSignal()
     notExportingCondensed = pyqtSignal()
 
-    def __init__(self, mw):
+    def __init__(self, mw: aqt.mw) -> None:
         self.mw = mw
         QThread.__init__(self)
         self.server = MigakuHTTPServer(self, mw)
         self.start()
 
-    def run(self):
+    def run(self) -> None:
         asyncio.set_event_loop(asyncio.new_event_loop())
         self.server.run()
 
-    def alert(self, message):
+    def alert(self, message: str) -> None:
         self.alertUser.emit(message)
 
 
-    def addCondensedAudioInProgressMessage(self):
+    def addCondensedAudioInProgressMessage(self) -> None:
         self.exportingCondensed.emit()
 
-    def removeCondensedAudioInProgressMessage(self):
+    def removeCondensedAudioInProgressMessage(self) -> None:
         self.notExportingCondensed.emit()
 
 
 
 
-def addCondensedAudioInProgressMessage():
+def addCondensedAudioInProgressMessage() -> None:
     title = mw.windowTitle()
     msg = " (Condensed Audio Exporting in Progress)"
     if msg not in title:
         mw.setWindowTitle(title + msg)
 
-def removeCondensedAudioInProgressMessage():
+def removeCondensedAudioInProgressMessage() -> None:
     title = mw.windowTitle()
     msg = " (Condensed Audio Exporting in Progress)"
     if msg in title:

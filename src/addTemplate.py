@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-# 
-# 
+
+import typing
 import json
 import sys
 import math
@@ -13,10 +13,32 @@ import re
 import os
 from os.path import dirname, join
 from .miutils import miInfo, miAsk
+from . import typer
+
+
+class _Template(typing.TypedDict):
+    noteType: str
+    sentence: str | typing.Literal["Don't Export"]
+    notes: str | typing.Literal["Don't Export"]
+    word: str
+    image: str
+    audio: str | None
+    unspecified: str
+    separator: str
+
 
 class TemplateEditor(QDialog):
-    def __init__(self, mw, parent = None, dictionaries = [], toEdit = False, tName = False):
+    def __init__(
+        self,
+        mw: aqt.mv,
+        parent: QWidget | None = None,
+        dictionaries: typing.Iterable[str] = None,
+        toEdit: bool = False,
+        tName: bool = False,
+    ) -> None:
         super(TemplateEditor, self).__init__(parent, Qt.Window)
+
+        dictionaries = dictionaries or None
         self.setMinimumSize(QSize(400, 0))
         self.setWindowTitle("Add Export Template")
         self.settings = parent
@@ -45,7 +67,7 @@ class TemplateEditor(QDialog):
         self.initHandlers()
         self.initTooltips()
 
-    def initTooltips(self):
+    def initTooltips(self) -> None:
         self.templateName.setToolTip('The name of the export template.')
         self.noteType.setToolTip('The note type to export to.')
         self.wordField.setToolTip('The destination field for your target word.')
@@ -58,7 +80,7 @@ class TemplateEditor(QDialog):
         self.addDictField.setToolTip('Add this dictionary/destination field combination.')
         self.entrySeparator.setToolTip('The separator that will be used in the case multiple\nitems(the sentence/word/image/definitions) are exported to the same destination field.\nBy default two line breaks are used ("<br><br>").')
 
-    def clearTemplateEditor(self):
+    def clearTemplateEditor(self) -> None:
         self.templateName.clear()
         self.setWindowTitle("Add Export Template")
         self.templateName.setEnabled(True)
@@ -75,7 +97,12 @@ class TemplateEditor(QDialog):
         self.dictFieldsTable.setRowCount(0)
         self.entrySeparator.clear()
 
-    def loadTemplateEditor(self, toEdit = False, tName = False, first = False):
+    def loadTemplateEditor(
+        self,
+        toEdit: bool = False,
+        tName: bool = False,
+        first: bool = False,
+    ) -> NOne:
         self.clearTemplateEditor()
         
         self.loadDictionaries()
@@ -90,7 +117,7 @@ class TemplateEditor(QDialog):
             self.loadTemplateForEdit(toEdit)
             self.loadTableForEdit(toEdit['specific'])
 
-    def loadTemplateForEdit(self, t):
+    def loadTemplateForEdit(self, t: _Template) -> None:
         self.setWindowTitle("Edit Export Template")
         self.templateName.setEnabled(False)
         self.noteType.setCurrentText(t['noteType'])
@@ -104,15 +131,15 @@ class TemplateEditor(QDialog):
         self.otherDictsField.setCurrentText(t['unspecified'])
         self.entrySeparator.setText(t['separator'])
 
-    def loadTableForEdit(self, fieldsDicts):
+    def loadTableForEdit(self, fieldsDicts: dict[str, list[str]]) -> None:
         for field, dictList in fieldsDicts.items():
             for dictName in dictList:
                 self.addDictFieldRow(dictName, field)
 
-    def getConfig(self):
+    def getConfig(self) -> typer.Configuration:
         return self.mw.addonManager.getConfig(__name__)
 
-    def getSpecificDictFields(self):
+    def getSpecificDictFields(self) -> dict[str, list[str]]:
         dictFields = {}
         for i in range(self.dictFieldsTable.rowCount()):
             dictn = self.dictFieldsTable.item(i, 0).text()
@@ -123,7 +150,7 @@ class TemplateEditor(QDialog):
                 dictFields[fieldn].append(dictn)
         return dictFields
         
-    def saveExportTemplate(self):
+    def saveExportTemplate(self) -> None:
         newConfig = self.getConfig()
         tn = self.templateName.text()
         if tn  == '':
@@ -149,11 +176,11 @@ class TemplateEditor(QDialog):
         self.mw.addonManager.writeConfig(__name__, newConfig)
         self.settings.loadTemplateTable()
         self.hide()
-         
-    def loadSepValue(self):
+
+    def loadSepValue(self) -> None:
         self.entrySeparator.setText('<br><br>')
 
-    def getDictFieldsTable(self):
+    def getDictFieldsTable(self) -> QTableWidget:
         macLin = False
         if isMac  or isLin:
             macLin = True
@@ -171,19 +198,19 @@ class TemplateEditor(QDialog):
         tableHeader.hide()
         return dictFields
 
-    def initHandlers(self):
+    def initHandlers(self) -> None:
         self.noteType.currentIndexChanged.connect(self.loadNoteFields)
         self.addDictField.clicked.connect(self.addDictFieldRow)
         self.saveButton.clicked.connect(self.saveExportTemplate)
         self.cancelButton.clicked.connect(self.hide)
 
-    def notInTable(self, dictName):
+    def notInTable(self, dictName: str) -> bool:
         for i in range(self.dictFieldsTable.rowCount()):
             if self.dictFieldsTable.item(i, 0).text() == dictName:
                 return False
         return True
 
-    def addDictFieldRow(self, dictName = False, fieldName = False):
+    def addDictFieldRow(self, dictName: bool = False, fieldName: bool = False) -> None:
         if not dictName:
             dictName = self.dictionaries.currentText()
         if not fieldName:
@@ -198,10 +225,10 @@ class TemplateEditor(QDialog):
             deleteButton.clicked.connect(self.removeDictField)
             self.dictFieldsTable.setCellWidget(rc, 2, deleteButton)
 
-    def removeDictField(self):
+    def removeDictField(self) -> None:
         self.dictFieldsTable.removeRow(self.dictFieldsTable.selectionModel().currentIndex().row())
 
-    def loadNoteFields(self):
+    def loadNoteFields(self) -> None:
         curNote = self.noteType.currentText()
 
         if curNote in self.notesFields:
@@ -210,7 +237,7 @@ class TemplateEditor(QDialog):
             self.loadFieldsValues(fields)
             self.dictFieldsTable.setRowCount(0)
             
-    def getNotesFields(self):
+    def getNotesFields(self) -> dict[str, list[str]]:
         notesFields = {}
         models = self.mw.col.models.all()
         for model in models:
@@ -219,12 +246,12 @@ class TemplateEditor(QDialog):
                 notesFields[model['name']].append(fld['name'])
         return notesFields
 
-    def loadDictionaries(self):
+    def loadDictionaries(self) -> None:
         self.dictionaries.addItems(self.dictionaryNames)
         self.dictionaries.addItem('Google Images')
         self.dictionaries.addItem('Forvo')
 
-    def initialNoteFieldsLoad(self, loadFields = True):
+    def initialNoteFieldsLoad(self, loadFields: bool = True) -> None:
         noteTypes = list(self.notesFields.keys())
         noteTypes.sort()
         self.noteType.addItems(noteTypes)
@@ -233,9 +260,8 @@ class TemplateEditor(QDialog):
             fields = self.notesFields[noteTypes[0]]
             fields.sort()
             self.loadFieldsValues(fields)
-    
 
-    def loadFieldsValues(self, fields): 
+    def loadFieldsValues(self, fields: typing.Sequence[str]) -> None:
         self.sentenceField.clear()
         self.sentenceField.addItem("Don't Export")
         self.sentenceField.addItems(fields)
@@ -259,7 +285,7 @@ class TemplateEditor(QDialog):
         self.fields.clear()
         self.fields.addItems(fields)    
 
-    def setupLayout(self):
+    def setupLayout(self) -> None:
         tempNameLay = QHBoxLayout()
         tempNameLay.addWidget(QLabel('Name: '))
         tempNameLay.addWidget(self.templateName)

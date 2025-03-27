@@ -1,6 +1,7 @@
 import os
-import stat
 import requests
+import stat
+import typing
 from anki.utils import isMac, isWin, isLin
 from anki.hooks import addHook
 from os.path import join, exists, dirname
@@ -9,10 +10,17 @@ from aqt.qt import *
 from aqt import mw, gui_hooks
 import zipfile
 
+
+class _Configuration(typing.TypedDict):
+    mp3Convert: bool
+    failedFFMPEGInstallation: bool
+
+
 class FFMPEGInstaller:
 
-    def __init__(self, mw):
-        print(mw)
+    def __init__(self, mw: aqt.mw) -> None:
+        super().__init__()
+
         self.mw = mw
         self.config = self.mw.addonManager.getConfig(__name__)
         self.addonPath = dirname(__file__)
@@ -28,8 +36,11 @@ class FFMPEGInstaller:
         self.ffmpegPath = join(self.ffmpegDir, self.ffmpegFilename)
         self.tempPath = join(self.addonPath, 'temp', 'ffmpeg')
 
-
-    def getFFMPEGProgressBar(self, title, initialText):
+    def getFFMPEGProgressBar(
+        self,
+        title: str,
+        initialText: str,
+    ) -> tuple[QWidget, QProgressBar, QLabel]:
         progressWidget = QWidget(None)
         textDisplay = QLabel()
         progressWidget.setWindowIcon(QIcon(join(self.addonPath, 'icons', 'migaku.png')))
@@ -47,23 +58,24 @@ class FFMPEGInstaller:
         per.setAlignment(Qt.AlignCenter)
         progressWidget.show()
         progressWidget.setFocus()
+
         return progressWidget, bar, textDisplay;
 
-    def toggleMP3Conversion(self, enable):
+    def toggleMP3Conversion(self, enable: bool) -> None:
         config = self.mw.addonManager.getConfig(__name__)
         config["mp3Convert"] = enable
         self.mw.addonManager.writeConfig(__name__, config)
 
-    def toggleFailedInstallation(self, failedInstallation):
+    def toggleFailedInstallation(self, failedInstallation: _Configuration) -> None:
         config = self.mw.addonManager.getConfig(__name__)
         config["failedFFMPEGInstallation"] = failedInstallation
         self.mw.addonManager.writeConfig(__name__, config)
     
-    def roundToKb(self, value):
+    def roundToKb(self, value) -> float:
         return round(value / 1000)
 
        
-    def downloadFFMPEG(self):
+    def downloadFFMPEG(self) -> bool:
         progressWidget = False
         try:
             with requests.get(self.downloadURL, stream=True) as ffmpegRequest:
@@ -94,14 +106,13 @@ class FFMPEGInstaller:
             self.closeProgressBar(progressWidget)
             return False
 
-        
-    def closeProgressBar(self, progressBar):
-        if progressBar:
-            progressBar.close()
-            progressBar.deleteLater()
+    def closeProgressBar(self, progressBar: QWidget) -> None:
+        progressBar.close()
+        progressBar.deleteLater()
 
-    def makeExecutable(self):
+    def makeExecutable(self) -> bool:
         if not isWin:
+            # TODO: @ColinKennedy - remove try/except later
             try:
                 st = os.stat(self.ffmpegPath)
                 os.chmod(self.ffmpegPath, st.st_mode | stat.S_IEXEC)
@@ -109,22 +120,21 @@ class FFMPEGInstaller:
                 return False
         return True
         
-    def removeFailedInstallation(self):
+    def removeFailedInstallation(self) -> None:
         os.remove(self.ffmpegPath)
 
-
-    def unzipFFMPEG(self):
+    def unzipFFMPEG(self) -> None:
         with zipfile.ZipFile(self.tempPath) as zf:
             zf.extractall(self.ffmpegDir)
 
-    def couldNotInstall(self):
+    def couldNotInstall(self) -> None:
         self.toggleMP3Conversion(False)
         self.toggleFailedInstallation(True)
         miInfo("FFMPEG could not be installed. MP3 Conversion has been disabled. You will not be able to convert audio files imported from the Immerse with Migaku Browser Extension to MP3 format until it is installed. Migaku Dictionary will attempt to install it again on the next profile load.")
     
 
         
-    def installFFMPEG(self):
+    def installFFMPEG(self) -> None:
         config = self.mw.addonManager.getConfig(__name__)
         if (config["mp3Convert"] or config["failedFFMPEGInstallation"]) and not exists(self.ffmpegPath):
             currentStep = 1

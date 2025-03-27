@@ -3,10 +3,11 @@ from PyQt6.QtWidgets import QSizePolicy, QLayout
 from PyQt6.QtGui import QPalette
 
 
+# TODO: @ColinKennedy - What is all this? An abstract class without using ``abc``?
 class MiWizardPage(QWidget):
 
-    def __init__(self, parent=None):
-        super(MiWizardPage, self).__init__(parent)
+    def __init__(self, parent: QWidget | None=None) -> None:
+        super().__init__(parent)
 
         self.wizard = None
         self.title = None
@@ -25,29 +26,29 @@ class MiWizardPage(QWidget):
         self.cancel_enabled = True
         self.cancel_visible = True
 
-    def on_show(self, is_next, is_back):
+    def on_show(self, is_next: bool, is_back: bool) -> None:
         pass
 
-    def on_hide(self, is_next, is_back):
+    def on_hide(self, is_next: bool, is_back: bool) -> None:
         pass
 
-    def on_back(self):
+    def on_back(self) -> bool:
         return True
 
-    def on_next(self):
+    def on_next(self) -> bool:
         return True
 
-    def on_cancel(self):
+    def on_cancel(self) -> bool:
         return True
 
-    def refresh_wizard_states(self):
+    def refresh_wizard_states(self) -> None:
         if self.wizard:
             self.wizard.refresh_states()
 
 
 class MiWizard(QDialog):
     
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None=None) -> None:
         super(MiWizard, self).__init__(parent)
 
         self._current_page = None
@@ -113,7 +114,13 @@ class MiWizard(QDialog):
         btn_lyt.addWidget(self._btn_cancel)
 
 
-    def add_page(self, page, back_page=None, next_page=None, back_populate=True):
+    def add_page(
+        self,
+        page: MiWizardPage,
+        back_page: MiWizardPage | None=None,
+        next_page: MiWizardPage | None=None,
+        back_populate: bool=True,
+    ) -> MiWizardPage:
         page.wizard = self
         page.hide()
         page_lyt = page.layout()
@@ -130,19 +137,28 @@ class MiWizard(QDialog):
         return page
 
 
-    def set_page_back(self, page, back_page, back_populate=True):
+    def set_page_back(
+        self,
+        page: MiWizardPage,
+        back_page: MiWizardPage | None,
+        back_populate: bool=True,
+    ) -> None:
         self._page_back[page] = back_page
         if back_populate and back_page:
             self.set_page_next(back_page, page, back_populate=False)
 
 
-    def set_page_next(self, page, next_page, back_populate=True):
+    def set_page_next(
+        self,
+        page: MiWizardPage,
+        next_page: MiWizardPage | None,
+        back_populate: bool=True,
+    ) -> None:
         self._page_next[page] = next_page
         if back_populate and next_page:
             self.set_page_back(next_page, page, back_populate=False)
 
-
-    def set_current_page(self, page, is_next=False, is_back=False):
+    def set_current_page(self, page: MiWizardPage, is_next: bool=False, is_back: bool=False) -> None:
         if self._current_page:
             self._current_page.on_hide(is_next, is_back)
             self._current_page.hide()
@@ -155,7 +171,7 @@ class MiWizard(QDialog):
         page.show()
 
 
-    def back(self):
+    def back(self) -> None:
         if self._current_page:
             if not self._current_page.on_back():
                 return
@@ -165,7 +181,7 @@ class MiWizard(QDialog):
             self.set_current_page(back_page, is_back=True)
 
 
-    def next(self):
+    def next(self) -> None:
         if self._current_page:
             if not self._current_page.on_next():
                 return
@@ -177,7 +193,7 @@ class MiWizard(QDialog):
             self.accept()
 
 
-    def cancel(self):
+    def cancel(self) -> None:
         if self._current_page:
             if not self._current_page.on_cancel():
                 return
@@ -188,11 +204,11 @@ class MiWizard(QDialog):
         self.reject()
 
 
-    def on_cancel(self):
+    def on_cancel(self) -> bool:
         return True
 
 
-    def refresh_states(self):
+    def refresh_states(self) -> None:
         if self._current_page:
             header_text = ''
 
@@ -229,6 +245,6 @@ class MiWizard(QDialog):
             self._btn_cancel.setVisible(self._current_page.cancel_visible)
 
 
-    def closeEvent(self, e):
+    def closeEvent(self, e: QCloseEvent) -> None:
         self.cancel()
         e.ignore()

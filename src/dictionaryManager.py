@@ -1,21 +1,41 @@
-import aqt
 import json
 import zipfile
-#from .sipbuild import sip
 import re
 import operator
+import re
 import shutil
+import sip
+import typing
+import zipfile
+
+import aqt
 from aqt.qt import *
 from aqt import mw
 from .dictionaryWebInstallWizard import DictionaryWebInstallWizard
 from .freqConjWebWindow import FreqConjWebWindow
 from PyQt6.QtWidgets import QMessageBox
 
+# TODO: @ColinKennedy Make this type real, later
+_FrequencyList = str
+
+_LOGGER = logging.getLogger(__name__)
+
+
+class _FrequencyEntry(typing.TypedDict):
+    frequency: int
+    starCount: int
+
+
+class _YomiDictEntry(typing.TypedDict):
+    term: str
+    not_sure: str
+    reading: str
+
 
 class DictionaryManagerWidget(QWidget):
     
-    def __init__(self, parent=None):
-        super(DictionaryManagerWidget, self).__init__(parent)
+    def __init__(self, parent: QWidget | None=None) -> None:
+        super().__init__(parent)
 
         lyt = QVBoxLayout()
         lyt.setContentsMargins(0, 0, 0, 0)
@@ -129,12 +149,12 @@ class DictionaryManagerWidget(QWidget):
         self.on_current_item_change(None, None)
 
 
-    def info(self, text):
+    def info(self, text: str) -> int:
         dlg = QMessageBox(QMessageBox.Information, 'Migaku Dictioanry', text, QMessageBox.Ok, self)
+
         return dlg.exec()
 
-
-    def get_string(self, text, default_text=''):
+    def get_string(self, text: str, default_text: str='') -> tuple[str, int]:
         dlg = QInputDialog(self)
         dlg.setWindowTitle('Migaku Dictionary')
         dlg.setLabelText(text + ':')
@@ -145,7 +165,7 @@ class DictionaryManagerWidget(QWidget):
         return txt, ok
 
 
-    def reload_tree_widget(self):
+    def reload_tree_widget(self) -> None:
         db = aqt.mw.miDictDB
 
         langs = db.getCurrentDbLangs()
@@ -186,7 +206,7 @@ class DictionaryManagerWidget(QWidget):
         self.dict_grp.setEnabled(dict_ is not None)
 
 
-    def get_current_lang_dict(self):
+    def get_current_lang_dict(self) -> tuple[str | None, str | None]:
 
         curr_item = self.dict_tree.currentItem()
 
@@ -200,8 +220,7 @@ class DictionaryManagerWidget(QWidget):
         return lang, dict_
 
 
-    def get_current_lang_item(self):
-
+    def get_current_lang_item(self) -> QTreeWidgetItem | None:
         curr_item = self.dict_tree.currentItem()
 
         if curr_item:
@@ -212,7 +231,7 @@ class DictionaryManagerWidget(QWidget):
         return curr_item
 
 
-    def get_current_dict_item(self):
+    def get_current_dict_item(self) -> QTreeWidgetItem | None:
 
         curr_item = self.dict_tree.currentItem()
 
@@ -224,13 +243,13 @@ class DictionaryManagerWidget(QWidget):
         return curr_item
 
 
-    def web_installer(self):
+    def web_installer(self) -> None:
 
         DictionaryWebInstallWizard.execute_modal()
         self.reload_tree_widget()
 
 
-    def add_lang(self):
+    def add_lang(self) -> None:
         db = aqt.mw.miDictDB
 
         text, ok = self.get_string('Select name of new language')
@@ -256,7 +275,7 @@ class DictionaryManagerWidget(QWidget):
         self.dict_tree.setCurrentItem(lang_item)
 
 
-    def remove_lang(self):
+    def remove_lang(self) -> None:
         db = aqt.mw.miDictDB
 
         lang_item = self.get_current_lang_item()
@@ -292,7 +311,7 @@ class DictionaryManagerWidget(QWidget):
         #sip.delete(lang_item)
 
 
-    def set_freq_data(self):
+    def set_freq_data(self) -> None:
         lang_name = self.get_current_lang_dict()[0]
         if lang_name is None:
             return
@@ -315,7 +334,7 @@ class DictionaryManagerWidget(QWidget):
         self.info('Imported frequency data for "%s".\n\nNote that the frequency data is only applied to newly imported dictionaries for this language.' % lang_name)
 
 
-    def web_freq_data(self):
+    def web_freq_data(self) -> None:
         lang_item = self.get_current_lang_item()
         if lang_item is None:
             return
@@ -324,7 +343,7 @@ class DictionaryManagerWidget(QWidget):
         FreqConjWebWindow.execute_modal(lang_name, FreqConjWebWindow.Mode.Freq)
 
 
-    def set_conj_data(self):
+    def set_conj_data(self) -> None:
         lang_name = self.get_current_lang_dict()[0]
         if lang_name is None:
             return
@@ -347,7 +366,7 @@ class DictionaryManagerWidget(QWidget):
         self.info('Imported conjugation data for "%s".' % lang_name)
 
 
-    def web_conj_data(self):
+    def web_conj_data(self) -> None:
         lang_item = self.get_current_lang_item()
         if lang_item is None:
             return
@@ -356,7 +375,7 @@ class DictionaryManagerWidget(QWidget):
         FreqConjWebWindow.execute_modal(lang_name, FreqConjWebWindow.Mode.Conj)
 
 
-    def import_dict(self):
+    def import_dict(self) -> None:
         lang_item = self.get_current_lang_item()
         if lang_item is None:
             return
@@ -384,7 +403,7 @@ class DictionaryManagerWidget(QWidget):
         self.dict_tree.setCurrentItem(dict_item)
 
 
-    def web_installer_lang(self):
+    def web_installer_lang(self) -> None:
         lang_item = self.get_current_lang_item()
         if lang_item is None:
             return
@@ -394,7 +413,7 @@ class DictionaryManagerWidget(QWidget):
         self.reload_tree_widget()
 
 
-    def remove_dict(self):
+    def remove_dict(self) -> None:
         db = aqt.mw.miDictDB
         
         dict_item = self.get_current_dict_item()
@@ -420,7 +439,7 @@ class DictionaryManagerWidget(QWidget):
         #sip.delete(dict_item)
 
 
-    def set_term_header(self):
+    def set_term_header(self) -> None:
         db = aqt.mw.miDictDB
 
         dict_name = self.get_current_lang_dict()[1]
@@ -454,12 +473,12 @@ class DictionaryManagerWidget(QWidget):
 
 addon_path = os.path.dirname(__file__)
 
-def importDict(lang_name, file, dict_name):
+def importDict(lang_name: str, path: str, dict_name: str) -> None:
     db = aqt.mw.miDictDB
 
     # Load ZIP file
     try:
-        zfile = zipfile.ZipFile(file)
+        zfile = zipfile.ZipFile(path)
     except zipfile.BadZipFile:
         raise ValueError('Dictionary archive is invalid.')
 
@@ -495,48 +514,70 @@ def importDict(lang_name, file, dict_name):
 
     loadDict(zfile, dict_files, lang_name, dict_name, frequency_dict, not is_yomichan)
 
-def natural_sort(l): 
+
+def natural_sort(l):
     convert = lambda text: int(text) if text.isdigit() else text.lower() 
     alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)] 
+
     return sorted(l, key=alphanum_key)
 
-def loadDict(zfile, filenames, lang, dictName, frequencyDict, miDict = False):
+
+def loadDict(
+    zfile: zipfile.Zipfile,
+    filenames: typing.Iteratable[str],
+    lang: str,
+    dictName: str,
+    frequencyDict,
+    miDict: bool = False,
+) -> None:
     tableName = 'l' + str(mw.miDictDB.getLangId(lang)) + 'name' + dictName
     jsonDict = []
     for filename in filenames:
         with zfile.open(filename, 'r') as jsonDictFile:
             jsonDict += json.loads(jsonDictFile.read())
+
     freq = False
+
     if frequencyDict:
         freq = True
-        if miDict:
-            jsonDict = organizeDictionaryByFrequency(jsonDict, frequencyDict, dictName, lang, True)
-        else:
-            jsonDict = organizeDictionaryByFrequency(jsonDict, frequencyDict, dictName, lang)
+        jsonDict = organizeDictionaryByFrequency(jsonDict, frequencyDict, miDict=miDict)
+
     for count, entry in enumerate(jsonDict):
         if miDict:
             handleMiDictEntry(jsonDict, count, entry, freq)
         else: 
             handleYomiDictEntry(jsonDict, count, entry, freq)
+
     mw.miDictDB.importToDict(tableName, jsonDict)
     mw.miDictDB.commitChanges()
 
-def getAdjustedTerm(term):
+
+def getAdjustedTerm(term: str) -> str:
     term = term.replace('\n', '')
+
     if len(term) > 1:
         term = term.replace('=', '')
+
     return term
 
-def getAdjustedPronunciation(pronunciation):
+
+def getAdjustedPronunciation(pronunciation: str) -> str:
     return pronunciation.replace('\n', '')
 
-def getAdjustedDefinition(definition):
+
+def getAdjustedDefinition(definition: str) -> str:
     definition = definition.replace('<br>','◟')
     definition = definition.replace('<', '&lt;').replace('>', '&gt;')
     definition = definition.replace('◟','<br>').replace('\n', '<br>')
     return re.sub(r'<br>$', '', definition)
 
-def handleMiDictEntry(jsonDict, count, entry, freq = False):
+
+def handleMiDictEntry(
+    jsonDict,
+    count: int,
+    entry: _FrequencyEntry,
+    freq: bool = False,
+) -> None:
     starCount = ''
     frequency = ''
     if freq:
@@ -545,13 +586,29 @@ def handleMiDictEntry(jsonDict, count, entry, freq = False):
     reading = entry['pronunciation']
     if reading == '':
         reading = entry['term']
-    term = getAdjustedTerm(entry['term']) 
+    term = getAdjustedTerm(entry['term'])
     altTerm = getAdjustedTerm(entry['altterm'])
     reading = getAdjustedPronunciation(reading)
     definition = getAdjustedDefinition(entry['definition'])
-    jsonDict[count] = (term, altTerm, reading, entry['pos'], definition, '', '', frequency, starCount)
+    jsonDict[count] = (
+        term,
+        altTerm,
+        reading,
+        entry['pos'],
+        definition,
+        '',
+        '',
+        frequency,
+        starCount,
+    )
 
-def handleYomiDictEntry(jsonDict, count, entry, freq = False):
+
+def handleYomiDictEntry(
+    jsonDict: dict[int, _YomiDictEntry],
+    count: int,
+    entry,
+    freq: bool = False,
+) -> None:
     starCount = ''
     frequency = ''
     if freq:
@@ -565,28 +622,37 @@ def handleYomiDictEntry(jsonDict, count, entry, freq = False):
     definition = getAdjustedDefinition(', '.join(entry[5]))
     jsonDict[count] = (term, '', reading, entry[2], definition, '', '', frequency, starCount)
 
-def kaner(to_translate, hiraganer = False):
-        hiragana = u"がぎぐげござじずぜぞだぢづでどばびぶべぼぱぴぷぺぽ" \
-                   u"あいうえおかきくけこさしすせそたちつてと" \
-                   u"なにぬねのはひふへほまみむめもやゆよらりるれろ" \
-                   u"わをんぁぃぅぇぉゃゅょっゐゑ"
-        katakana = u"ガギグゲゴザジズゼゾダヂヅデドバビブベボパピプペポ" \
-                   u"アイウエオカキクケコサシスセソタチツテト" \
-                   u"ナニヌネノハヒフヘホマミムメモヤユヨラリルレロ" \
-                   u"ワヲンァィゥェォャュョッヰヱ"
-        if hiraganer:
-            katakana = [ord(char) for char in katakana]
-            translate_table = dict(zip(katakana, hiragana))
-            return to_translate.translate(translate_table)
-        else:
-            hiragana = [ord(char) for char in hiragana]
-            translate_table = dict(zip(hiragana, katakana))
-            return to_translate.translate(translate_table) 
+def kaner(to_translate: str, hiraganer: bool = False) -> str:
+    hiragana = u"がぎぐげござじずぜぞだぢづでどばびぶべぼぱぴぷぺぽ" \
+               u"あいうえおかきくけこさしすせそたちつてと" \
+               u"なにぬねのはひふへほまみむめもやゆよらりるれろ" \
+               u"わをんぁぃぅぇぉゃゅょっゐゑ"
+    katakana = u"ガギグゲゴザジズゼゾダヂヅデドバビブベボパピプペポ" \
+               u"アイウエオカキクケコサシスセソタチツテト" \
+               u"ナニヌネノハヒフヘホマミムメモヤユヨラリルレロ" \
+               u"ワヲンァィゥェォャュョッヰヱ"
 
-def adjustReading(reading):
+    if hiraganer:
+        katakana = [ord(char) for char in katakana]
+        translate_table = dict(zip(katakana, hiragana))
+
+        return to_translate.translate(translate_table)
+
+    hiragana = [ord(char) for char in hiragana]
+    translate_table = dict(zip(hiragana, katakana))
+
+    return to_translate.translate(translate_table)
+
+
+def adjustReading(reading: str) -> str:
     return kaner(reading)
 
-def organizeDictionaryByFrequency(jsonDict, frequencyDict, dictName, lang, miDict = False):
+
+def organizeDictionaryByFrequency(
+    jsonDict: dict[str, _FrequencyEntry],
+    frequencyDict,
+    miDict: bool = False,
+):
     readingHyouki = False
     if frequencyDict['readingDictionaryType']:
         readingHyouki = True
@@ -604,7 +670,7 @@ def organizeDictionaryByFrequency(jsonDict, frequencyDict, dictName, lang, miDic
                 jsonDict[idx]['frequency'] = frequencyDict[entry['term']][adjusted]
                 jsonDict[idx]['starCount'] = getStarCount(jsonDict[idx]['frequency'])
             else:
-                jsonDict[idx]['frequency'] = 999999 
+                jsonDict[idx]['frequency'] = 999999
                 jsonDict[idx]['starCount'] = getStarCount(jsonDict[idx]['frequency'])
         else:
             if readingHyouki:
@@ -633,12 +699,13 @@ def organizeDictionaryByFrequency(jsonDict, frequencyDict, dictName, lang, miDic
                 else: 
                     jsonDict[idx].append(999999)
                     jsonDict[idx].append('')
+
     if miDict:
         return sorted(jsonDict, key = lambda i: i['frequency'])
-    else:
-        return sorted(jsonDict, key=operator.itemgetter(8))
 
-def getStarCount(freq):
+    return sorted(jsonDict, key=operator.itemgetter(8))
+
+def getStarCount(freq: int) -> str:
     if freq < 1501:
         return '★★★★★'
     elif freq < 5001:
@@ -652,28 +719,35 @@ def getStarCount(freq):
     else:
         return ''
 
-def getFrequencyList(lang):
+
+# TODO: @ColinKennedy check if ``False`` return is actually necessary
+
+def getFrequencyList(lang: str) -> _FrequencyList | None:
     filePath = os.path.join(addon_path, 'user_files', 'db', 'frequency', '%s.json' % lang)
     frequencyDict = {}
-    if os.path.exists(filePath):
-        frequencyList = json.load(open(filePath, 'r', encoding='utf-8-sig'))
-        if isinstance(frequencyList[0], str):
-            yomi = False
-            frequencyDict['readingDictionaryType'] = False 
-        elif isinstance(frequencyList[0], list) and len(frequencyList[0]) == 2 and isinstance(frequencyList[0][0], str) and isinstance(frequencyList[0][1], str):
-            yomi = True
-            frequencyDict['readingDictionaryType'] = True 
-        else:
-            return False
-        for idx, f in enumerate(frequencyList):
-            if yomi:
-                if f[0] in frequencyDict:
-                    frequencyDict[f[0]][f[1]] = idx
-                else:
-                    frequencyDict[f[0]] = {}
-                    frequencyDict[f[0]][f[1]] = idx
-            else:
-                frequencyDict[f] = idx
-        return frequencyDict
+
+    if not os.path.exists(filePath):
+        _LOGGER.warning('Path "%s" does not exist.', filePath)
+
+        return None
+
+    frequencyList = json.load(open(filePath, 'r', encoding='utf-8-sig'))
+    if isinstance(frequencyList[0], str):
+        yomi = False
+        frequencyDict['readingDictionaryType'] = False
+    elif isinstance(frequencyList[0], list) and len(frequencyList[0]) == 2 and isinstance(frequencyList[0][0], str) and isinstance(frequencyList[0][1], str):
+        yomi = True
+        frequencyDict['readingDictionaryType'] = True
     else:
         return False
+    for idx, f in enumerate(frequencyList):
+        if yomi:
+            if f[0] in frequencyDict:
+                frequencyDict[f[0]][f[1]] = idx
+            else:
+                frequencyDict[f[0]] = {}
+                frequencyDict[f[0]][f[1]] = idx
+        else:
+            frequencyDict[f] = idx
+
+    return frequencyDict

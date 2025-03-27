@@ -9,22 +9,29 @@ import datetime
 from .miutils import miInfo, miAsk
 from anki.utils import isMac, isLin, isWin
 
+
 class HistoryModel(QAbstractTableModel):
 
-    def __init__(self, history, parent=None):
-        super(HistoryModel, self).__init__(parent)
+    def __init__(
+        self,
+        history: typing.Sequence[list[str]],
+        parent: QWidget | None=None,
+    ) -> None:
+        super().__init__(parent)
+
         self.history = history
         self.dictInt = parent
         self.justTerms = [item[0] for item in history]
         
-    def rowCount(self, index=QModelIndex()):
+    def rowCount(self, index: QModelIndex=QModelIndex()) -> None:
         return len(self.history)
 
-    def columnCount(self, index=QModelIndex()):
+    def columnCount(self, index: QModelIndex=QModelIndex()) -> int:
         return 2
 
-    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+    def data(self, index: QModelIndex, role: Qt.ItemDataRole=Qt.DisplayRole) -> str | None:
         if not index.isValid():
+            # TODO: @ColinKennedy this check is not necessary
             return None
 
         if not 0 <= index.row() < len(self.history):
@@ -39,16 +46,33 @@ class HistoryModel(QAbstractTableModel):
                 return date
         return None
 
-    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+    def headerData(
+        self,
+        section: int,
+        orientation: Qt.Horizontal | Qt.Vertical,
+        role: Qt.ItemDataRole=Qt.DisplayRole,
+    ) -> str | None:
         if role != Qt.ItemDataRole.DisplayRole:
             return None
         if orientation == Qt.Orientation.Vertical:
             return section + 1;
         return None
 
-    def insertRows(self, position= False, rows=1, index=QModelIndex(), term = False, date = False):
+    def insertRows(
+        self,
+        position: int | None=None,
+        rows: int=1,
+        index: QModelIndex=QModelIndex(),
+        term: str = "",
+        date: str = "",
+    ) -> bool:
         if not position:
             position = self.rowCount()
+
+        if rows < 0:
+            return False
+
+        changed = False
         self.beginInsertRows(QModelIndex(), position, position)
         for row in range(rows):
             if term and date:
@@ -58,11 +82,21 @@ class HistoryModel(QAbstractTableModel):
                     del self.justTerms[index]
                 self.history.insert(0, [term, date])
                 self.justTerms.insert(0, term)
+
+                changed = True
+
         self.endInsertRows()
         self.dictInt.saveHistory()
-        return True
 
-    def removeRows(self, position, rows=1, index=QModelIndex()):
+        return changed
+
+    def removeRows(
+        self,
+        position: int,
+        rows: int=1,
+        index: QModeIndex=QModelIndex(),
+    ) -> bool:
+        # TODO: @ColinKennedy add range-check here
         self.beginRemoveRows(QModelIndex(), position, position + rows - 1)
         del self.history[position:position+rows]
         self.endRemoveRows()
@@ -70,8 +104,9 @@ class HistoryModel(QAbstractTableModel):
         return True
 
 class HistoryBrowser(QWidget):
-    def __init__(self, historyModel, parent):
-        super(HistoryBrowser, self).__init__(parent, Qt.WindowType.Window)
+    def __init__(self, historyModel: HistoryModel, parent: QWidget | None=None) -> None:
+        super().__init__(parent, Qt.Window)
+
         self.setAutoFillBackground(True)
         self.resize(300, 200)
         self.tableView = QTableView()
@@ -88,20 +123,20 @@ class HistoryBrowser(QWidget):
         self.hotkeyEsc = QShortcut(QKeySequence("Esc"), self)
         self.hotkeyEsc.activated.connect(self.hide)
 
-    def setupTable(self):
+    def setupTable(self) -> None:
         tableHeader = self.tableView.horizontalHeader()
         tableHeader.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         tableHeader.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         self.tableView.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.tableView.horizontalHeader().hide()
 
-    def searchAgain(self): 
+    def searchAgain(self) -> None:
         date = str(datetime.date.today())
         term = self.model.index(self.tableView.selectionModel().currentIndex().row(),0).data()
         self.model.insertRows(term = term, date = date)
         self.dictInt.initSearch(term)
 
-    def setColors(self):
+    def setColors(self) -> None:
         if self.dictInt.nightModeToggler.day:
             if isMac:
                 self.tableView.setStyleSheet(self.dictInt.getMacTableStyle())
@@ -112,11 +147,13 @@ class HistoryBrowser(QWidget):
             self.setPalette(self.dictInt.nightPalette)
             self.tableView.setStyleSheet(self.dictInt.getTableStyle())
 
-    def deleteHistory(self):
-        if miAsk('Clearing your history cannot be undone. Would you like to proceed?', self):
-            self.model.removeRows(0, len(self.model.history))
+    def deleteHistory(self) -> None:
+        if not miAsk('Clearing your history cannot be undone. Would you like to proceed?', self):
+            return
+
+        self.model.removeRows(0, len(self.model.history))
             
-    def getLayout(self):
+    def getLayout(self) -> QVBoxLayout:
         vbox = QVBoxLayout()
         vbox.addWidget(self.tableView)
         hbox = QHBoxLayout()

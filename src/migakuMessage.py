@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-# 
+
+import typing
 
 import aqt
 from aqt.qt import *
@@ -14,7 +15,11 @@ import re
 from aqt.utils import openLink
 
 
-def attemptOpenLink(cmd):
+class _Config(typing.TypedDict):
+    displayAgain: bool
+
+
+def attemptOpenLink(cmd: str) -> None:
     if cmd.startswith('openLink:'):
         openLink(cmd[9:])
 
@@ -23,13 +28,15 @@ def attemptOpenLink(cmd):
 addon_path = dirname(__file__)
 
 
-def getConfig():
-        return mw.addonManager.getConfig(__name__)
+def getConfig() -> _Config:
+    return mw.addonManager.getConfig(__name__)
 
-def saveConfiguration(newConf):
+
+def saveConfiguration(newConf: dict[str, typing.Any]) -> None:
     mw.addonManager.writeConfig(__name__, newConf)
 
-def getLatestVideos(config):
+# TODO: @ColinKennedy remove try/except
+def getLatestVideos(config: _Config) -> tuple[str, str]:
     try:
         resp = req.get("https://www.youtube.com/channel/UCQFe3x4WAgm7joN5daMm5Ew/videos")
         pattern = "\{\"videoId\"\:\"(.*?)\""
@@ -52,12 +59,9 @@ def getLatestVideos(config):
         return "".join(videoEmbeds), videoIds[0]
     except:
         return False, False
-    
-    
 
 
-
-def miMessage(text, parent=False):
+def miMessage(text: str, parent: QWidget | None=None) -> bool:
     title = "Migaku"
     if parent is False:
         parent = aqt.mw.app.activeWindow() or aqt.mw
@@ -159,16 +163,16 @@ migakuMessage = '''
 </body>
 '''
 
-def disableMessage(config):
+def disableMessage(config: _Config) -> None:
     config["displayAgain"] = False
     saveConfiguration(config)
     mw.MigakuShouldNotShowMessage = True
 
-def displayMessageMaybeDisableMessage(content, config):
+def displayMessageMaybeDisableMessage(content: str, config: _Config) -> None:
     if miMessage(migakuMessage%content):
         disableMessage(config)
      
-def attemptShowMigakuBrandUpdateMessage():
+def attemptShowMigakuBrandUpdateMessage() -> None:
     config = getConfig()
     shouldShow = config["displayAgain"]
     if shouldShow and not hasattr(mw, "MigakuShouldNotShowMessage"):
@@ -184,6 +188,3 @@ def attemptShowMigakuBrandUpdateMessage():
 
 
 addHook("profileLoaded", attemptShowMigakuBrandUpdateMessage)
-
-
-

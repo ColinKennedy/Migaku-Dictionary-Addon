@@ -19,7 +19,7 @@ from .history import HistoryBrowser, HistoryModel
 from aqt.editor import Editor
 from .cardExporter import CardExporter
 import time
-from . import dictdb
+from . import dictdb as dictdb_
 import aqt
 from aqt import gui_hooks
 from .miJapaneseHandler import miJHandler
@@ -35,9 +35,22 @@ import ntpath
 from .miutils import miInfo
 from PyQt6.QtSvgWidgets import QSvgWidget
 
+
+
+class _DictionaryGroupEntry(typing.TypedDict):
+    dict: str
+    lang: str
+
+
+class _DictionaryGroup(typing.TypedDict):
+    dictionaries: list[_DictionaryGroupEntry]
+    customFont: bool
+    font: bool
+
+
 class MIDict(AnkiWebView):
 
-    def __init__(self, dictInt, db, path, day, terms  = False):
+    def __init__(self, dictInt, db: dictdb_.DictDB, path: str, day, terms  = False):
         AnkiWebView.__init__(self)
         self._page.profile().setHttpUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36')
         self.terms = terms
@@ -613,6 +626,8 @@ class MIDict(AnkiWebView):
             self.currentEditor.loadNote()
 
     def getOverwriteChecks(self, dictCount,dictName):
+        addType: dictdb_.AddType
+
         if dictName == 'Google Images':
             addType = self.config['GoogleImageAddType']
         elif dictName == 'Forvo':
@@ -819,7 +834,7 @@ class ClipThread(QObject):
     def handleBulkTextExport(self, cards):
         self.bulkTextExport.emit(cards)
 
-    def handleExtensionCardExport(self, card): 
+    def handleExtensionCardExport(self, card):
         config = self.getConfig()
         audioFileName = card["audio"]
         imageFileName = card["image"]
@@ -846,8 +861,7 @@ class ClipThread(QObject):
         else:
             self.extensionCardExport.emit(card)
 
-
-    def saveScaledImage(self,imageTempPath, imageFileName):
+    def saveScaledImage(self, imageTempPath: str, imageFileName: str) -> None:
         maxW = self.mw.MigakuDictConfig['maxWidth']
         maxH = self.mw.MigakuDictConfig['maxHeight']
         path = join(self.mw.col.media.dir(), imageFileName)  
@@ -855,10 +869,10 @@ class ClipThread(QObject):
         image = image.scaled(QSize(maxW, maxH), Qt.KeepAspectRatio, Qt.SmoothTransformation)
         image.save(path)
 
-    def removeFile(self, file):
-        os.remove(file)
+    def removeFile(self, path: str) -> None:
+        os.remove(path)
 
-    def checkFileExists(self, source):
+    def checkFileExists(self, source: str) -> bool:
         now = time.time()  
         while True:     
             if exists(source):  
@@ -866,14 +880,20 @@ class ClipThread(QObject):
             if time.time() - now > 15:
                 return False
 
-    def moveExtensionFileToMediaFolder(self, source, filename):   
-        if exists(source):  
-            path = join(self.mw.col.media.dir(), filename)  
-            if not exists(path):    
-                copyfile(source, path) 
-                return True 
+    def moveExtensionFileToMediaFolder(self, source: str, filename: str) -> bool:
+        if not exists(source):
+            return False
 
-    def moveExtensionMp3ToMediaFolder(self, source, filename):
+        path = join(self.mw.col.media.dir(), filename)
+
+        if not exists(path):
+            copyfile(source, path)
+
+            return True
+
+        return False
+
+    def moveExtensionMp3ToMediaFolder(self, source: str, filename: str) -> None:
         suffix = ''     
         if isWin:   
             suffix = '.exe' 
@@ -882,10 +902,10 @@ class ClipThread(QObject):
         import subprocess
         subprocess.call([ffmpeg, '-i', source, path])
 
-    def handlePageRefreshDuringBulkMediaImport(self):
+    def handlePageRefreshDuringBulkMediaImport(self) -> None:
         self.pageRefreshDuringBulkMediaImport.emit()
 
-    def handleImageExport(self):
+    def handleImageExport(self) -> None:
         if self.checkDict():
             mime = self.mw.app.clipboard().mimeData()
             clip = self.mw.app.clipboard().text()
@@ -907,6 +927,7 @@ class ClipThread(QObject):
                         except:
                             return
                     if clip.startswith('file:///') and clip.endswith('.mp3'):
+                        # TODO: @ColinKennedy - remove try/except
                         try:
                             if isMac:
                                 path = clip.replace('file://', '', 1)
@@ -917,8 +938,9 @@ class ClipThread(QObject):
                                 self.image.emit([temp, '[sound:' + mp3 + ']', mp3]) 
                         except:
                             return
-                    
-    def moveAudioToTempFolder(self, path):
+
+    def moveAudioToTempFolder(self, path: str) -> tuple[bool, bool]:
+        # TODO: @ColinKennedy - remove try/except
         try:
             if exists(path): 
                 filename = str(time.time()).replace('.', '') + '.mp3'
@@ -930,14 +952,22 @@ class ClipThread(QObject):
         except: 
             return False, False;
 
-    def handleSentenceExport(self):
+    def handleSentenceExport(self) -> None:
         if self.checkDict():
             self.sentence.emit(self.mw.app.clipboard().text())
 
 class DictInterface(QWidget):
 
-    def __init__(self, dictdb, mw, path, welcome, parent=None, terms = False):
-        super(DictInterface, self).__init__()
+    def __init__(
+        self,
+        dictdb: dictdb_.DictDB,
+        mw: aqt.mw,
+        path: str,
+        welcome: str,
+        parent: QWidget | None=None,
+        terms: list[str] | typing.Literal[False] = False,
+    ):
+        super().__init__(parent)
         self.db = dictdb
         self.verticalBar = False
         self.jHandler = miJHandler(mw)
@@ -955,8 +985,7 @@ class DictInterface(QWidget):
         self.setHotkeys()
         ensureWidgetInScreenBoundaries(self)
 
-    
-    def setHotkeys(self):     
+    def setHotkeys(self) -> None:
         self.hotkeyEsc = QShortcut(QKeySequence("Esc"), self)
         self.hotkeyEsc.activated.connect(self.hide)
         self.hotkeyW = QShortcut(QKeySequence("Ctrl+W"), self)
@@ -966,23 +995,23 @@ class DictInterface(QWidget):
         self.hotkeyS = QShortcut(QKeySequence("Ctrl+Shift+B"), self)
         self.hotkeyS.activated.connect(lambda: self.mw.searchCol(self.dict._page))
 
-    def getFontColor(self, color):
+    def getFontColor(self, color: QColor) -> QPalette:
         pal = QPalette()
         #pal.setColor(QPalette.ColorRole.Base, color)
         return pal
 
-    def getPalette(self, color):
+    def getPalette(self, color: QColor) -> QPalette:
         pal = QPalette()
         #pal.setColor(QPalette.ColorRole.Background, color)
         return pal
 
-    def getStretchLay(self):
+    def getStretchLay(self) -> QHBoxLayout:
         stretch = QHBoxLayout()
         stretch.setContentsMargins(0,0,0,0)
         stretch.addStretch()
         return stretch
 
-    def setAlwaysOnTop(self):
+    def setAlwaysOnTop(self) -> None:
         if self.alwaysOnTop:
             self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
             self.show()
@@ -990,11 +1019,11 @@ class DictInterface(QWidget):
             self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint)
             self.show()
 
-    def reloadConfig(self, config):
+    def reloadConfig(self, config) -> None:
         self.config = config
         self.dict.config = config
 
-    def startUp(self, terms):
+    def startUp(self, terms: list[str]) -> None:
         terms = self.refineToValidSearchTerms(terms)
         willSearch = False
         if terms is not False:
@@ -1038,45 +1067,47 @@ class DictInterface(QWidget):
         self.setWindowIcon(QIcon(join(self.iconpath, 'migaku.png'))) 
         self.readyToSearch = False
         self.restoreSizePos()
-        self.initTooltips()
+
+        if self.config['tooltips']:
+            self.initTooltips()
+
         self.show()
         self.search.setFocus()
         if self.nightModeToggler.day:
             self.loadDay()
         else:
             self.loadNight()
-        html, url = self.getHTMLURL(willSearch, self.nightModeToggler.day, self.dict)
+        html, url = self.getHTMLURL(willSearch, self.nightModeToggler.day)
         self.dict.loadHTMLURL(html, url)
         self.alwaysOnTop = self.config['dictAlwaysOnTop']
         self.maybeSetToAlwaysOnTop()
 
-    def maybeSetToAlwaysOnTop(self):
+    def maybeSetToAlwaysOnTop(self) -> None:
         if self.alwaysOnTop:
             self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
             self.show()
 
-    def initTooltips(self):
-        if self.config['tooltips']:
-            self.dictGroups.setToolTip('Select the dictionary group.')
-            self.sType.setToolTip('Select the search type.')
-            self.openSB.setToolTip('Open/Close the definition sidebar.')
-            self.minusB.setToolTip('Decrease the dictionary\'s font size.')
-            self.plusB.setToolTip('Increase the dictionary\'s font size.')
-            self.tabB.setToolTip('Switch between single and multi-tab modes.')
-            self.histB.setToolTip('Open the history viewer.')
-            self.conjToggler.setToolTip('Turn deinflection mode on/off.')
-            self.nightModeToggler.setToolTip('Enable/Disable night-mode.')
-            self.setB.setToolTip('Open the dictionary settings.')
+    def initTooltips(self) -> None:
+        self.dictGroups.setToolTip('Select the dictionary group.')
+        self.sType.setToolTip('Select the search type.')
+        self.openSB.setToolTip('Open/Close the definition sidebar.')
+        self.minusB.setToolTip('Decrease the dictionary\'s font size.')
+        self.plusB.setToolTip('Increase the dictionary\'s font size.')
+        self.tabB.setToolTip('Switch between single and multi-tab modes.')
+        self.histB.setToolTip('Open the history viewer.')
+        self.conjToggler.setToolTip('Turn deinflection mode on/off.')
+        self.nightModeToggler.setToolTip('Enable/Disable night-mode.')
+        self.setB.setToolTip('Open the dictionary settings.')
 
 
-    def restoreSizePos(self):
+    def restoreSizePos(self) -> None:
         sizePos = self.config['dictSizePos']
         if sizePos:
             self.resize(sizePos[2], sizePos[3])
             self.move(sizePos[0], sizePos[1])
 
-
-    def refineToValidSearchTerms(self, terms):
+    # TODO: @ColinKennedy - Remove False?
+    def refineToValidSearchTerms(self, terms: list[str]) -> list[str] | typing.Literal[False]:
         if terms:
             validTerms = []
             for term in terms:
@@ -1088,9 +1119,10 @@ class DictInterface(QWidget):
                 return validTerms
         return False
 
-    def getHTMLURL(self, willSearch, day, dictObj):
+    def getHTMLURL(self, willSearch: bool, day: bool) -> tuple[str, str]:
         nightStyle =  '<style id="nightModeCss">body, .definitionSideBar, .defTools{color: white !important;background: black !important;} .termPronunciation{background: black !important;border-top:1px solid white !important;border-bottom:1px solid white !important;} .overwriteSelect, .fieldSelect, .overwriteCheckboxes, .fieldCheckboxes{background: black !important;} .fieldCheckboxes label:hover, .overwriteCheckboxes label:hover {background-color:   #282828 !important;} #tabs{background:black !important; color: white !important;} .tablinks:hover{background:gray !important;} .tablinks{color: white !important;} .active{background-image: linear-gradient(#272828, black); border-left: 1px solid white !important;border-right: 1px solid white !important;} .dictionaryTitleBlock{border-top: 2px solid white;border-bottom: 1px solid white;} .imageLoader, .forvoLoader{background-image: linear-gradient(#272828, black); color: white; border: 1px solid gray;}.definitionSideBar{border: 2px solid white;}</style>'
         htmlPath = join(self.addonPath, 'dictionaryInit.html')
+
         with open(htmlPath,'r', encoding="utf-8") as fh:
             html = fh.read()
             fontSizes = self.config['fontSizes']
@@ -1104,33 +1136,34 @@ class DictInterface(QWidget):
             if not willSearch:
                 html = html.replace('<script id="initialValue"></script>','<script id="initialValue">addNewTab(\'' + self.welcome +'\'); document.getElementsByClassName(\'tablinks\')[0].classList.add(\'active\');</script>')
             url = QUrl.fromLocalFile(htmlPath)
-        return html, url;
 
+        return html, url
 
-
-    def getAllGroups(self):
+    def getAllGroups(self) -> _DictionaryGroup:
         allGroups = {}
         allGroups['dictionaries'] = self.db.getAllDictsWithLang()
         allGroups['customFont'] = False
         allGroups['font'] = False
         return allGroups
 
-    def getInsertHTMLJS(self):
+    def getInsertHTMLJS(self) -> str:
         insertHTML = join(self.addonPath, "js", "insertHTML.js")
         with open(insertHTML, "r", encoding="utf-8") as insertHTMLFile:
             return insertHTMLFile.read() 
 
-    def focusWindow():
+    def focusWindow() -> None:
         self.show()
         if self.windowState() == Qt.WindowMinimized:
             self.setWindowState(Qt.WindowNoState)
         self.setFocus()
         self.activateWindow()
 
-    def closeEvent(self, event):
+    # TODO: @ColinKennedy - return bool?
+    def closeEvent(self, event: QCloseEvent) -> None:
         self.hide()
 
-    def hideEvent(self, event):
+    # TODO: @ColinKennedy - return bool?
+    def hideEvent(self, event: QHideEvent) -> None:
         self.saveSizeAndPos()
         shortcut = '(Ctrl+W)'
         if isMac:
@@ -1138,7 +1171,7 @@ class DictInterface(QWidget):
         self.mw.openMiDict.setText("Open Dictionary " + shortcut)
         event.accept()
 
-    def resetConfiguration(self, terms):
+    def resetConfiguration(self, terms: list[str]) -> None:
         terms = self.refineToValidSearchTerms(terms)
         willSearch = False
         if terms is not False:
@@ -1183,10 +1216,10 @@ class DictInterface(QWidget):
                 self.dictGroups.setStyleSheet(self.getComboStyle())
         self.resetDict(willSearch, terms)
         
-    def resetDict(self, willSearch, terms):
+    def resetDict(self, willSearch: bool, terms: list[str]) -> None:
         newDict = MIDict(self, self.db, self.addonPath, self.nightModeToggler.day, terms)
         newDict.setSType(self.sType)
-        html, url = self.getHTMLURL(willSearch, self.nightModeToggler.day, newDict)
+        html, url = self.getHTMLURL(willSearch, self.nightModeToggler.day)
         newDict.loadHTMLURL(html, url)
         newDict.setSType(self.sType)
         if self.dict.addWindow and self.dict.addWindow.scrollArea.isVisible():
@@ -1205,7 +1238,7 @@ class DictInterface(QWidget):
         else:
             self.dict.deinflect = False
 
-    def saveSizeAndPos(self):
+    def saveSizeAndPos(self) -> None:
         pos = self.pos()
         x = pos.x()
         y = pos.y()
@@ -1215,21 +1248,23 @@ class DictInterface(QWidget):
         posSize = [x,y,width, height]
         self.writeConfig('dictSizePos', posSize)
 
-    def getUserGroups(self):
+    def getUserGroups(self) -> dict[str, _DictionaryGroup]:
         groups = self.config['DictionaryGroups']
         userGroups = {}
+
         for name, group in groups.items():
-            dicts = group['dictionaries']
-            userGroups[name] = {}
-            userGroups[name]['dictionaries'] = self.db.getUserGroups(dicts)
-            userGroups[name]['customFont'] = group['customFont']
-            userGroups[name]['font']  = group['font']
+            userGroups[name] = {
+                'dictionaries': self.db.getUserGroups(group['dictionaries']),
+                'customFont': group['customFont'],
+                'font': group['font'],
+            }
+
         return userGroups
 
-    def getConfig(self):
+    def getConfig(self) -> typer.Configuration:
         return self.mw.addonManager.getConfig(__name__)
 
-    def setupView(self):
+    def setupView(self) -> QVBoxLayout:
         layoutV = QVBoxLayout()
         layoutH = QHBoxLayout()
         self.toolbarTopLayout = layoutH
@@ -1280,7 +1315,7 @@ class DictInterface(QWidget):
         layoutV.setSpacing(1)
         return layoutV
 
-    def toggleMenuBar(self, vertical):
+    def toggleMenuBar(self, vertical: bool) -> None:
         if vertical:
             self.mainHLay.removeItem(self.layoutH2)
             self.mainLayout.insertLayout(1, self.layoutH2)
@@ -1289,7 +1324,8 @@ class DictInterface(QWidget):
             self.mainHLay.insertLayout(1, self.layoutH2)
 
 
-    def resizeEvent(self, event):
+    # TODO: @ColinKennedy - return bool?
+    def resizeEvent(self, event: QSizeEvent) -> None:
         w = self.width()
         if w < 702 and not self.verticalBar:
             self.verticalBar = True
@@ -1300,20 +1336,20 @@ class DictInterface(QWidget):
         event.accept()
 
 
-    def setupSearchButton(self):
+    def setupSearchButton(self) -> SVGPushButton:
         searchB =  SVGPushButton(40,40)
         self.setSvg(searchB, 'search')
         searchB.clicked.connect(self.initSearch)
         return searchB
 
 
-    def setupOpenSB(self):
+    def setupOpenSB(self) -> SVGPushButton:
         openSB = SVGPushButton(40,40)
         self.setSvg(openSB, 'sidebaropen')
         openSB.clicked.connect(self.toggleSB)
         return openSB
 
-    def toggleSB(self):
+    def toggleSB(self) -> None:
         if not self.openSB.opened:
             self.openSB.opened = True
             self.setSvg(self.openSB, 'sidebarclose')
@@ -1322,7 +1358,7 @@ class DictInterface(QWidget):
             self.setSvg(self.openSB, 'sidebaropen')
         self.dict.eval('openSidebar()')
     
-    def setupTabMode(self):
+    def setupTabMode(self) -> SVGPushButton:
         TabMode = SVGPushButton(34,34)
         if self.config['onetab']:
             TabMode.singleTab = True
@@ -1334,7 +1370,7 @@ class DictInterface(QWidget):
         TabMode.clicked.connect(self.toggleTabMode)
         return TabMode
 
-    def toggleTabMode(self):
+    def toggleTabMode(self) -> None:
         if self.tabB.singleTab:
             self.tabB.singleTab = False
             self.setSvg(self.tabB, 'tabs')
@@ -1344,7 +1380,7 @@ class DictInterface(QWidget):
             self.setSvg(self.tabB, 'onetab')
             self.writeConfig('onetab', True)
        
-    def setupConjugationMode(self):
+    def setupConjugationMode(self) -> SVGPushButton:
         conjugationMode = SVGPushButton(40,40)
         if self.config['deinflect']:
             self.dict.deinflect = True
@@ -1356,17 +1392,17 @@ class DictInterface(QWidget):
         conjugationMode.clicked.connect(self.toggleConjugationMode)
         return conjugationMode
 
-    def setupOpenHistory(self):
+    def setupOpenHistory(self) -> SVGPushButton:
         history = SVGPushButton(40,40)
         self.setSvg(history, 'history')
         history.clicked.connect(self.openHistory)
         return history
 
-    def openHistory(self):
+    def openHistory(self) -> None:
         if not self.historyBrowser.isVisible():
             self.historyBrowser.show()
     
-    def toggleConjugationMode(self):
+    def toggleConjugationMode(self) -> None:
         if not self.dict.deinflect:
             self.setSvg(self.conjToggler, 'conjugation')
             self.dict.deinflect = True
@@ -1377,7 +1413,7 @@ class DictInterface(QWidget):
             self.dict.deinflect = False
             self.writeConfig('deinflect', False)
 
-    def loadDay(self):
+    def loadDay(self) -> None:
         self.setPalette(self.ogPalette)
         if not isWin:
             self.setStyleSheet(self.getMacOtherStyles())
@@ -1396,7 +1432,7 @@ class DictInterface(QWidget):
             self.dict.addWindow.setColors()
 
 
-    def loadNight(self):
+    def loadNight(self) -> None:
         if not isWin:
             self.setStyleSheet(self.getMacNightStyles())
             self.dictGroups.setStyleSheet(self.getMacNightComboStyle())
@@ -1412,7 +1448,7 @@ class DictInterface(QWidget):
         if self.historyBrowser:
             self.historyBrowser.setColors()
 
-    def toggleNightMode(self):
+    def toggleNightMode(self) -> None:
         if not self.nightModeToggler.day:
             self.nightModeToggler.day = True
             self.writeConfig('day', True)
@@ -1426,12 +1462,12 @@ class DictInterface(QWidget):
             self.writeConfig('day', False)
             self.loadNight()
      
-    def setSvg(self, widget, name):
+    def setSvg(self, widget: SVGPushButton, name: str) -> bool:
         if self.nightModeToggler.day:
             return widget.setSvg(join(self.iconpath, 'dictsvgs', name + '.svg'))
         return widget.setSvg(join(self.iconpath, 'dictsvgs', name + 'night.svg'))
 
-    def setAllIcons(self):
+    def setAllIcons(self) -> None:
         self.setSvg( self.setB, 'settings')
         self.setSvg( self.plusB, 'plus')
         self.setSvg( self.minusB, 'minus')
@@ -1441,34 +1477,34 @@ class DictInterface(QWidget):
         self.setSvg( self.openSB, self.getSBStatus())
         self.setSvg( self.conjToggler, self.getConjStatus())
 
-    def getConjStatus(self):
+    def getConjStatus(self) -> typing.Literal["closedcube"] | typing.Literal["conjugation"]:
         if self.dict.deinflect:
             return 'conjugation'
         return 'closedcube'
 
-    def getSBStatus(self):
+    def getSBStatus(self) -> typing.Literal["sidebarclose"] | typing.Literal["sidebaropen"]:
         if self.openSB.opened:
            return 'sidebarclose'
         return 'sidebaropen'
 
-    def getTabStatus(self):
+    def getTabStatus(self) -> typing.Literal["onetab"] | typing.Literal["tabs"]:
         if self.tabB.singleTab:
             return 'onetab'
         return 'tabs'
    
-    def setupNightModeToggle(self):
+    def setupNightModeToggle(self) -> SVGPushButton:
         nightToggle = SVGPushButton(40,40)
         nightToggle.day = self.config['day']
         nightToggle.clicked.connect(self.toggleNightMode)
         return nightToggle
 
-    def setupOpenSettings(self):
+    def setupOpenSettings(self) -> SVGPushButton:
         settings = SVGPushButton(40,40)
         self.setSvg(settings, 'settings')
         settings.clicked.connect(self.openDictionarySettings)
         return settings
 
-    def openDictionarySettings(self):
+    def openDictionarySettings(self) -> None:
         if not self.mw.dictSettings:
             self.mw.dictSettings = SettingsGui(self.mw, self.addonPath, self.openDictionarySettings)
         self.mw.dictSettings.show()
@@ -1478,29 +1514,29 @@ class DictInterface(QWidget):
         self.mw.dictSettings.setFocus()
         self.mw.dictSettings.activateWindow()
    
-    def setupPlus(self):
+    def setupPlus(self) -> SVGPushButton:
         plusB = SVGPushButton(40,40)
         self.setSvg(plusB, 'plus')
         plusB.clicked.connect(self.incFont)
         return plusB
 
-    def setupMinus(self):
+    def setupMinus(self) -> SVGPushButton:
         minusB = SVGPushButton(40,40)
         self.setSvg(minusB, 'minus')
         minusB.clicked.connect(self.decFont)
         return minusB
 
-    def decFont(self):
+    def decFont(self) -> None:
         self.dict.eval("scaleFont(false)")
 
-    def incFont(self):
+    def incFont(self) -> None:
         self.dict.eval("scaleFont(true)")
 
     def alignCenter(self, dictGroups):
         for i in range(0, dictGroups.count()):
             dictGroups.model().item(i).setTextAlignment(Qt.AlignmentFlag.AlignCenter)
 
-    def setupDictGroups(self, dictGroups = False):
+    def setupDictGroups(self, dictGroups: QComboBox | None=None) -> None:
         if not dictGroups:
             dictGroups =  QComboBox()
             dictGroups.setFixedHeight(30)
@@ -1524,7 +1560,7 @@ class DictInterface(QWidget):
         dictGroups.currentIndexChanged.connect(lambda: self.writeConfig('currentGroup', dictGroups.currentText()))
         return dictGroups
 
-    def setupSearchType(self):
+    def setupSearchType(self) -> QComboBox:
         searchTypes =  QComboBox()
         searchTypes.addItems(self.searchOptions)
         current = self.config['searchMode']
@@ -1536,13 +1572,13 @@ class DictInterface(QWidget):
         searchTypes.currentIndexChanged.connect(lambda: self.writeConfig('searchMode', searchTypes.currentText()))
         return searchTypes
 
-    def writeConfig(self, attribute, value):
+    def writeConfig(self, attribute: str, value: typing.Any) -> None:
         newConfig = self.getConfig()
         newConfig[attribute] = value
         self.mw.addonManager.writeConfig(__name__, newConfig)
         self.reloadConfig(newConfig)
-    
-    def getSelectedDictGroup(self):
+
+    def getSelectedDictGroup(self) -> _DictionaryGroup | None:
         cur = self.dictGroups.currentText()
         if cur in self.userGroups:
             return self.userGroups[cur]
@@ -1555,7 +1591,7 @@ class DictInterface(QWidget):
         if cur in self.defaultGroups:
             return self.defaultGroups[cur]
         
-    def ensureVisible(self):
+    def ensureVisible(self) -> None:
         if not self.isVisible():
             self.show()
         if self.windowState() == Qt.WindowState.WindowMinimized:
@@ -1563,13 +1599,13 @@ class DictInterface(QWidget):
         self.setFocus()
         self.activateWindow()
 
-    def cleanTermBrackets(self, term):
+    def cleanTermBrackets(self, term: str) -> str:
         return re.sub(r'(?:\[.*\])|(?:\(.*\))|(?:《.*》)|(?:（.*）)|\(|\)|\[|\]|《|》|（|）', '', term)[:30]
 
-    def initSearch(self, term = False): 
+    def initSearch(self, term: str | None) -> None:
         self.ensureVisible()
         selectedGroup = self.getSelectedDictGroup()
-        if term == False:
+        if not term:
             term = self.search.text()
             term = term.strip()
         term = term.strip()
@@ -1583,18 +1619,18 @@ class DictInterface(QWidget):
         
 
 
-    def addToHistory(self, term):
+    def addToHistory(self, term: str) -> None:
         date = str(datetime.date.today())
         self.historyModel.insertRows(term=term, date = date)
         self.saveHistory()
 
-    def saveHistory(self):
+    def saveHistory(self) -> None:
         path = join(self.mw.col.media.dir(), '_searchHistory.json')
-        with codecs.open(path, "w","utf-8") as outfile:
-            json.dump(self.historyModel.history, outfile, ensure_ascii=False) 
-        return
 
-    def getHistory(self):
+        with codecs.open(path, "w","utf-8") as outfile:
+            json.dump(self.historyModel.history, outfile, ensure_ascii=False)
+
+    def getHistory(self) -> list[list[str]]:
         path = join(self.mw.col.media.dir(), '_searchHistory.json')
         try:
             if exists(path):
@@ -1604,13 +1640,13 @@ class DictInterface(QWidget):
             return []
         return []
 
-    def updateFieldsSetting(self, dictName, fields):
+    def updateFieldsSetting(self, dictName: str, fields: list[str]) -> None:
         self.db.setFieldsSetting(dictName, json.dumps(fields, ensure_ascii=False));
 
-    def updateAddType(self, dictName, addType):
-        self.db.setAddType(dictName, addType);
+    def updateAddType(self, dictName: str, addType: str) -> None:
+        self.db.setAddType(dictName, addType)
 
-    def setupSearch(self):
+    def setupSearch(self) -> QLineEdit:
         searchBox = QLineEdit()
         searchBox.setFixedHeight(30)
         searchBox.setFixedWidth(100)
@@ -1618,14 +1654,14 @@ class DictInterface(QWidget):
         searchBox.setContentsMargins(0,0,0,0)
         return searchBox;
 
-    def getMacOtherStyles(self):
+    def getMacOtherStyles(self) -> str:
         return '''
             QLabel {color: black;}
             QLineEdit {color: black; background: white;} 
             QPushButton {border: 1px solid black; border-radius: 5px; color: black; background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 white, stop: 1 silver);} 
             QPushButton:hover{background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 white, stop: 1 silver); border-right: 2px solid black; border-bottom: 2px solid black;}"
             '''
-    def getMacNightStyles(self):
+    def getMacNightStyles(self) -> str:
         return '''
             QLabel {color: white;}
             QLineEdit {color: white;} 
@@ -1633,7 +1669,7 @@ class DictInterface(QWidget):
             QPushButton:hover{background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #272828, stop: 1 black); border: 1px solid white;}"
             '''
 
-    def getOtherStyles(self):
+    def getOtherStyles(self) -> str:
         return '''
             QLabel {color: white;}
             QLineEdit {color: white; background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #272828, stop: 1 black);} 
@@ -1641,7 +1677,7 @@ class DictInterface(QWidget):
             QPushButton:hover{background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #272828, stop: 1 black); border: 1px solid white;}"
             '''
 
-    def getMacComboStyle(self):
+    def getMacComboStyle(self) -> str:
         return  '''
 QComboBox {color: black; border-radius: 3px; border: 1px solid black;}
 QComboBox:hover {border: 1px solid black;}
@@ -1723,7 +1759,7 @@ QScrollBar:vertical {
         subcontrol-origin: margin;
     }'''
 
-    def getMacTableStyle(self):
+    def getMacTableStyle(self) -> str:
         return '''
         QAbstractItemView{color:black;}
 
@@ -1740,7 +1776,7 @@ QScrollBar:vertical {
 
         '''
 
-    def getComboStyle(self):
+    def getComboStyle(self) -> str:
         return  '''
 QComboBox {color: white; border-radius: 3px; border: 1px solid gray;}
 QComboBox:hover {border: 1px solid white;}
@@ -1814,7 +1850,7 @@ QScrollBar:vertical {
         subcontrol-origin: margin;
     }'''
 
-    def getTableStyle(self):
+    def getTableStyle(self) -> str:
         return '''
         QAbstractItemView{color:white;}
 
@@ -1839,7 +1875,7 @@ QScrollBar:vertical {
 
         '''
 
-    def getMacNightComboStyle(self):
+    def getMacNightComboStyle(self) -> str:
         return  '''
 QComboBox {color: white; border-radius: 3px; border: 1px solid gray;}
 QComboBox:hover {border: 1px solid white;}
@@ -1920,30 +1956,43 @@ QScrollBar:vertical {
 
 class MigakuSVG(QSvgWidget):
     clicked=pyqtSignal()
-    def __init__(self, parent=None):
-        QSvgWidget.__init__(self, parent)
 
-    def mousePressEvent(self, ev):
+    def __init__(self, parent: QWidget | None=None):
+        super().__init__(parent)
+
+    # TODO: @ColinKennedy - Do I need return bool?
+    def mousePressEvent(self, ev: QMouseEvent) -> None:
         self.clicked.emit()
 
 class SVGPushButton(QPushButton):
-    def __init__(self, width, height):
-        QPushButton.__init__(self)
-        # self.setSizePolicy( QSizePolicy.Preferred, QSizePolicy.Preferred )
+    def __init__(self, width: int, height: int, parent: QWidget | None=None) -> None:
+        super().__init__(parent)
+
         self.setFixedHeight(40)
         self.setFixedWidth(43)
         self.svgWidth = width
         self.svgHeight = height
-        self.layout = QHBoxLayout()
-        self.layout.setContentsMargins(0,0,0,0)
+        self._main_layout = QHBoxLayout()
+        self._main_layout.setContentsMargins(0,0,0,0)
         self.setContentsMargins(0,0,0,0)
-        self.setLayout(self.layout)
+        self.setLayout(self._main_layout)
 
-    def setSvg(self, svgPath):
-        for i in reversed(range(self.layout.count())): 
-            self.layout.itemAt(i).widget().setParent(None)
+    def setSvg(self, svgPath: str) -> None:
+        for i in reversed(range(self._main_layout.count())):
+            item = self._main_layout.itemAt(i)
+
+            if not item:
+                raise RuntimeError(f'Expected layout item at "{i}" but got nothing.')
+
+            widget = item.widget()
+
+            if not widget:
+                raise RuntimeError(
+                    f'Expected layout item at "{i}" to have a widget but got nothing.'
+                )
+
+            widget.setParent(None)
+
         svg = QSvgWidget(svgPath)
         svg.setFixedSize(self.svgWidth, self.svgHeight)
-        self.layout.addWidget(svg)
-
-
+        self._main_layout.addWidget(svg)

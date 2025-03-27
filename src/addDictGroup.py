@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-# 
-# 
+
+import typing
 import json
 import sys
 import math
@@ -20,9 +20,26 @@ from shutil import copyfile
 from operator import itemgetter
 import ntpath
 
+_DictionaryEntry = tuple[int, int, str]
+
+class _Group(typing.TypedDict):
+    customFont: bool
+    dictionaries: typing.List[_DictionaryEntry]
+    font: str
+
+
 class DictGroupEditor(QDialog):
-    def __init__(self, mw, parent = None, dictionaries = [], group = False, groupName = False):
-        super(DictGroupEditor, self).__init__(parent, Qt.WindowType.Window)
+    def __init__(
+        self,
+        mw: aqt.mv,
+        parent: QWidget | None = None,
+        dictionaries: typing.Iterable[str] = None,
+        group: _Group | None = None,
+        groupName: str = False,
+    ):
+        super().__init__(parent, Qt.Window)
+
+        dictionaries = dictionaries or None
         self.mw = mw
         self.settings = parent
         self.setWindowTitle("Add Dictionary Group")
@@ -37,7 +54,7 @@ class DictGroupEditor(QDialog):
         self.removeAll = QPushButton('Remove All')
         self.cancelButton = QPushButton('Cancel')
         self.saveButton = QPushButton('Save')
-        self.layout = QVBoxLayout()
+        self._main_layout = QVBoxLayout()
         self.setupLayout()
         self.fontToMove = False
         self.dictList = dictionaries
@@ -51,7 +68,7 @@ class DictGroupEditor(QDialog):
         self.initHandlers()
         self.initTooltips()
 
-    def initTooltips(self):
+    def initTooltips(self) -> None:
         self.groupName.setToolTip('The name of the dictionary group.')
         self.fontFromDropdown.setToolTip('Select a font installed on your system.')
         self.fontDropDown.setToolTip('Select a font installed on your system.')
@@ -60,10 +77,10 @@ class DictGroupEditor(QDialog):
         self.selectAll.setToolTip('Select all dictionaries.')
         self.removeAll.setToolTip('Clear the current selection.')
 
-    def resetNew(self):
+    def resetNew(self) -> None:
         self.new = True
 
-    def clearGroupEditor(self, new = False):
+    def clearGroupEditor(self, new: bool = False) -> None:
         self.groupName.clear()
         self.groupName.setEnabled(True)
         self.setWindowTitle("Add Dictionary Group")
@@ -76,11 +93,11 @@ class DictGroupEditor(QDialog):
         if new:
             self.resetNew()
 
-    def reloadDictTable(self):
+    def reloadDictTable(self) -> None:
         self.dictionaries.setRowCount(0)
         self.loadDictionaries(self.dictList)
 
-    def loadGroupEditor(self, group, groupName):
+    def loadGroupEditor(self, group: _Group | None, groupName: str) -> None:
         self.clearGroupEditor()
         self.new = False
         self.setWindowTitle("Edit Dictionary Group")
@@ -93,7 +110,7 @@ class DictGroupEditor(QDialog):
         else:
             self.fontDropDown.setCurrentText(group['font'])
         self.loadSelectedDictionaries(group['dictionaries'])
-        
+
     def loadSelectedDictionaries(self, dicts):
         count = 1
         for d in dicts:
@@ -103,10 +120,10 @@ class DictGroupEditor(QDialog):
                     self.dictionaries.cellWidget(i, 2).setChecked(True)
                     count+= 1
 
-    def getConfig(self):
+    def getConfig(self) -> typer.Configuration:
         return self.mw.addonManager.getConfig(__name__)
 
-    def initHandlers(self):
+    def initHandlers(self) -> None:
         self.browseFontFile.clicked.connect(self.grabFontFromFile)
         self.saveButton.clicked.connect(self.saveDictGroup)
         self.cancelButton.clicked.connect(self.hide)
@@ -115,15 +132,15 @@ class DictGroupEditor(QDialog):
         self.selectAll.clicked.connect(self.selectAllDicts)
         self.removeAll.clicked.connect(self.removeAllDicts)
 
-    def selectAllDicts(self):
+    def selectAllDicts(self) -> None:
         for i in range(self.dictionaries.rowCount()):
             cb = self.dictionaries.cellWidget(i, 2)
             if not cb.isChecked():
                 cb.setChecked(True)
                 self.setDictionaryOrder(i)
 
-        
-    def removeAllDicts(self):
+
+    def removeAllDicts(self) -> None:
         for i in range(self.dictionaries.rowCount()):
             cb = self.dictionaries.cellWidget(i, 2)
             if cb.isChecked():
@@ -131,7 +148,7 @@ class DictGroupEditor(QDialog):
                 self.setDictionaryOrder(i)
 
 
-    def toggleFontType(self, fromFile):
+    def toggleFontType(self, fromFile: bool) -> None:
         if fromFile:
             self.fontDropDown.setEnabled(False)
             self.browseFontFile.setEnabled(True)
@@ -141,7 +158,7 @@ class DictGroupEditor(QDialog):
             self.browseFontFile.setEnabled(False)
             self.fontFileName.setEnabled(False)
 
-    def grabFontFromFile(self):
+    def grabFontFromFile(self) -> None:
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         fileName, _ = QFileDialog.getOpenFileName(self,"Select a Custom Font", "",'Font Files (*.ttf *.woff *.woff2 *.eot)', options=options)
@@ -152,7 +169,7 @@ class DictGroupEditor(QDialog):
             self.fontFileName.setText(ntpath.basename(fileName))
             self.fontToMove = fileName
 
-    def saveDictGroup(self):
+    def saveDictGroup(self) -> None:
         newConfig = self.getConfig()
         gn = self.groupName.text()
         if gn  == '':
@@ -191,7 +208,7 @@ class DictGroupEditor(QDialog):
         self.settings.loadGroupTable()
         self.hide()
 
-    def getSelectedDictionaries(self, onlyNames = False):
+    def getSelectedDictionaries(self, onlyNames: bool = False) -> list[_DictionaryEntry]:
         dicts = []
         for i in range(self.dictionaries.rowCount()):
             order = self.dictionaries.item(i, 1).text()
@@ -201,8 +218,8 @@ class DictGroupEditor(QDialog):
         if onlyNames:
             return [item[2] for item in dicts]
         return dicts
-    
-    def setDictionaryOrder(self, row):
+
+    def setDictionaryOrder(self, row: int) -> None:
         self.dictionaries.selectRow(row)
         if not self.dictionaries.cellWidget(row, 2).isChecked():
             self.dictionaries.item(row, 1).setText('')
@@ -210,38 +227,38 @@ class DictGroupEditor(QDialog):
             return
         self.reorderDictionaries(row)
 
-    def reorderDictionaries(self, last = False):
+    def reorderDictionaries(self, last: bool = False) -> None:
         dicts = self.getSelectedDictionaries()
         for idx, d in enumerate(dicts):
             self.dictionaries.item(d[0], 1).setText(str(idx + 1))
         if last is not False:
             self.dictionaries.item(last, 1).setText(str(len(dicts) + 1))
 
-    def moveFontToFolder(self, filename):
+    def moveFontToFolder(self, filename: str) -> bool:
         try:
             basename = ntpath.basename(filename)
-            if exists(filename): 
+            if exists(filename):
                 path = join(self.settings.addonPath, 'user_files', 'fonts', basename)
-                if exists(path): 
+                if exists(path):
                     if not miAsk('A font with the same name currently exists in your custom fonts folder. Would you like to overwrite it?', self):
                         return
                 copyfile(filename, path)
                 return True
             else:
                 return False
-        except: 
+        except:
             return False
-    
-    def setOrder(self, x):
+
+    def setOrder(self, x: int) -> typing.Callable[[], None]:
         return lambda: self.setDictionaryOrder(x)
 
-    def getFontCB(self):
+    def getFontCB(self) -> QComboBox:
         fonts = QComboBox()
         fams = QFontDatabase.families()
         fonts.addItems(fams)
         return fonts
 
-    def loadDictionaries(self, dictionaries):
+    def loadDictionaries(self, dictionaries: typing.Iterable[str]) -> None:
         for dictName in dictionaries:
             rc = self.dictionaries.rowCount()
             self.dictionaries.setRowCount(rc + 1)
@@ -255,9 +272,7 @@ class DictGroupEditor(QDialog):
         self.addDefaultDict('Google Images')
         self.addDefaultDict('Forvo')
 
-
-
-    def addDefaultDict(self, name):
+    def addDefaultDict(self, name: str) -> None:
         rc = self.dictionaries.rowCount()
         self.dictionaries.setRowCount(rc + 1)
         self.dictionaries.setItem(rc, 0, QTableWidgetItem(name))
@@ -268,16 +283,21 @@ class DictGroupEditor(QDialog):
         checkBox.clicked.connect(self.setOrder(rc))
         self.dictionaries.setCellWidget(rc, 2, checkBox)
 
-    def setupDictionaries(self):
+    def setupDictionaries(self) -> QTableWidget:
         macLin = False
         if isMac  or isLin:
             macLin = True
         dictionaries = QTableWidget()
         dictionaries.setColumnCount(3)
         tableHeader = dictionaries.horizontalHeader()
+
+        if not tableHeader:
+            raise RuntimeError(f'Expected "{dictionaries}" to have a header.')
+
         tableHeader.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         tableHeader.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
         tableHeader.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
+
         dictionaries.setRowCount(0)
         dictionaries.setSortingEnabled(False)
         dictionaries.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -290,12 +310,12 @@ class DictGroupEditor(QDialog):
         tableHeader.hide()
         return dictionaries
 
-    def setupLayout(self):
+    def setupLayout(self) -> None:
         nameLayout = QHBoxLayout()
         nameLayout.addWidget(QLabel('Name: '))
         nameLayout.addWidget(self.groupName)
 
-        self.layout.addLayout(nameLayout)
+        self._main_layout.addLayout(nameLayout)
 
         fontLayoutH1 = QHBoxLayout()
         fontL1 = QLabel('Font: ')
@@ -305,7 +325,7 @@ class DictGroupEditor(QDialog):
         fontLayoutH1.addWidget(self.fontFromDropdown)
         fontLayoutH1.addWidget(self.fontDropDown)
         fontLayoutH1.addStretch()
-        self.layout.addLayout(fontLayoutH1)
+        self._main_layout.addLayout(fontLayoutH1)
 
         fontLayoutH2 = QHBoxLayout()
         fontL2 = QLabel('Font From File:')
@@ -317,26 +337,21 @@ class DictGroupEditor(QDialog):
         fontLayoutH2.addWidget(self.fontFileName)
         fontLayoutH2.addWidget(self.browseFontFile)
         fontLayoutH2.addStretch()
-        self.layout.addLayout(fontLayoutH2)
+        self._main_layout.addLayout(fontLayoutH2)
 
-        self.layout.addWidget(QLabel('Dictionaries'))
-        self.layout.addWidget(self.dictionaries)
+        self._main_layout.addWidget(QLabel('Dictionaries'))
+        self._main_layout.addWidget(self.dictionaries)
 
         selRemButtons = QHBoxLayout()
         selRemButtons.addWidget(self.selectAll)
         selRemButtons.addWidget(self.removeAll)
         selRemButtons.addStretch()
-        self.layout.addLayout(selRemButtons)
+        self._main_layout.addLayout(selRemButtons)
 
         cancelSaveButtons = QHBoxLayout()
         cancelSaveButtons.addStretch()
         cancelSaveButtons.addWidget(self.cancelButton)
         cancelSaveButtons.addWidget(self.saveButton)
 
-        self.layout.addLayout(cancelSaveButtons)
-        self.setLayout(self.layout)
-
-
-
-
-
+        self._main_layout.addLayout(cancelSaveButtons)
+        self.setLayout(self._main_layout)

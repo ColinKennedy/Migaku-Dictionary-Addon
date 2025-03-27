@@ -9,7 +9,7 @@ from aqt.webview import AnkiWebView
 
 addon_path = dirname(__file__)
 
-def miInfo(text, parent=False, level = 'msg', day = True):
+def miInfo(text: str, parent: bool=False, level: str = 'msg', day: bool = True) -> bool:
     if level == 'wrn':
         title = "Migaku Dictionary Warning"
     elif level == 'not':

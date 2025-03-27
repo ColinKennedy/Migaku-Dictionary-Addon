@@ -1,3 +1,5 @@
+import logging
+
 from aqt.qt import *
 from anki.httpclient import HttpClient
 import json
@@ -5,6 +7,7 @@ import io
 import os
 import aqt
 
+from . import migaku_wizard
 from .migaku_wizard import *
 from . import webConfig
 from PyQt6.QtCore import Qt
@@ -12,20 +15,24 @@ from PyQt6.QtGui import QTextCursor
 
 addon_path = os.path.dirname(__file__)
 
+_LOGGER = logging.getLogger(__name__)
+
 
 class NoAutoSelectLineEdit(QLineEdit):
 
-    def focusInEvent(self, e):
-        super(NoAutoSelectLineEdit, self).focusInEvent(e)
+    # TODO: @ColinKennedy - Do I need return bool?
+    def focusInEvent(self, e: QFocusEvent | None) -> None:
+        super().focusInEvent(e)
+
         self.deselect()
 
 
-class DictionaryWebInstallWizard(MiWizard):
+class DictionaryWebInstallWizard(migaku_wizard.MiWizard):
 
     INITIAL_SIZE = (600, 400)
 
-    def __init__(self, force_lang=None):
-        super(DictionaryWebInstallWizard, self).__init__()
+    def __init__(self, force_lang: str | None=None, parent: QWidget | None=None) -> None:
+        super().__init__(parent)
 
         self.dictionary_force_lang = force_lang
 
@@ -35,13 +42,13 @@ class DictionaryWebInstallWizard(MiWizard):
         server_add_page = self.add_page(ServerAskPage(self))
         dict_select_page = self.add_page(DictionarySelectPage(self), server_add_page)
         dict_confirm_page = self.add_page(DictionaryConfirmPage(self), dict_select_page)
-        dict_install_page = self.add_page(DictionaryInstallPage(self), dict_confirm_page)
+        self.add_page(DictionaryInstallPage(self), dict_confirm_page)
 
         self.resize(*self.INITIAL_SIZE)
 
 
     @classmethod
-    def execute_modal(cls, force_lang=None):
+    def execute_modal(cls, force_lang: str | None=None) -> int:
         wizard = cls(force_lang)
         return wizard.exec()
 
@@ -49,7 +56,7 @@ class DictionaryWebInstallWizard(MiWizard):
 
 class ServerAskPage(MiWizardPage):
 
-    def __init__(self, wizard):
+    def __init__(self, wizard: DictionaryWebInstallWizard) -> None:
         super(ServerAskPage, self).__init__(wizard)
         self.wizard = wizard
 
@@ -83,11 +90,11 @@ class ServerAskPage(MiWizardPage):
         self.server_reset_btn.clicked.connect(self.reset_server_line)
 
 
-    def reset_server_line(self):
+    def reset_server_line(self) -> None:
         self.server_line.setText(webConfig.DEFAULT_SERVER)
 
 
-    def on_next(self):
+    def on_next(self) -> bool:
         
         server_url_usr = self.server_line.text().strip()
         server_url = webConfig.normalize_url(server_url_usr)
@@ -109,7 +116,7 @@ class ServerAskPage(MiWizardPage):
 
 class DictionarySelectPage(MiWizardPage):
 
-    def __init__(self, wizard):
+    def __init__(self, wizard: DictionaryWebInstallWizard) -> None:
         super(DictionarySelectPage, self).__init__(wizard)
         self.wizard = wizard
 
@@ -177,12 +184,11 @@ class DictionarySelectPage(MiWizardPage):
 
 
     # TODO: Add whitelist functionality so only limited amount is displayed based on user target language, native language, etc
-    def setup_entries(self):
+    def setup_entries(self) -> NOne:
 
         self.dict_tree.clear()
 
         dictionary_index = getattr(self.wizard, 'dictionary_index', {})
-
         languages = dictionary_index.get('languages', [])
 
         for language in languages:
@@ -245,10 +251,13 @@ class DictionarySelectPage(MiWizardPage):
             load_dict_list(dictionaries, lang_item)
 
 
-
 class DictionaryConfirmPage(MiWizardPage):
 
-    def __init__(self, wizard, can_select_none=False):
+    def __init__(
+        self,
+        wizard: DictionaryWebInstallWizard,
+        can_select_none: bool=False,
+    ) -> None:
         super(DictionaryConfirmPage, self).__init__(wizard)
         self.wizard = wizard
         self.can_select_none = can_select_none
@@ -266,7 +275,7 @@ class DictionaryConfirmPage(MiWizardPage):
         lyt.addWidget(self.box)
 
 
-    def on_show(self, is_next, is_prev):
+    def on_show(self, is_next: bool, is_prev: bool) -> None:
         install_index = getattr(self.wizard, 'dictionary_install_index', [])
         install_freq = getattr(self.wizard, 'dictionary_install_frequency', False)
         install_conj = getattr(self.wizard, 'dictionary_install_conjugation', False)
@@ -323,7 +332,6 @@ class DictionaryConfirmPage(MiWizardPage):
         self.refresh_wizard_states()
 
 
-
 class DictionaryInstallPage(MiWizardPage):
 
     class InstallThread(QThread):
@@ -331,8 +339,17 @@ class DictionaryInstallPage(MiWizardPage):
         progress_update = pyqtSignal(int)
         log_update = pyqtSignal(str)
 
-        def __init__(self, server_root, install_index, install_freq, install_conj, force_lang=None):
-            QThread.__init__(self)
+        def __init__(
+            self,
+            server_root: str,
+            install_index: typing.Sequence[str],
+            install_freq: bool,
+            install_conj: bool,
+            force_lang=None,
+            parent=QObject | None,
+        ) -> None:
+            super().__init__(parent)
+
             self.server_root = server_root
             self.install_index = install_index
             self.install_freq = install_freq
@@ -340,12 +357,12 @@ class DictionaryInstallPage(MiWizardPage):
             self.force_lang = force_lang
             self.cancel_requested = False
 
-        def construct_url(self, url):
+        def construct_url(self, url: str) -> str:
             if not url.startswith('http'):
                 return self.server_root + url
             return url
 
-        def run(self):
+        def run(self) -> None:
             from .dictionaryManager import importDict
 
             client = HttpClient()
@@ -353,7 +370,7 @@ class DictionaryInstallPage(MiWizardPage):
             num_dicts = 0
             num_installed = 0
 
-            def update_dict_progress(amt):
+            def update_dict_progress(amt: int) -> None:
                 progress = 0
                 if num_dicts > 0:
                     progress = num_installed / num_dicts
@@ -454,9 +471,8 @@ class DictionaryInstallPage(MiWizardPage):
             self.progress_update.emit(100)
             self.log_update.emit('All done.')
 
-
-    def __init__(self, wizard, is_last_page=True):
-        super(DictionaryInstallPage, self).__init__(wizard)
+    def __init__(self, wizard, is_last_page: bool=True) -> None:
+        super().__init__(wizard)
         self.wizard = wizard
         self.is_last_page = is_last_page
 
@@ -484,16 +500,20 @@ class DictionaryInstallPage(MiWizardPage):
         self.install_thread = None
 
 
-    def on_show(self, is_next, is_back):
-        if is_next:
-            self.is_complete = False
-            self.install_thread = None
-            self.progress_bar.setValue(0)
-            self.log_box.clear()
-            self.start_thread()
-        
+    def on_show(self, is_next: bool, is_back: bool) -> None:
+        if not is_next:
+            _LOGGER.warn("Nothing to show next.")
 
-    def on_cancel(self):
+            return
+
+        self.is_complete = False
+        self.install_thread = None
+        self.progress_bar.setValue(0)
+        self.log_box.clear()
+        self.start_thread()
+
+
+    def on_cancel(self) -> bool:
         if self.install_thread and self.install_thread.isRunning():
             dlg = QMessageBox(QMessageBox.Question, 'Migaku Dictioanry',
                               'Do you really want to cancel the import process?',
@@ -509,19 +529,21 @@ class DictionaryInstallPage(MiWizardPage):
         return True
 
 
-    def add_log(self, txt):
+    def add_log(self, txt: str) -> None:
         self.log_box.moveCursor(QTextCursor.MoveOperation.End)
+
         if not self.log_box.document().isEmpty():
             self.log_box.insertPlainText('\n')    
+
         self.log_box.insertPlainText(txt)
         self.log_box.verticalScrollBar().setValue(self.log_box.verticalScrollBar().maximum())
 
 
-    def update_progress(self, val):
+    def update_progress(self, val: int) -> None:
         self.progress_bar.setValue(val)
 
 
-    def start_thread(self):
+    def start_thread(self) -> None:
         if self.install_thread:
             return
 
@@ -538,7 +560,7 @@ class DictionaryInstallPage(MiWizardPage):
         self.install_thread.start()
 
 
-    def on_thread_finish(self):
+    def on_thread_finish(self) -> None:
         self.progress_bar.setValue(100)
         self.next_enabled = True
 

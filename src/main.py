@@ -897,7 +897,7 @@ def window_loaded():
     AddCards.onHistory = wrap(AddCards.onHistory, addEditActivated)
 
 
-    def addHotkeys(self):   
+    def addHotkeys(self):
         self.parentWindow.hotkeyS = QShortcut(QKeySequence("Ctrl+S"), self.parentWindow)    
         self.parentWindow.hotkeyS.activated.connect(lambda: searchTerm(self.web))   
         self.parentWindow.hotkeyS = QShortcut(QKeySequence("Ctrl+Shift+B"), self.parentWindow)    
@@ -962,4 +962,3 @@ def window_loaded():
     Reviewer.show = wrap(Reviewer.show, addBodyClick)
 
 gui_hooks.main_window_did_init.append(window_loaded)
-

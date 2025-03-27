@@ -1,21 +1,28 @@
 # -*- coding: utf-8 -*-
-# 
+
 from aqt import mw
 from aqt.utils import  showInfo
 
-class miJHandler():
+class miJHandler:
 
-	def __init__(self, mw):
+	def __init__(self, mw: aqt.mv) -> None:
+		super().__init__()
+
 		self.mw = mw
 		self.activeNotes = self.getActiveNotes()
 
-	def getActiveNotes(self):
-		if hasattr(self.mw, 'Exporter') and hasattr(self.mw, 'CSSJSHandler'):
-			activeNotes, placeholder = self.mw.CSSJSHandler.getWrapperDict()
-			for noteType in activeNotes:
-				activeNotes[noteType] = list(dict.fromkeys([item[1] for item in activeNotes[noteType]]))
-			return activeNotes
-		return False
+	def getActiveNotes(self) -> dict[str, list[str]]:
+		if not hasattr(self.mw, 'Exporter'):
+			raise RuntimeError(f'No Exporter found for "{self.mv!r}".')
+
+		if hasattr(self.mw,'CSSJSHandler'):
+			raise RuntimeError(f'No CSSJSHandler found for "{self.mv!r}".')
+
+		activeNotes, _ = self.mw.CSSJSHandler.getWrapperDict()
+		for noteType in activeNotes:
+			activeNotes[noteType] = list(dict.fromkeys([item[1] for item in activeNotes[noteType]]))
+
+		return activeNotes
 
 	def attemptGenerate(self, note):
 		if self.activeNotes:
@@ -27,7 +34,7 @@ class miJHandler():
 						note[field] = self.mw.Exporter.fetchParsedField(note[field], note)
 		return note
 
-	def attemptFieldGenerate(self, text, field, model, note):
+	def attemptFieldGenerate(self, text: str, field: str, model: str, note: str) -> str:
 		if self.activeNotes:
 			if model in self.activeNotes:
 				if field in self.activeNotes[model]:
