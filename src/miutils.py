@@ -33,8 +33,8 @@ def miInfo(text: str, parent: bool=False, level: str = 'msg', day: bool = True) 
 
     return mb.exec_()
 
-def miAsk(text, parent=None, day=True, customText = False):
 
+def miAsk(text: str, parent: QWidget | None=None, day: bool=True, customText: str = "") -> bool:
     msg = QMessageBox(parent)
     msg.setWindowTitle("Migaku Dictionary")
     msg.setText(text)
@@ -45,18 +45,17 @@ def miAsk(text, parent=None, day=True, customText = False):
     b.setDefault(True)
     c = msg.addButton(QMessageBox.No)
     c.setFixedSize(100, 30)
+
     if customText:
         b.setText(customText[0])
         c.setText(customText[1])
         b.setFixedSize(120, 40)
         c.setFixedSize(120, 40)
 
-    
     if not day:
         msg.setStyleSheet(" QMessageBox {background-color: #272828;}")
+
     msg.setWindowIcon(icon)
     msg.exec_()
-    if msg.clickedButton() == b:
-        return True
-    else:
-        return False
+
+    return msg.clickedButton() == b

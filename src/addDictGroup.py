@@ -4,42 +4,44 @@ import typing
 import json
 import sys
 import math
-from anki.hooks import addHook
 from aqt.qt import *
-from aqt.utils import openLink, tooltip, showInfo, askUser
-from anki.utils import isMac, isWin, isLin
+from anki.utils import is_mac, is_lin
 from anki.lang import _
-from aqt.webview import AnkiWebView
-import re
-import os
-from os.path import dirname, join, exists
-from aqt import mw
+from os.path import join, exists
+import aqt
 from PyQt6 import QtCore
 from .miutils import miInfo, miAsk
 from shutil import copyfile
 from operator import itemgetter
 import ntpath
 
-_DictionaryEntry = tuple[int, int, str]
+from . import addonSettings, typer
+
+
+class _Dictionary(typing.NamedTuple):
+    index: int
+    order: int
+    text: str
+
 
 class _Group(typing.TypedDict):
     customFont: bool
-    dictionaries: typing.List[_DictionaryEntry]
+    dictionaries: typing.List[_Dictionary]
     font: str
 
 
 class DictGroupEditor(QDialog):
     def __init__(
         self,
-        mw: aqt.mv,
-        parent: QWidget | None = None,
-        dictionaries: typing.Iterable[str] = None,
+        mw: aqt.mw,
+        parent: addonSettings.SettingsGui,
+        dictionaries: typing.Iterable[str] | None = None,
         group: _Group | None = None,
         groupName: str = False,
     ):
-        super().__init__(parent, Qt.Window)
+        super().__init__(parent, QtCore.Qt.Window)
 
-        dictionaries = dictionaries or None
+        dictionaries = dictionaries or []
         self.mw = mw
         self.settings = parent
         self.setWindowTitle("Add Dictionary Group")
@@ -97,28 +99,50 @@ class DictGroupEditor(QDialog):
         self.dictionaries.setRowCount(0)
         self.loadDictionaries(self.dictList)
 
-    def loadGroupEditor(self, group: _Group | None, groupName: str) -> None:
+    def loadGroupEditor(self, group: _Group, groupName: str) -> None:
         self.clearGroupEditor()
         self.new = False
         self.setWindowTitle("Edit Dictionary Group")
         self.groupName.setText(groupName)
         self.groupName.setEnabled(False)
+
         if group['customFont']:
             self.fontFromFile.setChecked(True)
             self.toggleFontType(True)
             self.fontFileName.setText(group['font'])
         else:
             self.fontDropDown.setCurrentText(group['font'])
+
         self.loadSelectedDictionaries(group['dictionaries'])
 
-    def loadSelectedDictionaries(self, dicts):
+    def loadSelectedDictionaries(self, dicts: typing.Iterable[str]) -> None:
         count = 1
         for d in dicts:
             for i in range(self.dictionaries.rowCount()):
-                if d == self.dictionaries.item(i, 0).text():
-                    self.dictionaries.item(i, 1).setText(str(count))
-                    self.dictionaries.cellWidget(i, 2).setChecked(True)
-                    count+= 1
+                item = self.dictionaries.item(i, 0)
+
+                if not item:
+                    raise RuntimeError(f'Index "{i}" has no dictionary column==0 item.')
+
+                if d != item.text():
+                    continue
+
+                item = self.dictionaries.item(i, 1)
+
+                if not item:
+                    raise RuntimeError(f'Index "{i}" has no dictionary column==1 item.')
+
+                widget = typing.cast(
+                    QCheckBox | None,
+                    self.dictionaries.cellWidget(i, 2),
+                )
+
+                if not widget:
+                    raise RuntimeError(f'Index "{i}" has no dictionary column==2 widget.')
+
+                item.setText(str(count))
+                widget.setChecked(True)
+                count += 1
 
     def getConfig(self) -> typer.Configuration:
         return self.mw.addonManager.getConfig(__name__)
@@ -132,21 +156,30 @@ class DictGroupEditor(QDialog):
         self.selectAll.clicked.connect(self.selectAllDicts)
         self.removeAll.clicked.connect(self.removeAllDicts)
 
-    def selectAllDicts(self) -> None:
-        for i in range(self.dictionaries.rowCount()):
-            cb = self.dictionaries.cellWidget(i, 2)
-            if not cb.isChecked():
-                cb.setChecked(True)
-                self.setDictionaryOrder(i)
+    def _get_dict_checkboxes(self) -> list[QCheckBox]:
+        output: list[QCheckBox] = []
 
+        for i in range(self.dictionaries.rowCount()):
+            widget = typing.cast(QCheckBox | None, self.dictionaries.cellWidget(i, 2))
+
+            if not widget:
+                raise RuntimeError(f'Index "{i}" has no checkbox from column==2.')
+
+            output.append(widget)
+
+        return output
+
+    def selectAllDicts(self) -> None:
+        for i, widget in enumerate(self._get_dict_checkboxes()):
+            if not widget.isChecked():
+                widget.setChecked(True)
+                self.setDictionaryOrder(i)
 
     def removeAllDicts(self) -> None:
-        for i in range(self.dictionaries.rowCount()):
-            cb = self.dictionaries.cellWidget(i, 2)
-            if cb.isChecked():
-                cb.setChecked(False)
+        for i, widget in enumerate(self._get_dict_checkboxes()):
+            if widget.isChecked():
+                widget.setChecked(False)
                 self.setDictionaryOrder(i)
-
 
     def toggleFontType(self, fromFile: bool) -> None:
         if fromFile:
@@ -193,14 +226,17 @@ class DictGroupEditor(QDialog):
                 if not self.moveFontToFolder(self.fontToMove):
                     miInfo('The font file was unable to be loaded, please ensure your file exists in the target folder and try again.', level='err')
                     return
-        selectedDicts = self.getSelectedDictionaries(True)
+        selectedDicts = self.getSelectedDictionaryNames()
+
         if len(selectedDicts) < 1:
             miInfo('You must select at least one dictionary.', level='wrn')
+
             return
-        dictGroup = {
-        'dictionaries' : selectedDicts,
-        'customFont' : customFont,
-        'font' : fontName
+
+        dictGroup: _Group = {
+            'customFont' : customFont,
+            'dictionaries' : selectedDicts,
+            'font' : fontName,
         }
         curGroups[gn] = dictGroup
         self.mw.addonManager.writeConfig(__name__, newConfig)
@@ -208,44 +244,89 @@ class DictGroupEditor(QDialog):
         self.settings.loadGroupTable()
         self.hide()
 
-    def getSelectedDictionaries(self, onlyNames: bool = False) -> list[_DictionaryEntry]:
-        dicts = []
+    def getSelectedDictionaryNames(self) -> list[str]:
+        return [item[2] for item in self.getSelectedDictionaries()]
+
+    def getSelectedDictionaries(self) -> list[_Dictionary]:
+        dicts: list[_Dictionary] = []
+
         for i in range(self.dictionaries.rowCount()):
-            order = self.dictionaries.item(i, 1).text()
-            if order != '':
-                dicts.append([i, int(order), self.dictionaries.item(i, 0).text()])
-        dicts = sorted(dicts, key=itemgetter(1))
-        if onlyNames:
-            return [item[2] for item in dicts]
-        return dicts
+            item = self.dictionaries.item(i, 1)
+
+            if not item:
+                raise RuntimeError(f'Index "{i}" column==1 has no table item.')
+
+            order = item.text()
+
+            if not order:
+                continue
+
+            item = self.dictionaries.item(i, 0)
+
+            if not item:
+                raise RuntimeError(f'Index "{i}" column==0 has no table item.')
+
+            dicts.append((i, int(order), item.text()))
+
+        return sorted(dicts, key=itemgetter(1))
 
     def setDictionaryOrder(self, row: int) -> None:
         self.dictionaries.selectRow(row)
-        if not self.dictionaries.cellWidget(row, 2).isChecked():
-            self.dictionaries.item(row, 1).setText('')
+        widget = typing.cast(QCheckBox | None, self.dictionaries.cellWidget(row, 2))
+
+        if not widget:
+            raise RuntimeError(f'Row "{row}" has no dictionary widget.')
+
+        if not widget.isChecked():
+            item = self.dictionaries.item(row, 1)
+
+            if not item:
+                raise RuntimeError(f'Row "{row}" column==1 has no cell item.')
+
+            item.setText('')
             self.reorderDictionaries()
+
             return
+
         self.reorderDictionaries(row)
 
-    def reorderDictionaries(self, last: bool = False) -> None:
+    def reorderDictionaries(self, last: int | None = None) -> None:
         dicts = self.getSelectedDictionaries()
+
         for idx, d in enumerate(dicts):
-            self.dictionaries.item(d[0], 1).setText(str(idx + 1))
-        if last is not False:
-            self.dictionaries.item(last, 1).setText(str(len(dicts) + 1))
+            index = d[0]
+            item = self.dictionaries.item(index, 1)
+
+            if not item:
+                raise RuntimeError(f'Last index "{index}" column==1 has no item.')
+
+            item.setText(str(idx + 1))
+
+        if last is not None:
+            item = self.dictionaries.item(last, 1)
+
+            if not item:
+                raise RuntimeError(f'Last index "{last}" column==1 has no item.')
+
+            item.setText(str(len(dicts) + 1))
 
     def moveFontToFolder(self, filename: str) -> bool:
         try:
             basename = ntpath.basename(filename)
-            if exists(filename):
-                path = join(self.settings.addonPath, 'user_files', 'fonts', basename)
-                if exists(path):
-                    if not miAsk('A font with the same name currently exists in your custom fonts folder. Would you like to overwrite it?', self):
-                        return
-                copyfile(filename, path)
-                return True
-            else:
+
+            if not exists(filename):
+                # TODO: @ColinKennedy - Logging
                 return False
+
+            path = join(self.settings.addonPath, 'user_files', 'fonts', basename)
+
+            if exists(path):
+                if not miAsk('A font with the same name currently exists in your custom fonts folder. Would you like to overwrite it?', self):
+                    return False
+
+            copyfile(filename, path)
+
+            return True
         except:
             return False
 
@@ -285,7 +366,7 @@ class DictGroupEditor(QDialog):
 
     def setupDictionaries(self) -> QTableWidget:
         macLin = False
-        if isMac  or isLin:
+        if is_mac  or is_lin:
             macLin = True
         dictionaries = QTableWidget()
         dictionaries.setColumnCount(3)
@@ -303,11 +384,14 @@ class DictGroupEditor(QDialog):
         dictionaries.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         dictionaries.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         dictionaries.setColumnWidth(1, 40)
+
         if macLin:
             dictionaries.setColumnWidth(2, 40)
         else:
             dictionaries.setColumnWidth(2, 20)
+
         tableHeader.hide()
+
         return dictionaries
 
     def setupLayout(self) -> None:
