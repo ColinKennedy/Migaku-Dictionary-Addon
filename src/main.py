@@ -106,7 +106,7 @@ def window_loaded():
                 browser.form.searchEdit.lineEdit().setText(text)
                 browser.onSearchActivated()
                 browser.activateWindow()
-                if not isWin:
+                if not is_win:
                     browser.setWindowState(browser.windowState() & ~Qt.WindowState.Minimized| Qt.WindowState.WindowActive)
                     browser.raise_()
                 else:
@@ -235,7 +235,7 @@ def window_loaded():
     def showCardExporterWindow():
         adder = mw.migakuDictionary.dict.addWindow
         cardWindow = adder.scrollArea
-        if not isWin:
+        if not is_win:
             cardWindow.setWindowState(cardWindow.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
             cardWindow.raise_()
         else:
@@ -255,7 +255,7 @@ def window_loaded():
 
     def showAfterGlobalSearch():
         mw.migakuDictionary.activateWindow()
-        if not isWin:
+        if not is_win:
             mw.migakuDictionary.setWindowState(mw.migakuDictionary.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
             mw.migakuDictionary.raise_()
         else:

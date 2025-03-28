@@ -6,7 +6,7 @@ import typing
 
 from aqt import dialogs
 from aqt.qt import *
-from anki.utils import is_mac, is_lin, isWin
+from anki.utils import is_mac, is_lin, is_win
 from aqt.utils import ensureWidgetInScreenBoundaries
 from os.path import join, exists
 from shutil import copyfile

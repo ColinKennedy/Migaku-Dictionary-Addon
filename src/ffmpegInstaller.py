@@ -111,7 +111,7 @@ class FFMPEGInstaller:
         progressBar.deleteLater()
 
     def makeExecutable(self) -> bool:
-        if not isWin:
+        if not is_win:
             # TODO: @ColinKennedy - remove try/except later
             try:
                 st = os.stat(self.ffmpegPath)

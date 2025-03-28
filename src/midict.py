@@ -1204,17 +1204,17 @@ class DictInterface(QWidget):
             self.currentTarget.show()
         if self.config['tooltips']:
             self.dictGroups.setToolTip('Select the dictionary group.')
-        if not isWin:
+        if not is_win:
             self.dictGroups.setFixedSize(108,38)
         else:
             self.dictGroups.setFixedSize(110,38)
         if self.nightModeToggler.day:
-            if not isWin:
+            if not is_win:
                 self.dictGroups.setStyleSheet(self.getMacComboStyle())
             else:
                 self.dictGroups.setStyleSheet('')
         else:
-            if not isWin:
+            if not is_win:
                 self.dictGroups.setStyleSheet(self.getMacNightComboStyle())
             else:
                 self.dictGroups.setStyleSheet(self.getComboStyle())
@@ -1278,7 +1278,7 @@ class DictInterface(QWidget):
 
         layoutH.addWidget(self.search)
         layoutH.addWidget(self.searchButton)
-        if not isWin:
+        if not is_win:
             self.dictGroups.setFixedSize(108,38)
             self.search.setFixedSize(104, 38)
             self.sType.setFixedSize(92,38)
@@ -1419,7 +1419,7 @@ class DictInterface(QWidget):
 
     def loadDay(self) -> None:
         self.setPalette(self.ogPalette)
-        if not isWin:
+        if not is_win:
             self.setStyleSheet(self.getMacOtherStyles())
             self.dictGroups.setStyleSheet(self.getMacComboStyle())
             self.sType.setStyleSheet(self.getMacComboStyle())
@@ -1437,7 +1437,7 @@ class DictInterface(QWidget):
 
 
     def loadNight(self) -> None:
-        if not isWin:
+        if not is_win:
             self.setStyleSheet(self.getMacNightStyles())
             self.dictGroups.setStyleSheet(self.getMacNightComboStyle())
             self.sType.setStyleSheet(self.getMacNightComboStyle())

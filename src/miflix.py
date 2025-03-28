@@ -20,7 +20,7 @@ import os, uuid
 from aqt import mw as mw_
 from anki.collection import Collection
 from threading import Timer
-from anki.utils import isWin
+from anki.utils import is_win
 
 
 class _Field(typing.TypedDict):

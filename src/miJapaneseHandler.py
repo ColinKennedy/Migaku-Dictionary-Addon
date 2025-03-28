@@ -13,7 +13,8 @@ class miJHandler:
 
 	def getActiveNotes(self) -> dict[str, list[str]]:
 		if not hasattr(self.mw,'CSSJSHandler'):
-			raise RuntimeError(f'No CSSJSHandler found for "{self.mw!r}".')
+			# TODO: @ColinKennedy add logging
+			return {}
 
 		activeNotes, _ = self.mw.CSSJSHandler.getWrapperDict()
 		for noteType in activeNotes:
