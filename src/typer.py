@@ -7,19 +7,19 @@ class Configuration(typing.TypedDict):
     autoAddDefinitions: bool
     autoDefinitionSettings: bool
     backBracket: str
-    condensedAudioDirectory: str | typing.Literal[False]
-    currentDeck: str | typing.Literal[False]
-    currentGroup: typing.Literal["All"] | typing.Literal["Google Images"] | typing.Literal["Forvo"]
-    currentTemplate: str | typing.Literal[False]
+    condensedAudioDirectory: typing.Union[str, typing.Literal[False]]
+    currentDeck: typing.Union[str, typing.Literal[False]]
+    currentGroup: typing.Union[typing.Literal["All"], typing.Literal["Google Images"], typing.Literal["Forvo"]]
+    currentTemplate: typing.Union[str, typing.Literal[False]]
     day: bool
     deinflect: bool
     dictAlwaysOnTop: bool
     dictOnStart: bool
     dictSearch: int
-    dictSizePos: tuple[int, int, int, int] | typing.Literal[False]
+    dictSizePos: typing.Union[tuple[int, int, int, int], typing.Literal[False]]
     disableCondensed: bool
     displayAgain: bool
-    exporterSizePos: tuple[int, int, int, int] | typing.Literal[False]
+    exporterSizePos: typing.Union[tuple[int, int, int, int], typing.Literal[False]]
     failedFFMPEGInstallation: bool
     fontSizes: tuple[int, int]
     frontBracket: str
@@ -37,7 +37,7 @@ class Configuration(typing.TypedDict):
     ontab: bool
     openOnGlobal: bool
     safeSearch: bool
-    searchMode: typing.Literal["Forward"] | typing.Literal["Backward"] | typing.Literal["Exact"] | typing.Literal["Anywhere"] | typing.Literal["Definition"] | typing.Literal["Example"] | typing.Literal["Pronunciation"]
+    searchMode: typing.Union[typing.Literal["Forward"], typing.Literal["Backward"], typing.Literal["Exact"], typing.Literal["Anywhere"], typing.Literal["Definition"], typing.Literal["Example"], typing.Literal["Pronunciation"]]
     showTarget: bool
     tooltips: bool
     unknownsToSearch: int

@@ -15,7 +15,11 @@ from shutil import copyfile
 from operator import itemgetter
 import ntpath
 
-from . import addonSettings, typer
+if typing.TYPE_CHECKING:
+    # TODO: @ColinKennedy - fix cyclic dependency "addonSettings.SettingsGui" later
+    from . import addonSettings
+
+from . import typer
 
 
 class _Dictionary(typing.NamedTuple):
@@ -34,9 +38,10 @@ class DictGroupEditor(QDialog):
     def __init__(
         self,
         mw: aqt.mw,
-        parent: addonSettings.SettingsGui,
-        dictionaries: typing.Iterable[str] | None = None,
-        group: _Group | None = None,
+        # TODO: @ColinKennedy - fix cyclic dependency "addonSettings.SettingsGui" later
+        parent: "addonSettings.SettingsGui",
+        dictionaries: typing.Optional[typing.Iterable[str]]= None,
+        group: typing.Optional[_Group]= None,
         groupName: str = False,
     ):
         super().__init__(parent, QtCore.Qt.Window)
@@ -133,7 +138,7 @@ class DictGroupEditor(QDialog):
                     raise RuntimeError(f'Index "{i}" has no dictionary column==1 item.')
 
                 widget = typing.cast(
-                    QCheckBox | None,
+                    typing.Optional[QCheckBox],
                     self.dictionaries.cellWidget(i, 2),
                 )
 
@@ -160,7 +165,7 @@ class DictGroupEditor(QDialog):
         output: list[QCheckBox] = []
 
         for i in range(self.dictionaries.rowCount()):
-            widget = typing.cast(QCheckBox | None, self.dictionaries.cellWidget(i, 2))
+            widget = typing.cast(typing.Optional[QCheckBox], self.dictionaries.cellWidget(i, 2))
 
             if not widget:
                 raise RuntimeError(f'Index "{i}" has no checkbox from column==2.')
@@ -272,7 +277,7 @@ class DictGroupEditor(QDialog):
 
     def setDictionaryOrder(self, row: int) -> None:
         self.dictionaries.selectRow(row)
-        widget = typing.cast(QCheckBox | None, self.dictionaries.cellWidget(row, 2))
+        widget = typing.cast(typing.Optional[QCheckBox], self.dictionaries.cellWidget(row, 2))
 
         if not widget:
             raise RuntimeError(f'Row "{row}" has no dictionary widget.')
@@ -290,7 +295,7 @@ class DictGroupEditor(QDialog):
 
         self.reorderDictionaries(row)
 
-    def reorderDictionaries(self, last: int | None = None) -> None:
+    def reorderDictionaries(self, last: typing.Optional[int]= None) -> None:
         dicts = self.getSelectedDictionaries()
 
         for idx, d in enumerate(dicts):

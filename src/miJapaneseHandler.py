@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from aqt import mw
+from aqt import mw as mw_
 from aqt.utils import  showInfo
 
 class miJHandler:
 
-	def __init__(self, mw: aqt.mv) -> None:
+	def __init__(self, mw: mw_) -> None:
 		super().__init__()
 
 		self.mw = mw

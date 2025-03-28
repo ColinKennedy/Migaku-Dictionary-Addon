@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-# 
+#
 from os.path import dirname, join, basename, exists, join
 import sys, os, platform, re, subprocess, aqt.utils
-from anki.utils import stripHTML, isWin, isMac, isLin
+from anki.utils import stripHTML, is_win, is_mac, is_lin
 from .midict import DictInterface, ClipThread
 import re
 import unicodedata
@@ -44,7 +44,7 @@ def window_loaded():
     mw.miDictDB = dictdb.DictDB()
     progressBar = False
     addon_path = dirname(__file__)
-    currentNote = False 
+    currentNote = False
     currentField = False
     currentKey = False
     wrapperDict = False
@@ -108,7 +108,7 @@ def window_loaded():
                 browser.activateWindow()
                 if not isWin:
                     browser.setWindowState(browser.windowState() & ~Qt.WindowState.Minimized| Qt.WindowState.WindowActive)
-                    browser.raise_()  
+                    browser.raise_()
                 else:
                     browser.setWindowFlags(browser.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
                     browser.show()
@@ -123,7 +123,7 @@ def window_loaded():
         char = str(key)
         if char not in mw.currentlyPressed:
                 mw.currentlyPressed.append(char)
-        if isWin:
+        if is_win:
             if 'Key.ctrl_l' in mw.currentlyPressed and "'c'" in mw.currentlyPressed and'Key.space'  in mw.currentlyPressed:
                 mw.hkThread.handleSystemSearch()
                 mw.currentlyPressed = []
@@ -139,7 +139,7 @@ def window_loaded():
             elif 'Key.ctrl_l' in mw.currentlyPressed and 'Key.shift' in mw.currentlyPressed and "'v'" in mw.currentlyPressed:
                 mw.hkThread.handleImageExport()
                 mw.currentlyPressed = []
-        elif isLin:
+        elif is_lin:
             if 'Key.ctrl' in mw.currentlyPressed and "'c'" in mw.currentlyPressed and'Key.space'  in mw.currentlyPressed:
                 mw.hkThread.handleSystemSearch()
                 mw.currentlyPressed = []
@@ -166,14 +166,14 @@ def window_loaded():
                 mw.hkThread.handleImageExport()
                 mw.currentlyPressed = []
 
-    
+
     def releaseKey(keyList):
         key = keyList[0]
         try:
             mw.currentlyPressed.remove(str(key))
         except:
             return
-        
+
 
     def exportSentence(sentence):
         if mw.migakuDictionary and mw.migakuDictionary.isVisible():
@@ -189,19 +189,19 @@ def window_loaded():
             showCardExporterWindow()
 
     def extensionBulkTextExport(cards):
-        if not mw.migakuDictionary or not mw.migakuDictionary.isVisible(): 
+        if not mw.migakuDictionary or not mw.migakuDictionary.isVisible():
             mw.dictionaryInit()
         mw.migakuDictionary.dict.bulkTextExport(cards)
 
 
     def extensionBulkMediaExport(card):
-        if not mw.migakuDictionary or not mw.migakuDictionary.isVisible(): 
+        if not mw.migakuDictionary or not mw.migakuDictionary.isVisible():
             mw.dictionaryInit()
         mw.migakuDictionary.dict.bulkMediaExport(card)
 
 
     def cancelBulkMediaExport():
-        if mw.migakuDictionary and mw.migakuDictionary.isVisible(): 
+        if mw.migakuDictionary and mw.migakuDictionary.isVisible():
             mw.migakuDictionary.dict.cancelBulkMediaExport()
 
 
@@ -216,28 +216,28 @@ def window_loaded():
         if len(unknownWords) > 0:
             if not autoExportCards:
                 searchTermList(unknownWords)
-            elif not mw.migakuDictionary or not mw.migakuDictionary.isVisible(): 
+            elif not mw.migakuDictionary or not mw.migakuDictionary.isVisible():
                 mw.dictionaryInit()
             mw.migakuDictionary.dict.exportWord(unknownWords[0])
         else:
-            if not mw.migakuDictionary or not mw.migakuDictionary.isVisible(): 
+            if not mw.migakuDictionary or not mw.migakuDictionary.isVisible():
                     mw.dictionaryInit()
             mw.migakuDictionary.dict.exportWord('')
         if audio:
-            mw.migakuDictionary.dict.exportAudio([join(mw.col.media.dir(), audio), '[sound:' + audio +']', audio]) 
+            mw.migakuDictionary.dict.exportAudio([join(mw.col.media.dir(), audio), '[sound:' + audio +']', audio])
         if image:
-            mw.migakuDictionary.dict.exportImage([join(mw.col.media.dir(), image), image]) 
+            mw.migakuDictionary.dict.exportImage([join(mw.col.media.dir(), image), image])
         mw.migakuDictionary.dict.exportSentence(primary, secondary)
         mw.migakuDictionary.dict.addWindow.focusWindow()
         mw.migakuDictionary.dict.attemptAutoAdd(False)
         showCardExporterWindow()
-        
+
     def showCardExporterWindow():
         adder = mw.migakuDictionary.dict.addWindow
         cardWindow = adder.scrollArea
         if not isWin:
             cardWindow.setWindowState(cardWindow.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
-            cardWindow.raise_()  
+            cardWindow.raise_()
         else:
             cardWindow.setWindowFlags(cardWindow.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
             cardWindow.show()
@@ -245,19 +245,19 @@ def window_loaded():
                 cardWindow.setWindowFlags(cardWindow.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint)
                 cardWindow.show()
 
-    def trySearch(term):    
-        if mw.migakuDictionary and mw.migakuDictionary.isVisible(): 
-            mw.migakuDictionary.initSearch(term)    
-            showAfterGlobalSearch() 
-        elif mw.MigakuDictConfig['openOnGlobal'] and (not mw.migakuDictionary or not mw.migakuDictionary.isVisible()):  
-            mw.dictionaryInit([term])   
+    def trySearch(term):
+        if mw.migakuDictionary and mw.migakuDictionary.isVisible():
+            mw.migakuDictionary.initSearch(term)
+            showAfterGlobalSearch()
+        elif mw.MigakuDictConfig['openOnGlobal'] and (not mw.migakuDictionary or not mw.migakuDictionary.isVisible()):
+            mw.dictionaryInit([term])
 
 
     def showAfterGlobalSearch():
         mw.migakuDictionary.activateWindow()
         if not isWin:
             mw.migakuDictionary.setWindowState(mw.migakuDictionary.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
-            mw.migakuDictionary.raise_()  
+            mw.migakuDictionary.raise_()
         else:
             mw.migakuDictionary.setWindowFlags(mw.migakuDictionary.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
             mw.migakuDictionary.show()
@@ -286,14 +286,14 @@ def window_loaded():
         with open(htmlPath,'r', encoding="utf-8") as fh:
             file =  fh.read()
         return file
-            
+
     def getMacWelcomeScreen():
         htmlPath = join(addon_path, 'macwelcome.html')
         with open(htmlPath,'r', encoding="utf-8") as fh:
             file =  fh.read()
         return file
 
-    if isMac:
+    if is_mac:
         welcomeScreen = getMacWelcomeScreen()
     else:
         welcomeScreen = getWelcomeScreen()
@@ -302,7 +302,7 @@ def window_loaded():
         if terms and isinstance(terms, str):
             terms = [terms]
         shortcut = '(Ctrl+W)'
-        if isMac:
+        if is_mac:
             shortcut = '⌘W'
         if not mw.migakuDictionary:
             mw.migakuDictionary = DictInterface(mw.miDictDB, mw, addon_path, welcomeScreen, terms = terms)
@@ -344,7 +344,7 @@ def window_loaded():
             mw.MigakuMainMenu.addAction(act)
 
         if addMenu:
-            mw.form.menubar.insertMenu(mw.form.menuHelp.menuAction(), mw.MigakuMainMenu)  
+            mw.form.menubar.insertMenu(mw.form.menuHelp.menuAction(), mw.MigakuMainMenu)
 
     setupGuiMenu()
 
@@ -387,7 +387,7 @@ def window_loaded():
     mw.hotkeyW.activated.connect(dictionaryInit)
 
 
-    def selectedText(page):    
+    def selectedText(page):
         text = page.selectedText()
         if not text:
             return False
@@ -418,12 +418,12 @@ def window_loaded():
     mw.searchTerm = searchTerm
     mw.searchCol = searchCol
 
-            
-    
-    mw.hotkeyS = QShortcut(QKeySequence("Ctrl+S"), mw)  
-    mw.hotkeyS.activated.connect(lambda: searchTerm(mw.web))    
-    mw.hotkeyS = QShortcut(QKeySequence("Ctrl+Shift+B"), mw)  
-    mw.hotkeyS.activated.connect(lambda: searchCol(mw.web)) 
+
+
+    mw.hotkeyS = QShortcut(QKeySequence("Ctrl+S"), mw)
+    mw.hotkeyS.activated.connect(lambda: searchTerm(mw.web))
+    mw.hotkeyS = QShortcut(QKeySequence("Ctrl+Shift+B"), mw)
+    mw.hotkeyS.activated.connect(lambda: searchCol(mw.web))
 
 
     def addToContextMenu(self, m):
@@ -432,6 +432,7 @@ def window_loaded():
         b = m.addAction("Search Collection (Ctrl/⌘+Shift+B)")
         b.triggered.connect(self.searchCol)
 
+    # TODO: @ColinKennedy dedent
     def exportDefinitionsWidget(browser):
         import anki.find
         notes = browser.selectedNotes()
@@ -463,9 +464,9 @@ def window_loaded():
             dictDict['Forvo'] = 'Forvo'
             dictDict['None'] = 'None'
             ex =  QPushButton('Execute')
-            ex.clicked.connect(lambda: exportDefinitions(origin.currentText(), destination.currentText(), addType.currentText(), 
-                [dictDict[dicts.currentText()], dictDict[dict2.currentText()] , 
-                dictDict[dict3.currentText()]], howMany.value(), notes, generateWidget, 
+            ex.clicked.connect(lambda: exportDefinitions(origin.currentText(), destination.currentText(), addType.currentText(),
+                [dictDict[dicts.currentText()], dictDict[dict2.currentText()] ,
+                dictDict[dict3.currentText()]], howMany.value(), notes, generateWidget,
                 [dicts.currentText(),dict2.currentText(), dict3.currentText()]))
             destination = QComboBox()
             destination.addItems(fields)
@@ -541,7 +542,7 @@ def window_loaded():
         progressWidget.setWindowTitle("Generating Definitions...")
         progressWidget.setWindowModality(Qt.WindowModality.ApplicationModal)
         bar = QProgressBar(progressWidget)
-        if isMac:
+        if is_mac:
             bar.setFixedSize(380, 50)
         else:
             bar.setFixedSize(390, 50)
@@ -581,11 +582,11 @@ def window_loaded():
         for idx, r in enumerate(results):
             text = ''
             if dh == 0:
-            
+
                 text = getTermHeaderText(th, r, fb, bb) + '<br>' + r['definition']
             else:
                 stars = r['starCount']
-                text =  r['definition'] 
+                text =  r['definition']
                 if '】' in text:
                     text = text.replace('】',  '】' + stars + ' ', 1)
                 elif '<br>' in text:
@@ -599,12 +600,15 @@ def window_loaded():
 
     def initImager():
         global googleImager
+
         googleImager = googleimages.Google()
         config = mw.addonManager.getConfig(__name__)
         googleImager.setSearchRegion(config['googleSearchRegion'])
         googleImager.setSafeSearch(config["safeSearch"])
 
     def exportGoogleImages(term, howMany):
+        global googleImager
+
         config = mw.addonManager.getConfig(__name__)
         maxW = config['maxWidth']
         maxH = config['maxHeight']
@@ -650,14 +654,14 @@ def window_loaded():
         url1 = protocol + "//" + audiohost + "/mp3/" + base64.b64decode(url1).decode("utf-8", "strict")
         return url1, url2
 
-        
+
 
     def generateURLS(results, language):
         audio = re.findall(r'var pronunciations = \[([\w\W\n]*?)\];', results)
         if not audio:
             return []
         audio = audio[0]
-        data = re.findall(language + r'.*?Pronunciation by (?:<a.*?>)?(\w+).*?class="lang_xx"\>(.*?)\<.*?,.*?,.*?,.*?,\'(.+?)\',.*?,.*?,.*?\'(.+?)\'', audio)     
+        data = re.findall(language + r'.*?Pronunciation by (?:<a.*?>)?(\w+).*?class="lang_xx"\>(.*?)\<.*?,.*?,.*?,.*?,\'(.+?)\',.*?,.*?,.*?\'(.+?)\'', audio)
         if data:
             server = re.search(r"var _SERVER_HOST=\'(.+?)\';", results).group(1)
             audiohost = re.search(r'var _AUDIO_HTTP_HOST=\'(.+?)\';', results).group(1)
@@ -666,7 +670,7 @@ def window_loaded():
             for datum in data:
                 urls.append(decodeURL(datum[2],datum[3],protocol, audiohost, server))
             return urls
-            
+
 
 
     def exportForvoAudio(term, howMany, lang):
@@ -692,7 +696,7 @@ def window_loaded():
                 open(join(mw.col.media.dir(), filename), 'wb').write(file)
                 tags.append('[sound:' + filename + ']')
                 success = True
-            except: 
+            except:
                 success = True
             if success:
                 continue
@@ -726,7 +730,7 @@ def window_loaded():
             limit = dictionary["limit"]
             targetField = dictionary["field"]
             if targetField in fields:
-                term = re.sub(r'<[^>]+>', '', term) 
+                term = re.sub(r'<[^>]+>', '', term)
                 term = re.sub(r'\[[^\]]+?\]', '', term)
                 if term == '':
                     continue
@@ -744,7 +748,7 @@ def window_loaded():
                         note[targetField] = results
                     else:
                         note[targetField] += '<br><br>' + results
-        return note    
+        return note
 
     mw.addDefinitionsToCardExporterNote = addDefinitionsToCardExporterNote
 
@@ -763,7 +767,7 @@ def window_loaded():
         mw.checkpoint('Definition Export')
         if not miAsk('Are you sure you want to export definitions for the "'+ og + '" field into the "' + dest +'" field?'):
             return
-        progWid, bar = getProgressWidgetDefs()   
+        progWid, bar = getProgressWidgetDefs()
         progWid.closeEvent = closeBar
         bar.setMinimum(0)
         bar.setMaximum(len(notes))
@@ -778,7 +782,7 @@ def window_loaded():
             note = mw.col.getNote(nid)
             fields = mw.col.models.fieldNames(note.model())
             if og in fields and dest in fields:
-                term = re.sub(r'<[^>]+>', '', note[og]) 
+                term = re.sub(r'<[^>]+>', '', note[og])
                 term = re.sub(r'\[[^\]]+?\]', '', term)
                 if term == '':
                     continue
@@ -793,7 +797,7 @@ def window_loaded():
                         dresults, dh, th = mw.miDictDB.getDefForMassExp(term, dictN, str(howMany), rawNames[dCount])
                         tresults.append(formatDefinitions(dresults, th, dh, fb, bb))
                     dCount+= 1
-                results = '<br><br>'.join([i for i in tresults if i != ''])      
+                results = '<br><br>'.join([i for i in tresults if i != ''])
                 if addType == 'If Empty':
                     if note[dest] == '':
                         note[dest] = results
@@ -850,7 +854,7 @@ def window_loaded():
                     ogReroute(self, cmd)
         else:
             if cmd.startswith("focus"):
-                
+
                 if mw.migakuDictionary and mw.migakuDictionary.isVisible() and self.note:
                     widget = type(self.widget.parentWidget()).__name__
                     if widget == 'QWidget':
@@ -858,8 +862,8 @@ def window_loaded():
                     target = getTarget(widget)
                     mw.migakuDictionary.dict.setCurrentEditor(self, target)
             ogReroute(self, cmd)
-        
-    ogReroute = aqt.editor.Editor.onBridgeCmd 
+
+    ogReroute = aqt.editor.Editor.onBridgeCmd
     aqt.editor.Editor.onBridgeCmd = bridgeReroute
 
     def setBrowserEditor(browser):
@@ -898,22 +902,22 @@ def window_loaded():
 
 
     def addHotkeys(self):
-        self.parentWindow.hotkeyS = QShortcut(QKeySequence("Ctrl+S"), self.parentWindow)    
-        self.parentWindow.hotkeyS.activated.connect(lambda: searchTerm(self.web))   
-        self.parentWindow.hotkeyS = QShortcut(QKeySequence("Ctrl+Shift+B"), self.parentWindow)    
-        self.parentWindow.hotkeyS.activated.connect(lambda: searchCol(self.web))    
-        self.parentWindow.hotkeyW = QShortcut(QKeySequence("Ctrl+W"), self.parentWindow)    
+        self.parentWindow.hotkeyS = QShortcut(QKeySequence("Ctrl+S"), self.parentWindow)
+        self.parentWindow.hotkeyS.activated.connect(lambda: searchTerm(self.web))
+        self.parentWindow.hotkeyS = QShortcut(QKeySequence("Ctrl+Shift+B"), self.parentWindow)
+        self.parentWindow.hotkeyS.activated.connect(lambda: searchCol(self.web))
+        self.parentWindow.hotkeyW = QShortcut(QKeySequence("Ctrl+W"), self.parentWindow)
         self.parentWindow.hotkeyW.activated.connect(dictionaryInit)
 
 
-    def addHotkeysToPreview(self):  
+    def addHotkeysToPreview(self):
         self._web.hotkeyS = QShortcut(QKeySequence("Ctrl+S"), self._web)
         self._web.hotkeyS.activated.connect(lambda: searchTerm(self._web))
         self._web.hotkeyS = QShortcut(QKeySequence("Ctrl+Shift+B"), self._web)
         self._web.hotkeyS.activated.connect(lambda: searchCol(self._web))
         self._web.hotkeyW = QShortcut(QKeySequence("Ctrl+W"), self._web)
         self._web.hotkeyW.activated.connect(dictionaryInit)
-        
+
     Previewer.open = wrap(Previewer.open, addHotkeysToPreview)
 
 
@@ -921,7 +925,7 @@ def window_loaded():
         self.web.parentEditor = self
         addBodyClick(self)
         addHotkeys(self)
-        
+
     def gt(obj):
         return type(obj).__name__
 
@@ -943,7 +947,7 @@ def window_loaded():
                 if not parent:
                     return
             mw.migakuDictionary.dict.setCurrentEditor(parent.editor, getTarget(pName))
-                
+
     def addClickToTags(self):
         self.tags.clicked.connect(lambda: announceParent(self))
 
@@ -958,7 +962,7 @@ def window_loaded():
         return ogLinks(self, cmd)
 
     ogLinks = Reviewer._linkHandler
-    Reviewer._linkHandler = miLinks
-    Reviewer.show = wrap(Reviewer.show, addBodyClick)
+    Reviewer._linkHandler = miLinks  # type: ignore
+    Reviewer.show = wrap(Reviewer.show, addBodyClick)  # type: ignore
 
 gui_hooks.main_window_did_init.append(window_loaded)

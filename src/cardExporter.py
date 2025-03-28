@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-# 
+#
 
 import collections
 import typing
 
 from aqt import dialogs
 from aqt.qt import *
-from anki.utils import isMac, isLin, isWin
+from anki.utils import is_mac, is_lin, isWin
 from aqt.utils import ensureWidgetInScreenBoundaries
 from os.path import join, exists
 from shutil import copyfile
@@ -17,7 +17,7 @@ from anki import sound
 import re
 
 
-class _DefinitionSetting(typing.NamedDict):
+class _DefinitionSetting(typing.TypedDict):
     name: str
     limit: int
 
@@ -39,7 +39,7 @@ class _Card(typing.TypedDict):
 
 
 class MITextEdit(QTextEdit):
-    def __init__(self, parent: QWidget | None = None, dictInt: midict.DictInterface | None = None):
+    def __init__(self, parent: typing.Optional[QWidget]= None, dictInt= None) -> None:
         super().__init__(parent)
 
         self.dictInt = dictInt
@@ -51,7 +51,7 @@ class MITextEdit(QTextEdit):
         search.triggered.connect(self.searchSelected)
         menu.addAction(search)
         menu.exec_(event.globalPos())
-    
+
     def keyPressEvent(self, event):
         if event.modifiers() & Qt.ControlModifier:
             if event.key() == Qt.Key_B:
@@ -142,7 +142,7 @@ class CardExporter():
         self.definitionSettingsButton = QPushButton('Automatic Definition Settings')
         self.clearButton = QPushButton('Clear Current Card')
         self.cancelButton = QPushButton("Cancel")
-        self.addButton = QPushButton("Add")      
+        self.addButton = QPushButton("Add")
         self.exportJS = self.config['jReadingCards']
         self.imgName = False
         self.imgPath = False
@@ -184,7 +184,7 @@ class CardExporter():
     def attemptAutoAdd(self, bulkExport):
         if self.autoAdd.isChecked() or bulkExport:
             self.addCard()
-        
+
     def initTooltips(self):
         if self.config['tooltips']:
             self.templateCB.setToolTip('Select the export template.')
@@ -214,7 +214,7 @@ class CardExporter():
     def setColors(self):
         if self.dictInt.nightModeToggler.day :
             self.scrollArea.setPalette(self.dictInt.ogPalette)
-            if isMac:
+            if is_mac:
                 self.templateCB.setStyleSheet(self.dictInt.getMacComboStyle())
                 self.deckCB.setStyleSheet(self.dictInt.getMacComboStyle())
                 self.definitions.setStyleSheet(self.dictInt.getMacTableStyle())
@@ -224,14 +224,14 @@ class CardExporter():
                 self.definitions.setStyleSheet('')
         else:
             self.scrollArea.setPalette(self.dictInt.nightPalette)
-            if isMac: 
+            if is_mac:
                 self.templateCB.setStyleSheet(self.dictInt.getMacNightComboStyle())
                 self.deckCB.setStyleSheet(self.dictInt.getMacNightComboStyle())
             else:
                 self.templateCB.setStyleSheet(self.dictInt.getComboStyle())
                 self.deckCB.setStyleSheet(self.dictInt.getComboStyle())
             self.definitions.setStyleSheet(self.dictInt.getTableStyle())
-        
+
     def addNote(self, note, did):
         note.model()['did'] = int(did)
         ret = note.dupeOrEmpty()
@@ -276,13 +276,13 @@ Please review your template and notetype combination."""), level='wrn', day = se
 
     def hideEvent(self, event):
         self.saveSizeAndPos()
-        event.accept() 
+        event.accept()
 
     def closeEvent(self, event):
         self.clearCurrent()
         self.saveSizeAndPos()
-        event.accept() 
-        
+        event.accept()
+
     def saveSizeAndPos(self):
         pos = self.scrollArea.pos()
         x = pos.x()
@@ -384,16 +384,16 @@ Please review your template and notetype combination."""), level='wrn', day = se
                     "tableName" : table,
                     "limit" : limit,
                     "field" : targetField,
-                    "dictName" : dictName 
+                    "dictName" : dictName
                     })
-                
+
         return self.mw.addDefinitionsToCardExporterNote(note, word, dictionaries)
-    
+
     def moveImageToMediaFolder(self):
         if self.imgPath and self.imgName:
-            if exists(self.imgPath): 
+            if exists(self.imgPath):
                 path = join(self.mw.col.media.dir(), self.imgName)
-                if not exists(path): 
+                if not exists(path):
                     copyfile(self.imgPath, path)
 
     def fieldValid(self, field):
@@ -417,7 +417,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
             return ""
         return value
 
-    
+
 
     def getFieldsValues(self, t):
         imgField = False
@@ -452,7 +452,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
                 if self.fieldValid(wordField):
                     if wordField not in fields:
                         fields[wordField] = [wordText]
-                    else: 
+                    else:
                         fields[wordField].append(wordText)
         tagsText = self.tagsLE.text()
         if tagsText != '':
@@ -465,7 +465,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
                 if self.fieldValid(imgField):
                     if imgField not in fields:
                         fields[imgField] = [imgTag]
-                    else: 
+                    else:
                         fields[imgField].append(imgTag)
         audioText = self.imageMap.text()
         if audioText != 'No Audio Selected' and 'audio' in t and self.audioTag != False:
@@ -474,7 +474,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
                 if self.fieldValid(audioField):
                     if audioField not in fields:
                         fields[audioField] = [self.audioTag]
-                    else: 
+                    else:
                         fields[audioField].append(self.audioTag)
         specific = t['specific']
         for field in specific:
@@ -511,7 +511,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
 
     def getDefinitions(self):
         macLin = False
-        if isMac  or isLin:
+        if is_mac  or is_lin:
             macLin = True
         definitions = QTableWidget()
         definitions.setMinimumHeight(100)
@@ -572,9 +572,9 @@ Please review your template and notetype combination."""), level='wrn', day = se
         self.secondaryLE.setFont(f)
         self.notesLE.setFont(f)
         f = self.wordLE.font()
-        f.setPointSize(20) 
+        f.setPointSize(20)
         self.wordLE.setFont(f)
-        
+
         self.wordLE.setFixedHeight(40)
         definitionsL = QLabel('Definitions')
         self.layout.addWidget(definitionsL)
@@ -622,7 +622,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         cb = QComboBox()
         cb.addItems(self.templates)
         current = self.config['currentTemplate']
-        
+
         cb.currentIndexChanged.connect(lambda: self.dictInt.writeConfig('currentTemplate', cb.currentText()))
         if current in self.templates:
             cb.setCurrentText(current)
@@ -648,16 +648,16 @@ Please review your template and notetype combination."""), level='wrn', day = se
             self.wordLE.setText(word)
 
     def exportWord(self, word):
-        self.wordLE.setText(word)        
+        self.wordLE.setText(word)
 
     def removeImgs(self, imgs):
         try:
             row = self.definitions.selectionModel().currentIndex().row()
             self.definitions.removeRow(row)
             self.removeImgFromDefinitionList(imgs)
-        except: 
+        except:
             return
-    
+
     def removeImgFromDefinitionList(self, imgs):
         for idx, entry in enumerate(self.definitionList):
             if entry[0] == 'Google Images' and entry[3] == imgs:
@@ -677,8 +677,8 @@ Please review your template and notetype combination."""), level='wrn', day = se
         self.definitionList.append(defEntry)
         rc = self.definitions.rowCount()
         self.definitions.setRowCount(rc + 1)
-        self.definitions.setItem(rc, 0, QTableWidgetItem(dictName))  
-        self.definitions.setItem(rc, 1, QTableWidgetItem(shortDef)) 
+        self.definitions.setItem(rc, 0, QTableWidgetItem(dictName))
+        self.definitions.setItem(rc, 1, QTableWidgetItem(shortDef))
         deleteButton =  QPushButton("X");
         deleteButton.setFixedWidth(40)
         deleteButton.clicked.connect(self.removeDefinition)
@@ -706,9 +706,9 @@ Please review your template and notetype combination."""), level='wrn', day = se
 
     def moveAudioToMediaFolder(self) -> None:
         if self.audioPath and self.audioName:
-            if exists(self.audioPath): 
+            if exists(self.audioPath):
                 path = join(self.mw.col.media.dir(), self.audioName)
-                if not exists(path): 
+                if not exists(path):
                     copyfile(self.audioPath, path)
 
     def playAudio(self) -> None:
@@ -736,9 +736,9 @@ Please review your template and notetype combination."""), level='wrn', day = se
             shortDef = self.definitions.item(row, 1).text()
             self.definitions.removeRow(row)
             self.removeFromDefinitionList(dictName, shortDef)
-        except: 
+        except:
             return
-     
+
     def focusWindow(self) -> None:
         self.scrollArea.show()
         if self.scrollArea.windowState() == Qt.WindowState.WindowMinimized:
@@ -763,13 +763,13 @@ Please review your template and notetype combination."""), level='wrn', day = se
         dict1 = QComboBox()
         dict2 = QComboBox()
         dict3 = QComboBox()
-        
+
         dictToTable = self.getDictionaryNameToTableNameDictionary()
         dictNames = dictToTable.keys()
         dict1.addItems(dictNames)
         dict2.addItems(dictNames)
         dict3.addItems(dictNames)
-        
+
         dict1Lay = QHBoxLayout()
         dict1Lay.addWidget(QLabel("1st Dictionary:"))
         dict1Lay.addStretch()
@@ -862,7 +862,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
 
         # Switch paragraphs to <br>
         text = re.sub(r'</p>', r'<br />', text, re.S)
-        
+
         # Trim unneeded bits
         text = re.sub(r'.+</head>', r'', text, flags=re.S)
         text = re.sub(r'(<html[^>]*?>|</html>|<body[^>]*?>|</body>|<p[^>]*?>|<span[^>]*?>|</span>)', r'', text, flags=re.S)
@@ -932,7 +932,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
                 if self.fieldValid(wordField):
                     if wordField not in fields:
                         fields[wordField] = [wordText]
-                    else: 
+                    else:
                         fields[wordField].append(wordText)
         tagsText = self.tagsLE.text()
         if tagsText != '':
@@ -955,7 +955,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
             self.mw.app.processEvents()
         self.bulkTextImporting = False
         self.closeProgressBar(progressWidget)
-     
+
     def addMediaCard(self, card: _Card) -> None:
         templateName = self.templateCB.currentText()
         word = ""
@@ -1028,7 +1028,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
                 if self.fieldValid(wordField):
                     if wordField not in fields:
                         fields[wordField] = [wordText]
-                    else: 
+                    else:
                         fields[wordField].append(wordText)
         tagsText = self.tagsLE.text()
         if tagsText != '':
@@ -1039,14 +1039,14 @@ Please review your template and notetype combination."""), level='wrn', day = se
             if self.fieldValid(imgField):
                 if imgField not in fields:
                     fields[imgField] = [imgTag]
-                else: 
+                else:
                     fields[imgField].append(imgTag)
         if audio:
             audioField = t['audio']
             if self.fieldValid(audioField):
                 if audioField not in fields:
                     fields[audioField] = [audio]
-                else: 
+                else:
                     fields[audioField].append(audio)
         return fields, tagsField
 
@@ -1113,18 +1113,18 @@ Please review your template and notetype combination."""), level='wrn', day = se
                 if not progressWidget.closedBecauseFinishedImporting:
                     self.mw.MigakuBulkMediaExportWasCancelled = True
                     miInfo("Importing cancelled.\n\n{} cards were imported.".format(currentValue))
-                
+
         progressWidget.exporter = self
         textDisplay = QLabel()
         progressWidget.setWindowIcon(QIcon(join(self.dictInt.addonPath, 'icons', 'migaku.png')))
         progressWidget.setWindowTitle(title)
         textDisplay.setText(initialText)
-        
+
         bar = QProgressBar(progressWidget)
         layout = QVBoxLayout()
         layout.addWidget(textDisplay)
         layout.addWidget(bar)
-        progressWidget.setLayout(layout) 
+        progressWidget.setLayout(layout)
         bar.move(10,10)
         per = QLabel(bar)
         per.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -1142,7 +1142,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         self.mw.app.processEvents()
         return progressWidget, bar, textDisplay
 
-    def closeProgressBar(self, progressBar: QProgressBar | None) -> None:
+    def closeProgressBar(self, progressBar: typing.Optional[QProgressBar]) -> None:
         if progressBar:
             progressBar.closedBecauseFinishedImporting = True
             progressBar.close()

@@ -61,7 +61,7 @@ def getLatestVideos(config: _Config) -> tuple[str, str]:
         return False, False
 
 
-def miMessage(text: str, parent: QWidget | None=None) -> bool:
+def miMessage(text: str, parent: typing.Optional[QWidget]=None) -> bool:
     title = "Migaku"
     if parent is False:
         parent = aqt.mw.app.activeWindow() or aqt.mw

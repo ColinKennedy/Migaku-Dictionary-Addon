@@ -4,25 +4,28 @@ import typing
 import json
 import sys
 import math
-from anki.hooks import addHook
-from aqt.qt import *
-from aqt.utils import openLink, tooltip, showInfo, askUser
-from anki.utils import isMac, isWin, isLin
-from anki.lang import _
 import re
 import os
 from os.path import dirname, join
+
+from anki.hooks import addHook
+from aqt.qt import *
+from aqt.utils import openLink, tooltip, showInfo, askUser
+from anki.utils import is_mac, isWin, is_lin
+from anki.lang import _
+import aqt
+
 from .miutils import miInfo, miAsk
 from . import typer
 
 
 class _Template(typing.TypedDict):
     noteType: str
-    sentence: str | typing.Literal["Don't Export"]
-    notes: str | typing.Literal["Don't Export"]
+    sentence: typing.Union[str, typing.Literal["Don't Export"]]
+    notes: typing.Union[str, typing.Literal["Don't Export"]]
     word: str
     image: str
-    audio: str | None
+    audio: typing.Optional[str]
     unspecified: str
     separator: str
 
@@ -30,13 +33,13 @@ class _Template(typing.TypedDict):
 class TemplateEditor(QDialog):
     def __init__(
         self,
-        mw: aqt.mv,
-        parent: QWidget | None = None,
+        mw: aqt.mw,
+        parent: typing.Optional[QWidget]= None,
         dictionaries: typing.Iterable[str] = None,
         toEdit: bool = False,
         tName: bool = False,
     ) -> None:
-        super(TemplateEditor, self).__init__(parent, Qt.Window)
+        super().__init__(parent, Qt.Window)
 
         dictionaries = dictionaries or None
         self.setMinimumSize(QSize(400, 0))
@@ -102,9 +105,9 @@ class TemplateEditor(QDialog):
         toEdit: bool = False,
         tName: bool = False,
         first: bool = False,
-    ) -> NOne:
+    ) -> None:
         self.clearTemplateEditor()
-        
+
         self.loadDictionaries()
         if not toEdit:
             self.new = True
@@ -149,7 +152,7 @@ class TemplateEditor(QDialog):
             else:
                 dictFields[fieldn].append(dictn)
         return dictFields
-        
+
     def saveExportTemplate(self) -> None:
         newConfig = self.getConfig()
         tn = self.templateName.text()
@@ -182,7 +185,7 @@ class TemplateEditor(QDialog):
 
     def getDictFieldsTable(self) -> QTableWidget:
         macLin = False
-        if isMac  or isLin:
+        if is_mac  or is_lin:
             macLin = True
         dictFields = QTableWidget()
         dictFields.setColumnCount(3)
@@ -236,7 +239,7 @@ class TemplateEditor(QDialog):
             fields.sort()
             self.loadFieldsValues(fields)
             self.dictFieldsTable.setRowCount(0)
-            
+
     def getNotesFields(self) -> dict[str, list[str]]:
         notesFields = {}
         models = self.mw.col.models.all()
@@ -283,7 +286,7 @@ class TemplateEditor(QDialog):
         self.otherDictsField.clear()
         self.otherDictsField.addItems(fields)
         self.fields.clear()
-        self.fields.addItems(fields)    
+        self.fields.addItems(fields)
 
     def setupLayout(self) -> None:
         tempNameLay = QHBoxLayout()
@@ -353,4 +356,4 @@ class TemplateEditor(QDialog):
 
         self.setLayout(self.layout)
 
-        
+

@@ -12,7 +12,7 @@ addon_path = os.path.dirname(__file__)
 from aqt import mw
 
 
-AddType = typing.Literal["add"] | typing.Literal["no"]
+AddType = typing.Union[typing.Literal["add"], typing.Literal["no"]]
 
 
 @typing.final
@@ -52,7 +52,7 @@ class DictDB:
     def closeConnection(self) -> None:
         self.c.close()
 
-    def getLangId(self, lang: str) -> int | None:
+    def getLangId(self, lang: str) -> typing.Optional[int]:
         self.c.execute('SELECT id FROM langnames WHERE langname = ?;',  (lang,))
 
         # TODO: Remove try/except
@@ -406,7 +406,7 @@ class DictDB:
         except:
             return None
 
-    def getDupHeaders(self) -> dict | None:
+    def getDupHeaders(self) -> typing.Optional[dict]:
         self.c.execute('SELECT dictname, duplicateHeader FROM dictnames')
         # TODO: Remove try/except
         try:
@@ -423,7 +423,7 @@ class DictDB:
         self.c.execute('UPDATE dictnames SET duplicateHeader = ? WHERE dictname=?', (duplicateHeader, name))
         self.commitChanges()
 
-    def getTermHeaders(self) -> dict | None:
+    def getTermHeaders(self) -> typing.Optional[dict]:
         self.c.execute('SELECT dictname, termHeader FROM dictnames')
         # TODO: Remove try/except
         try:
@@ -436,7 +436,7 @@ class DictDB:
         except:
             return None
 
-    def getAddType(self, name: str) -> AddType | None:
+    def getAddType(self, name: str) -> typing.Optional[AddType]:
         self.c.execute('SELECT addtype FROM dictnames WHERE dictname=?', (name, ))
         # TODO: Remove try/except
         try:

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # 
 
+import typing
+
 import aqt
 from aqt.qt import *
 from os.path import dirname, join
@@ -34,7 +36,7 @@ def miInfo(text: str, parent: bool=False, level: str = 'msg', day: bool = True) 
     return mb.exec_()
 
 
-def miAsk(text: str, parent: QWidget | None=None, day: bool=True, customText: str = "") -> bool:
+def miAsk(text: str, parent: typing.Optional[QWidget]=None, day: bool=True, customText: str = "") -> bool:
     msg = QMessageBox(parent)
     msg.setWindowTitle("Migaku Dictionary")
     msg.setText(text)

@@ -2,12 +2,12 @@ import os
 import requests
 import stat
 import typing
-from anki.utils import isMac, isWin, isLin
+from anki.utils import is_mac, is_win, is_lin
 from anki.hooks import addHook
 from os.path import join, exists, dirname
 from .miutils import miInfo
 from aqt.qt import *
-from aqt import mw, gui_hooks
+from aqt import mw as mw_, gui_hooks
 import zipfile
 
 
@@ -18,7 +18,7 @@ class _Configuration(typing.TypedDict):
 
 class FFMPEGInstaller:
 
-    def __init__(self, mw: aqt.mw) -> None:
+    def __init__(self, mw: mw_) -> None:
         super().__init__()
 
         self.mw = mw
@@ -26,12 +26,12 @@ class FFMPEGInstaller:
         self.addonPath = dirname(__file__)
         self.ffmpegDir = join(self.addonPath, 'user_files', 'ffmpeg')
         self.ffmpegFilename = "ffmpeg"
-        if isWin:
+        if is_win:
             self.ffmpegFilename += ".exe"
             self.downloadURL = "http://dicts.migaku.io/ffmpeg/windows"
-        elif isLin:
+        elif is_lin:
             self.downloadURL = "http://dicts.migaku.io/ffmpeg/linux"
-        elif isMac:
+        elif is_mac:
             self.downloadURL = "http://dicts.migaku.io/ffmpeg/macos"
         self.ffmpegPath = join(self.ffmpegDir, self.ffmpegFilename)
         self.tempPath = join(self.addonPath, 'temp', 'ffmpeg')
@@ -175,6 +175,6 @@ class FFMPEGInstaller:
             print("FFMPEG already installed or conversion disabled.")
 
 def window_loaded():
-    ffmpegInstaller = FFMPEGInstaller(mw)
+    ffmpegInstaller = FFMPEGInstaller(mw_)
     addHook("profileLoaded", ffmpegInstaller.installFFMPEG)
 gui_hooks.main_window_did_init.append(window_loaded)

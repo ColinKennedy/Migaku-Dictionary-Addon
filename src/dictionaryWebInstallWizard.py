@@ -1,10 +1,11 @@
-import logging
-
-from aqt.qt import *
-from anki.httpclient import HttpClient
-import json
 import io
+import json
+import logging
 import os
+import typing
+
+from anki.httpclient import HttpClient
+from aqt.qt import *
 import aqt
 
 from . import migaku_wizard
@@ -21,7 +22,7 @@ _LOGGER = logging.getLogger(__name__)
 class NoAutoSelectLineEdit(QLineEdit):
 
     # TODO: @ColinKennedy - Do I need return bool?
-    def focusInEvent(self, e: QFocusEvent | None) -> None:
+    def focusInEvent(self, e: typing.Optional[QFocusEvent]) -> None:
         super().focusInEvent(e)
 
         self.deselect()
@@ -31,7 +32,7 @@ class DictionaryWebInstallWizard(migaku_wizard.MiWizard):
 
     INITIAL_SIZE = (600, 400)
 
-    def __init__(self, force_lang: str | None=None, parent: QWidget | None=None) -> None:
+    def __init__(self, force_lang: typing.Optional[str]=None, parent: typing.Optional[QWidget]=None) -> None:
         super().__init__(parent)
 
         self.dictionary_force_lang = force_lang
@@ -48,7 +49,7 @@ class DictionaryWebInstallWizard(migaku_wizard.MiWizard):
 
 
     @classmethod
-    def execute_modal(cls, force_lang: str | None=None) -> int:
+    def execute_modal(cls, force_lang: typing.Optional[str]=None) -> int:
         wizard = cls(force_lang)
         return wizard.exec()
 
@@ -184,7 +185,7 @@ class DictionarySelectPage(MiWizardPage):
 
 
     # TODO: Add whitelist functionality so only limited amount is displayed based on user target language, native language, etc
-    def setup_entries(self) -> NOne:
+    def setup_entries(self) -> None:
 
         self.dict_tree.clear()
 
@@ -346,7 +347,7 @@ class DictionaryInstallPage(MiWizardPage):
             install_freq: bool,
             install_conj: bool,
             force_lang=None,
-            parent=QObject | None,
+            parent=typing.Optional[QObject],
         ) -> None:
             super().__init__(parent)
 

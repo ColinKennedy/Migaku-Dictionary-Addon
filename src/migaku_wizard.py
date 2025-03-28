@@ -1,3 +1,5 @@
+import typing
+
 from aqt.qt import *
 from PyQt6.QtWidgets import QSizePolicy, QLayout
 from PyQt6.QtGui import QPalette
@@ -6,7 +8,7 @@ from PyQt6.QtGui import QPalette
 # TODO: @ColinKennedy - What is all this? An abstract class without using ``abc``?
 class MiWizardPage(QWidget):
 
-    def __init__(self, parent: QWidget | None=None) -> None:
+    def __init__(self, parent: typing.Optional[QWidget]=None) -> None:
         super().__init__(parent)
 
         self.wizard = None
@@ -48,7 +50,7 @@ class MiWizardPage(QWidget):
 
 class MiWizard(QDialog):
     
-    def __init__(self, parent: QWidget | None=None) -> None:
+    def __init__(self, parent: typing.Optional[QWidget]=None) -> None:
         super(MiWizard, self).__init__(parent)
 
         self._current_page = None
@@ -117,8 +119,8 @@ class MiWizard(QDialog):
     def add_page(
         self,
         page: MiWizardPage,
-        back_page: MiWizardPage | None=None,
-        next_page: MiWizardPage | None=None,
+        back_page: typing.Optional[MiWizardPage]=None,
+        next_page: typing.Optional[MiWizardPage]=None,
         back_populate: bool=True,
     ) -> MiWizardPage:
         page.wizard = self
@@ -140,7 +142,7 @@ class MiWizard(QDialog):
     def set_page_back(
         self,
         page: MiWizardPage,
-        back_page: MiWizardPage | None,
+        back_page: typing.Optional[MiWizardPage],
         back_populate: bool=True,
     ) -> None:
         self._page_back[page] = back_page
@@ -151,7 +153,7 @@ class MiWizard(QDialog):
     def set_page_next(
         self,
         page: MiWizardPage,
-        next_page: MiWizardPage | None,
+        next_page: typing.Optional[MiWizardPage],
         back_populate: bool=True,
     ) -> None:
         self._page_next[page] = next_page

@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import typing
 import urllib
 from aqt.utils import  showInfo
 from bs4 import BeautifulSoup
@@ -123,7 +124,7 @@ class Forvo(QRunnable):
     def search(
         self,
         term: str,
-        lang: str | typing.Literal[False] = False,
+        lang: typing.Union[str, typing.Literal[False]] = False,
     ) -> list[tuple[str, str, str, str]]:
         if lang and self.selLang != lang:
             self.selLang = lang
@@ -144,7 +145,7 @@ class Forvo(QRunnable):
         url1 = protocol + "//" + audiohost + "/mp3/" + base64.b64decode(url1).decode("utf-8", "strict")
         return url1, url2
 
-    def attemptFetchForvoLinks(self, term: str) -> str | typing.Literal[False]:
+    def attemptFetchForvoLinks(self, term: str) -> typing.Union[str, typing.Literal[False]]:
         urls = self.search(term)
         if len(urls) > 0:
             return json.dumps(urls)

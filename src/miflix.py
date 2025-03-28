@@ -54,7 +54,7 @@ class MigakuHTTPHandler(tornado.web.RequestHandler):
         self.addCondensedAudioInProgressMessage = self.application.addCondensedAudioInProgressMessage
         self.removeCondensedAudioInProgressMessage  = self.application.removeCondensedAudioInProgressMessage
         suffix = ''     
-        if isWin:   
+        if is_win:
             suffix = '.exe' 
         self.ffmpeg = join(self.addonDirectory, 'user_files', 'ffmpeg', 'ffmpeg' + suffix)
 
@@ -206,7 +206,7 @@ class ImportHandler(MigakuHTTPHandler):
     def handleAudioFileInRequestAndReturnFilename(
         self,
         copyFileFunction: typing.Callable[[_File, str], None],
-    ) -> str | None:
+    ) -> typing.Optional[str]:
         if "audio" in self.request.files:
             audioFile = self.request.files['audio'][0]
             audioFileName = audioFile["filename"]
@@ -216,7 +216,7 @@ class ImportHandler(MigakuHTTPHandler):
         # TODO: @ColinKennedy consider return None
         return False
 
-    def parseBoolean(self, bulk: bool | typing.Literal["false"]) -> bool:
+    def parseBoolean(self, bulk: typing.Union[bool, typing.Literal["false"]]) -> bool:
         if bulk == "false" or  bulk is False :
             return False 
         return True
@@ -272,7 +272,7 @@ class LearningStatusHandler(MigakuHTTPHandler):
         self,
         templateSide: str,
         fieldOrdinatesDict: dict[str, str],
-    ) -> list[str] | None:
+    ) -> typing.Optional[list[str]]:
         pattern = r"{{([^#^\/][^}]*?)}}";
         matches = re.findall(pattern, templateSide);
         fields = self.getCleanedFieldArray(matches);
@@ -382,7 +382,7 @@ class MigakuHTTPServer(tornado.web.Application):
     def removeCondensedAudioInProgressMessage(self) -> None:
         self.thread.removeCondensedAudioInProgressMessage()
 
-    def checkVersion(self, version: int | typing.Literal[False]) -> bool:
+    def checkVersion(self, version: typing.Union[int, typing.Literal[False]]) -> bool:
         if version is False or version < self.PROTOCOL_VERSION:
             self.alert("Your Migaku Dictionary Version is newer than and incompatible with your Immerse with Migaku Browser Extension installation. Please ensure you are using the latest version of the add-on and extension to resolve this issue.")
             return False

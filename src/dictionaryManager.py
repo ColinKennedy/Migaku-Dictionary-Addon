@@ -1,10 +1,9 @@
 import json
-import zipfile
-import re
+import logging
 import operator
+import os
 import re
 import shutil
-import sip
 import typing
 import zipfile
 
@@ -34,7 +33,7 @@ class _YomiDictEntry(typing.TypedDict):
 
 class DictionaryManagerWidget(QWidget):
     
-    def __init__(self, parent: QWidget | None=None) -> None:
+    def __init__(self, parent: typing.Optional[QWidget]=None) -> None:
         super().__init__(parent)
 
         lyt = QVBoxLayout()
@@ -206,7 +205,7 @@ class DictionaryManagerWidget(QWidget):
         self.dict_grp.setEnabled(dict_ is not None)
 
 
-    def get_current_lang_dict(self) -> tuple[str | None, str | None]:
+    def get_current_lang_dict(self) -> tuple[typing.Optional[str], typing.Optional[str]]:
 
         curr_item = self.dict_tree.currentItem()
 
@@ -220,7 +219,7 @@ class DictionaryManagerWidget(QWidget):
         return lang, dict_
 
 
-    def get_current_lang_item(self) -> QTreeWidgetItem | None:
+    def get_current_lang_item(self) -> typing.Optional[QTreeWidgetItem]:
         curr_item = self.dict_tree.currentItem()
 
         if curr_item:
@@ -231,7 +230,7 @@ class DictionaryManagerWidget(QWidget):
         return curr_item
 
 
-    def get_current_dict_item(self) -> QTreeWidgetItem | None:
+    def get_current_dict_item(self) -> typing.Optional[QTreeWidgetItem]:
 
         curr_item = self.dict_tree.currentItem()
 
@@ -307,9 +306,6 @@ class DictionaryManagerWidget(QWidget):
             os.remove(path)
         except OSError:
             pass
-
-        #sip.delete(lang_item)
-
 
     def set_freq_data(self) -> None:
         lang_name = self.get_current_lang_dict()[0]
@@ -436,8 +432,6 @@ class DictionaryManagerWidget(QWidget):
             return
 
         db.deleteDict(dict_name)
-        #sip.delete(dict_item)
-
 
     def set_term_header(self) -> None:
         db = aqt.mw.miDictDB
@@ -523,8 +517,8 @@ def natural_sort(l):
 
 
 def loadDict(
-    zfile: zipfile.Zipfile,
-    filenames: typing.Iteratable[str],
+    zfile: zipfile.ZipFile,
+    filenames: typing.Iterable[str],
     lang: str,
     dictName: str,
     frequencyDict,
@@ -722,7 +716,7 @@ def getStarCount(freq: int) -> str:
 
 # TODO: @ColinKennedy check if ``False`` return is actually necessary
 
-def getFrequencyList(lang: str) -> _FrequencyList | None:
+def getFrequencyList(lang: str) -> typing.Optional[_FrequencyList]:
     filePath = os.path.join(addon_path, 'user_files', 'db', 'frequency', '%s.json' % lang)
     frequencyDict = {}
 

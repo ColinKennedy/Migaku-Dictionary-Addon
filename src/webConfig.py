@@ -1,4 +1,8 @@
+from __future__ import annotations
+
 import json
+import typing
+
 from anki.httpclient import HttpClient
 
 
@@ -13,7 +17,7 @@ class _Dictionary(typing.TypedDict):
 class _DictionaryLanguage(typing.TypedDict):
     name_en: str
     name_native: str
-    to_languages: typing.Sequence[_DictionaryLanguage] | None
+    to_languages: typing.Optional[typing.Sequence[_DictionaryLanguage]]
     dictionaries: typing.Sequence[_Dictionary]
 
 

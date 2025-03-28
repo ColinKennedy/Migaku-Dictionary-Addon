@@ -1,12 +1,12 @@
 from aqt.qt import *
 from .miutils import miAsk
-from anki.utils import isWin, isMac
+from anki.utils import is_win, is_mac
 from anki.hooks import addHook
 from aqt.utils import openLink
 
 
 def checkForThirtyTwo():
-	if isWin or isMac:
+	if is_win or is_mac:
 		qVer = QT_VERSION_STR
 		invalid = ['5.12.6', '5.9.7']
 		if qVer in invalid:
