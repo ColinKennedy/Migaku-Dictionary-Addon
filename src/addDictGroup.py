@@ -44,7 +44,7 @@ class DictGroupEditor(QDialog):
         group: typing.Optional[_Group]= None,
         groupName: str = False,
     ):
-        super().__init__(parent, QtCore.Qt.Window)
+        super().__init__(parent, Qt.WindowType.Window)
 
         dictionaries = dictionaries or []
         self.mw = mw

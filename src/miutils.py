@@ -29,7 +29,7 @@ def miInfo(text: str, parent: bool=False, level: str = 'msg', day: bool = True) 
     mb.setText(text)
     mb.setWindowIcon(icon)
     mb.setWindowTitle(title)
-    b = mb.addButton(QMessageBox.Ok)
+    b = mb.addButton(QMessageBox.StandardButton.Ok)
     b.setFixedSize(100, 30)
     b.setDefault(True)
 
@@ -41,11 +41,11 @@ def miAsk(text: str, parent: typing.Optional[QWidget]=None, day: bool=True, cust
     msg.setWindowTitle("Migaku Dictionary")
     msg.setText(text)
     icon = QIcon(join(addon_path, 'icons', 'migaku.png'))
-    b = msg.addButton(QMessageBox.Yes)
+    b = msg.addButton(QMessageBox.StandardButton.Yes)
     
     b.setFixedSize(100, 30)
     b.setDefault(True)
-    c = msg.addButton(QMessageBox.No)
+    c = msg.addButton(QMessageBox.StandardButton.No)
     c.setFixedSize(100, 30)
 
     if customText:

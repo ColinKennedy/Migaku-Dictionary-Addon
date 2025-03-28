@@ -55,7 +55,7 @@ class FFMPEGInstaller:
         progressWidget.setLayout(layout) 
         bar.move(10,10)
         per = QLabel(bar)
-        per.setAlignment(Qt.AlignCenter)
+        per.setAlignment(Qt.AlignmentFlag.AlignCenter)
         progressWidget.show()
         progressWidget.setFocus()
 

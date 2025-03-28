@@ -17,7 +17,7 @@ import os.path
 from threading import Thread
 from aqt.qt import QThread, pyqtSignal
 import os, uuid
-from aqt import mw
+from aqt import mw as mw_
 from anki.collection import Collection
 from threading import Timer
 from anki.utils import isWin
@@ -358,7 +358,7 @@ class MigakuHTTPServer(tornado.web.Application):
 
     PROTOCOL_VERSION = 2
 
-    def __init__(self, thread, mw: aqt.mw) -> None:
+    def __init__(self, thread, mw: mw_) -> None:
         self.mw = mw
         self.previousBulkTimeStamp = 0
         self.thread = thread
@@ -397,7 +397,7 @@ class MigakuServerThread(QThread):
     exportingCondensed = pyqtSignal()
     notExportingCondensed = pyqtSignal()
 
-    def __init__(self, mw: aqt.mw) -> None:
+    def __init__(self, mw: mw_) -> None:
         self.mw = mw
         QThread.__init__(self)
         self.server = MigakuHTTPServer(self, mw)
@@ -434,7 +434,7 @@ def removeCondensedAudioInProgressMessage() -> None:
 
 
 
-serverThread = MigakuServerThread(mw)
+serverThread = MigakuServerThread(mw_)
 serverThread.alertUser.connect(miInfo)
 serverThread.exportingCondensed.connect(addCondensedAudioInProgressMessage)
 serverThread.notExportingCondensed.connect(removeCondensedAudioInProgressMessage)

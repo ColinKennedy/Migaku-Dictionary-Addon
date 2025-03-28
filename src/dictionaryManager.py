@@ -149,7 +149,7 @@ class DictionaryManagerWidget(QWidget):
 
 
     def info(self, text: str) -> int:
-        dlg = QMessageBox(QMessageBox.Information, 'Migaku Dictioanry', text, QMessageBox.Ok, self)
+        dlg = QMessageBox(QMessageBox.Information, 'Migaku Dictioanry', text, QMessageBox.StandardButton.Ok, self)
 
         return dlg.exec()
 
@@ -282,9 +282,9 @@ class DictionaryManagerWidget(QWidget):
             return
         lang_name = lang_item.data(0, Qt.ItemDataRole.UserRole+0)
 
-        dlg = QMessageBox(QMessageBox.Question, 'Migaku Dictioanry',
+        dlg = QMessageBox(QMessageBox.Icon.Question, 'Migaku Dictioanry',
                           'Do you really want to remove the language "%s"?\n\nAll settings and dictionaries for it will be removed.' % lang_name,
-                          QMessageBox.Yes | QMessageBox.No, self)
+                          QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, self)
         r = dlg.exec_()
 
         if r != QMessageBox.Yes:

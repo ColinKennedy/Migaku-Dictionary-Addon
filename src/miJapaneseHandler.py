@@ -12,11 +12,8 @@ class miJHandler:
 		self.activeNotes = self.getActiveNotes()
 
 	def getActiveNotes(self) -> dict[str, list[str]]:
-		if not hasattr(self.mw, 'Exporter'):
-			raise RuntimeError(f'No Exporter found for "{self.mv!r}".')
-
-		if hasattr(self.mw,'CSSJSHandler'):
-			raise RuntimeError(f'No CSSJSHandler found for "{self.mv!r}".')
+		if not hasattr(self.mw,'CSSJSHandler'):
+			raise RuntimeError(f'No CSSJSHandler found for "{self.mw!r}".')
 
 		activeNotes, _ = self.mw.CSSJSHandler.getWrapperDict()
 		for noteType in activeNotes:
