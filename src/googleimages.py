@@ -254,6 +254,7 @@ countryCodes = {"Afghanistan" : "countryAF",
 "Zambia": "countryZM",
 "Zimbabwe": "countryZW"}
 
+
 class GoogleSignals(QObject):
     resultsFound = pyqtSignal(list)
     noResults = pyqtSignal(str)
@@ -264,14 +265,15 @@ class Google(QRunnable):
     
     # finished = pyqtSignal()
 
-    def __init__(self):
-        super(Google, self).__init__()
+    def __init__(self) -> None:
+        super().__init__()
+
         self.GOOGLE_SEARCH_URL = "https://www.google.com/search"
         self.term = False
         self.signals = GoogleSignals()
         self.initSession()
 
-    def initSession(self):
+    def initSession(self) -> None:
         self.session = requests.session()
         self.session.headers.update(
             {
@@ -281,22 +283,22 @@ class Google(QRunnable):
             }
         )
 
-    def setTermIdName(self, term, idName):
+    def setTermIdName(self, term: str, idName: str) -> None:
         self.term = term
         self.idName = idName
 
-    def run(self):
+    def run(self) -> None:
         if self.term:
             resultList = self.getPreparedResults(self.term, self.idName)
             self.signals.resultsFound.emit(resultList)
         self.signals.finished.emit()
 
-    def search(self, keyword, maximum, region = False):
+    def search(self, keyword: str, maximum: int, region: str = "") -> list[str]:
         query = self.query_gen(keyword) 
 
         return self.image_search(query, maximum, region)
 
-    def query_gen(self, keyword):
+    def query_gen(self, keyword: str) -> typing.Generator[str]:
         page = 0
         while True:
             queryDict = {"q": keyword, "tbm": "isch"}
@@ -312,17 +314,16 @@ class Google(QRunnable):
             yield url + "?" + params
             page += 1
 
-    def setSearchRegion(self, region):
+    def setSearchRegion(self, region: str) -> None:
         self.region = region
 
-
-    def setSafeSearch(self, safe):
+    def setSafeSearch(self, safe: bool) -> None:
         self.safeSearch = safe
 
-    def getResultsFromRawHtml(self, html):
+    def getResultsFromRawHtml(self, html: list[str]) -> list[str]:
         pattern = r"AF_initDataCallback[\s\S]+AF_initDataCallback\({key: '[\s\S]+?',[\s\S]+?data:(\[[\s\S]+\])[\s\S]+?<\/script><script id="
         matches = re.findall(pattern, html)
-        results = []
+        results: list[str] = []
         try:
             if len(matches) > 0:
                 decoded = json.loads(matches[0])[31][0][12][2]
@@ -332,12 +333,15 @@ class Google(QRunnable):
                         results.append(str(d1[3][0]))   
             return results
         except:
+            # TODO: @ColinKennedy - Adjust try/except
             return []
 
-    def getHtml(self, term):
+    def getHtml(self, term: str) -> str:
         images = self.search(term, 80)
+
         if not images or len(images) < 1:
             return 'No Images Found. This is likely due to a connectivity error.'
+
         firstImages = []
         tempImages = []
         for idx, image in enumerate(images):
@@ -356,15 +360,16 @@ class Google(QRunnable):
         html += '</div><button class="imageLoader" onclick="loadMoreImages(this, \\\'' + '\\\' , \\\''.join(self.getCleanedUrls(images)) +'\\\')">Load More</button>'
         return html
 
-    def getPreparedResults(self, term, idName):
+    def getPreparedResults(self, term: str, idName: str) -> list[str]:
         html = self.getHtml(term)
+
         return [html, idName]
     
-    def getCleanedUrls(self, urls):
+    def getCleanedUrls(self, urls: typing.Iterable[str]) -> list[str]:
         return [x.replace('\\', '\\\\') for x in urls]
 
-    def image_search(self, query_gen, maximum, region = False):
-        results = []
+    def image_search(self, query_gen, maximum: int, region: str = "") -> list[str]:
+        results: list[str] = []
         if not region:
             region = countryCodes[self.region]
         total = 0
@@ -408,7 +413,7 @@ class Google(QRunnable):
                 break
         return results
 
-def search(target, number):
+def search(target: str, number: int):
     parser = argparse.ArgumentParser(argument_default=argparse.SUPPRESS)
     parser.add_argument("-t", "--target", help="target name", type=str, required=True)
     parser.add_argument(

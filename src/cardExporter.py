@@ -39,20 +39,24 @@ class _Card(typing.TypedDict):
 
 
 class MITextEdit(QTextEdit):
-    def __init__(self, parent: typing.Optional[QWidget]= None, dictInt= None) -> None:
+    def __init__(
+        self,
+        parent: typing.Optional[QWidget]= None,
+        dictInt: typing.Optional[midict.DictInterface] = None,
+    ) -> None:
         super().__init__(parent)
 
         self.dictInt = dictInt
         self.setAcceptRichText(False)
 
-    def contextMenuEvent(self, event):
+    def contextMenuEvent(self, event: QEvent) -> None:
         menu = super().createStandardContextMenu()
         search = QAction('Search')
         search.triggered.connect(self.searchSelected)
         menu.addAction(search)
         menu.exec_(event.globalPos())
 
-    def keyPressEvent(self, event):
+    def keyPressEvent(self, event: QEvent) -> None:
         if event.modifiers() & Qt.ControlModifier:
             if event.key() == Qt.Key_B:
                 cursor = self.textCursor()
@@ -72,9 +76,10 @@ class MITextEdit(QTextEdit):
                 format.setUnderlineStyle(QTextCharFormat.SingleUnderline if not cursor.charFormat().font().underline() else QTextCharFormat.NoUnderline)
                 cursor.mergeCharFormat(format)
                 return
-        QTextEdit.keyPressEvent(self, event)
 
-    def searchSelected(self, in_browser):
+        super().keyPressEvent(event)
+
+    def searchSelected(self, in_browser: bool) -> None:
         if in_browser:
             b = dialogs.open('Browser', self.dictInt.mw)
             b.form.searchEdit.lineEdit().setText('expression:*{0}*'.format(self.selectedText()))
@@ -82,22 +87,26 @@ class MITextEdit(QTextEdit):
         else:
             self.dictInt.initSearch(self.selectedText())
 
-    def selectedText(self):
+    def selectedText(self) -> str:
         return self.textCursor().selectedText()
 
 class MILineEdit(QLineEdit):
-    def __init__(self, parent = None, dictInt = None):
-        super(MILineEdit, self).__init__(parent)
+    def __init__(
+        self,
+        parent: typing.Optional[QWidget] = None,
+        dictInt: typing.Optional[midict.DictInterface] = None,
+    ):
+        super().__init__(parent)
         self.dictInt = dictInt
 
-    def contextMenuEvent(self, event):
+    def contextMenuEvent(self, event: QEvent) -> None:
         menu = super().createStandardContextMenu()
         search = QAction('Search')
         search.triggered.connect(self.searchSelected)
         menu.addAction(search)
         menu.exec_(event.globalPos())
 
-    def searchSelected(self, in_browser):
+    def searchSelected(self, in_browser: bool) -> None:
         if in_browser:
             b = dialogs.open('Browser', self.dictInt.mw)
             b.form.searchEdit.lineEdit().setText('Expression:*{0}*'.format(self.selectedText()))
@@ -106,7 +115,15 @@ class MILineEdit(QLineEdit):
             self.dictInt.initSearch(self.selectedText())
 
 class CardExporter():
-    def __init__(self, dictInt, dictWeb, templates = [], sentence = False, word = False, definition = False):
+    def __init__(
+        self,
+        dictInt,
+        dictWeb,
+        templates = [],
+        sentence = False,
+        word = False,
+        definition = False,
+    ):
         self.window = QWidget()
         self.scrollArea = QScrollArea()
         self.scrollArea.setWidget(self.window)
@@ -176,29 +193,29 @@ class CardExporter():
         self.maybeSetToAlwaysOnTop()
         self.bulkMediaExportProgressWindow = False
 
-    def maybeSetToAlwaysOnTop(self):
+    def maybeSetToAlwaysOnTop(self) -> None:
         if self.alwaysOnTop:
             self.scrollArea.setWindowFlags(self.scrollArea.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
             self.scrollArea.show()
 
-    def attemptAutoAdd(self, bulkExport):
+    def attemptAutoAdd(self, bulkExport: bool) -> None:
         if self.autoAdd.isChecked() or bulkExport:
             self.addCard()
 
-    def initTooltips(self):
+    def initTooltips(self) -> None:
         if self.config['tooltips']:
             self.templateCB.setToolTip('Select the export template.')
             self.deckCB.setToolTip('Select the deck to export to.')
             self.clearButton.setToolTip('Clear the card exporter.')
 
-    def restoreSizePos(self):
+    def restoreSizePos(self) -> None:
         sizePos = self.config['exporterSizePos']
         if sizePos:
             self.scrollArea.resize(sizePos[2], sizePos[3])
             self.scrollArea.move(sizePos[0], sizePos[1])
             ensureWidgetInScreenBoundaries(self.scrollArea)
 
-    def setHotkeys(self):
+    def setHotkeys(self) -> None:
         self.sentencehotkeyS = QShortcut(
             QKeySequence('Ctrl+S'), self.scrollArea, lambda : self.attemptSearch(False))
         self.sentencehotkeyS = QShortcut(
@@ -206,12 +223,12 @@ class CardExporter():
         self.scrollArea.hotkeyEsc = QShortcut(QKeySequence("Esc"), self.scrollArea)
         self.scrollArea.hotkeyEsc.activated.connect(self.scrollArea.hide)
 
-    def attemptSearch(self, in_browser):
+    def attemptSearch(self, in_browser) -> None:
         focused = self.scrollArea.focusWidget()
         if type(focused).__name__ in  ['MILineEdit', 'MITextEdit']:
             focused.searchSelected(in_browser)
 
-    def setColors(self):
+    def setColors(self) -> None:
         if self.dictInt.nightModeToggler.day :
             self.scrollArea.setPalette(self.dictInt.ogPalette)
             if is_mac:
@@ -232,7 +249,7 @@ class CardExporter():
                 self.deckCB.setStyleSheet(self.dictInt.getComboStyle())
             self.definitions.setStyleSheet(self.dictInt.getTableStyle())
 
-    def addNote(self, note, did):
+    def addNote(self, note, did) -> bool:
         note.model()['did'] = int(did)
         ret = note.dupeOrEmpty()
         if ret == 1:
@@ -253,17 +270,20 @@ Please review your template and notetype combination."""), level='wrn', day = se
             return False
         self.mw.col.save()
         self.mw.reset()
+
         return True
 
-    def getDecks(self):
+    def getDecks(self) -> dict[str, int]:
         decksRaw = self.mw.col.decks.decks
-        decks = {}
+        decks: dict[str, int] = {}
+
         for did, deck in decksRaw.items():
             if not deck['dyn']:
                 decks[deck['name']] = did
+
         return decks
 
-    def getDeckCB(self):
+    def getDeckCB(self) -> QComboBox:
         cb = QComboBox()
         decks = list(self.decks.keys())
         decks.sort()
@@ -274,16 +294,16 @@ Please review your template and notetype combination."""), level='wrn', day = se
         cb.currentIndexChanged.connect(lambda: self.dictInt.writeConfig('currentDeck', cb.currentText()))
         return cb
 
-    def hideEvent(self, event):
+    def hideEvent(self, event: QEvent) -> None:
         self.saveSizeAndPos()
         event.accept()
 
-    def closeEvent(self, event):
+    def closeEvent(self, event: QEvent) -> None:
         self.clearCurrent()
         self.saveSizeAndPos()
         event.accept()
 
-    def saveSizeAndPos(self):
+    def saveSizeAndPos(self) -> None:
         pos = self.scrollArea.pos()
         x = pos.x()
         y = pos.y()
@@ -294,7 +314,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         self.dictInt.writeConfig('exporterSizePos', posSize)
         self.dictInt.writeConfig('exporterLastTags', self.tagsLE.text())
 
-    def initHandlers(self):
+    def initHandlers(self) -> None:
         self.definitionSettingsButton.clicked.connect(self.definitionSettingsWidget)
         self.clearButton.clicked.connect(self.clearCurrent)
         self.cancelButton.clicked.connect(self.scrollArea.close)
@@ -303,28 +323,28 @@ Please review your template and notetype combination."""), level='wrn', day = se
         self.searchUnknowns.valueChanged.connect(self.saveSearchUnknowns)
         self.autoAdd.clicked.connect(self.saveAutoAddChecked)
 
-    def saveSearchUnknowns(self):
+    def saveSearchUnknowns(self) -> None:
         config = self.getConfig()
         config["unknownsToSearch"] = self.searchUnknowns.value()
         self.config = config
         self.mw.refreshMigakuDictConfig(config)
         self.mw.addonManager.writeConfig(__name__, config)
 
-    def saveAutoAddChecked(self):
+    def saveAutoAddChecked(self) -> None:
         config = self.getConfig()
         config["autoAddCards"] = self.autoAdd.isChecked()
         self.config = config
         self.mw.refreshMigakuDictConfig(config)
         self.mw.addonManager.writeConfig(__name__, config)
 
-    def saveAddDefinitionChecked(self):
+    def saveAddDefinitionChecked(self) -> None:
         config = self.getConfig()
         config["autoAddDefinitions"] = self.addDefinitionsCheckbox.isChecked()
         self.config = config
         self.mw.refreshMigakuDictConfig(config)
         self.mw.addonManager.writeConfig(__name__, config)
 
-    def addCard(self):
+    def addCard(self) -> None:
         templateName = self.templateCB.currentText()
         if templateName in self.templates:
             template = self.templates[templateName]
@@ -367,6 +387,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
     def automaticallyAddDefinitions(self, note, word, template):
         if not self.definitionSettings:
             return note
+
         dictToTable = self.getDictionaryNameToTableNameDictionary()
         unspecifiedDefinitionField = template["unspecified"]
         specificFields = template["specific"]
@@ -389,19 +410,19 @@ Please review your template and notetype combination."""), level='wrn', day = se
 
         return self.mw.addDefinitionsToCardExporterNote(note, word, dictionaries)
 
-    def moveImageToMediaFolder(self):
+    def moveImageToMediaFolder(self) -> None:
         if self.imgPath and self.imgName:
             if exists(self.imgPath):
                 path = join(self.mw.col.media.dir(), self.imgName)
                 if not exists(path):
                     copyfile(self.imgPath, path)
 
-    def fieldValid(self, field):
+    def fieldValid(self, field: str) -> bool:
         return field != 'Don\'t Export'
 
-    def getDictionaryEntries(self, dictionary):
-        finList = []
-        idxs = []
+    def getDictionaryEntries(self, dictionary: str) -> list[str]:
+        finList: list[str] = []
+        idxs: list[int] = []
         for idx, defList in enumerate(self.definitionList):
             if defList[0] == dictionary:
                 finList.append(defList[2])
@@ -411,15 +432,14 @@ Please review your template and notetype combination."""), level='wrn', day = se
             self.definitionList.pop(idx)
         return finList
 
-    def emptyValueIfEmptyHtml(self, value):
+    def emptyValueIfEmptyHtml(self, value: str) -> str:
         pattern = r"(?:<[^<]+?>)"
         if re.sub(pattern, "", value) == "":
             return ""
         return value
 
-
-
     def getFieldsValues(self, t):
+        # TODO: tuple[fields, imgField, audioField, tagsField]
         imgField = False
         audioField = False
         tagsField = ''
@@ -491,7 +511,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
                 fields[unspecified].append(defList[2])
         return fields, imgField, audioField, tagsField;
 
-    def clearCurrent(self):
+    def clearCurrent(self) -> None:
         self.definitions.setRowCount(0)
         self.sentenceLE.clear()
         self.secondaryLE.clear()
@@ -509,7 +529,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         self.imgPath = False
         self.imgName = False
 
-    def getDefinitions(self):
+    def getDefinitions(self) -> QTableWidget:
         macLin = False
         if is_mac  or is_lin:
             macLin = True
@@ -535,7 +555,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
     def getConfig(self):
         return self.mw.addonManager.getConfig(__name__)
 
-    def setupLayout(self):
+    def setupLayout(self) -> None:
         tempLayout = QHBoxLayout()
         tempLayout.addWidget(QLabel('Template: '))
         self.templateCB.setFixedSize(120, 30)
@@ -618,7 +638,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         self.layout.setContentsMargins(2, 2, 2, 2)
         self.layout.setSpacing(2)
 
-    def getTemplateCB(self):
+    def getTemplateCB(self) -> QComboBox:
         cb = QComboBox()
         cb.addItems(self.templates)
         current = self.config['currentTemplate']
@@ -628,7 +648,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
             cb.setCurrentText(current)
         return cb
 
-    def addImgs(self, word, imgs, thumbs):
+    def addImgs(self, word: str, imgs: str, thumbs: QWidget) -> None:
         self.focusWindow()
         defEntry = ["Google Images", False, imgs, imgs]
         if defEntry in self.definitionList:
@@ -647,10 +667,11 @@ Please review your template and notetype combination."""), level='wrn', day = se
         if self.wordLE.text() == '':
             self.wordLE.setText(word)
 
-    def exportWord(self, word):
+    def exportWord(self, word: str) -> None:
         self.wordLE.setText(word)
 
-    def removeImgs(self, imgs):
+    def removeImgs(self, imgs: str) -> None:
+        # TODO: @ColinKennedy - try/except
         try:
             row = self.definitions.selectionModel().currentIndex().row()
             self.definitions.removeRow(row)
@@ -658,7 +679,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         except:
             return
 
-    def removeImgFromDefinitionList(self, imgs):
+    def removeImgFromDefinitionList(self, imgs: str) -> None:
         for idx, entry in enumerate(self.definitionList):
             if entry[0] == 'Google Images' and entry[3] == imgs:
                 self.definitionList.pop(idx)
@@ -877,7 +898,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         return text
 
 
-    def addTextCard(self, card: _Card) -> None:
+    def addTextCard(self, card: typer.Card) -> None:
         templateName = self.templateCB.currentText()
         sentence = card["primary"]
         word = ""
@@ -939,7 +960,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
             tagsField = tagsText
         return fields, tagsField
 
-    def bulkTextExport(self, cards: typing.Sequence[_Card]) -> None:
+    def bulkTextExport(self, cards: typing.Sequence[typer.Card]) -> None:
         self.bulkTextImporting = True
         total = len(cards)
         importingMessage = "Importing {} of "+ str(total) + " cards."
@@ -956,7 +977,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         self.bulkTextImporting = False
         self.closeProgressBar(progressWidget)
 
-    def addMediaCard(self, card: _Card) -> None:
+    def addMediaCard(self, card: typer.Card) -> None:
         templateName = self.templateCB.currentText()
         word = ""
         unknowns = card["unknownWords"]
@@ -996,7 +1017,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         self,
         t: _Template,
         wordText: str,
-        card: _Card,
+        card: typer.Card,
     ) -> tuple[dict[str, list[str]], str]:
         sentenceText = card["primary"]
         secondaryText = card["secondary"]
@@ -1050,7 +1071,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
                     fields[audioField].append(audio)
         return fields, tagsField
 
-    def bulkMediaExport(self, card: _Card) -> None:
+    def bulkMediaExport(self, card: typer.Card) -> None:
         if self.mw.MigakuBulkMediaExportWasCancelled:
             return
         if not self.bulkMediaExportProgressWindow:

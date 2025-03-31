@@ -22,26 +22,14 @@ if typing.TYPE_CHECKING:
 from . import typer
 
 
-class _Dictionary(typing.NamedTuple):
-    index: int
-    order: int
-    text: str
-
-
-class _Group(typing.TypedDict):
-    customFont: bool
-    dictionaries: typing.List[_Dictionary]
-    font: str
-
-
 class DictGroupEditor(QDialog):
     def __init__(
         self,
-        mw: aqt.mw,
+        mw: aqt.AnkiQt,
         # TODO: @ColinKennedy - fix cyclic dependency "addonSettings.SettingsGui" later
         parent: "addonSettings.SettingsGui",
         dictionaries: typing.Optional[typing.Iterable[str]]= None,
-        group: typing.Optional[_Group]= None,
+        group: typing.Optional[typer.DictionaryGroup]= None,
         groupName: str = False,
     ):
         super().__init__(parent, Qt.WindowType.Window)
@@ -104,7 +92,7 @@ class DictGroupEditor(QDialog):
         self.dictionaries.setRowCount(0)
         self.loadDictionaries(self.dictList)
 
-    def loadGroupEditor(self, group: _Group, groupName: str) -> None:
+    def loadGroupEditor(self, group: typer.DictionaryGroup, groupName: str) -> None:
         self.clearGroupEditor()
         self.new = False
         self.setWindowTitle("Edit Dictionary Group")
@@ -238,7 +226,7 @@ class DictGroupEditor(QDialog):
 
             return
 
-        dictGroup: _Group = {
+        dictGroup: typer.DictionaryGroup = {
             'customFont' : customFont,
             'dictionaries' : selectedDicts,
             'font' : fontName,
@@ -252,8 +240,8 @@ class DictGroupEditor(QDialog):
     def getSelectedDictionaryNames(self) -> list[str]:
         return [item[2] for item in self.getSelectedDictionaries()]
 
-    def getSelectedDictionaries(self) -> list[_Dictionary]:
-        dicts: list[_Dictionary] = []
+    def getSelectedDictionaries(self) -> list[typer.Dictionary]:
+        dicts: list[typer.Dictionary] = []
 
         for i in range(self.dictionaries.rowCount()):
             item = self.dictionaries.item(i, 1)

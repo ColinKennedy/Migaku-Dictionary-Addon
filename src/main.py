@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
-#
+
+import typing
+
 from os.path import dirname, join, basename, exists, join
 import sys, os, platform, re, subprocess, aqt.utils
 from anki.utils import stripHTML, is_win, is_mac, is_lin
-from .midict import DictInterface, ClipThread
+from . import midict
 import re
 import unicodedata
 import urllib.parse
@@ -35,12 +37,21 @@ import os
 from aqt.qt import debug;
 from PyQt6.QtCore import Qt
 
+from . import google_imager, migaku_dictionary, migaku_configuration, threader
 
-def window_loaded():
 
-    mw.MigakuDictConfig = mw.addonManager.getConfig(__name__)
+class _DictionaryConfiguration(typing.TypedDict):
+    dictName: str
+    field: str
+    limit: int
+    tableName: str
+
+
+def window_loaded() -> None:
+    migaku_configuration.initialize_by_namespace()
     mw.MigakuExportingDefinitions = False
     mw.dictSettings = False
+    dictdb.initialize()
     mw.miDictDB = dictdb.DictDB()
     progressBar = False
     addon_path = dirname(__file__)
@@ -52,16 +63,7 @@ def window_loaded():
     mw.migakuEditorLoadedAfterDictionary = False
     mw.MigakuBulkMediaExportWasCancelled = False
 
-
-    def refreshMigakuDictConfig(config = False):
-        if config:
-            mw.MigakuDictConfig = config
-            return
-        mw.MigakuDictConfig = mw.addonManager.getConfig(__name__)
-
-    mw.refreshMigakuDictConfig = refreshMigakuDictConfig
-
-    def removeTempFiles():
+    def removeTempFiles() -> None:
         filelist = [ f for f in os.listdir(tmpdir)]
         for f in filelist:
             path = os.path.join(tmpdir, f)
@@ -76,10 +78,10 @@ def window_loaded():
 
     removeTempFiles()
 
-    def migaku(text):
+    def migaku(text: str) -> None:
         showInfo(text ,False,"", "info", "Migaku Dictionary Add-on")
 
-    def showA(ar):
+    def showA(ar: typing.Iterable[typing.Hashable]) -> None:
         showInfo(json.dumps(ar, ensure_ascii=False))
 
 
@@ -90,12 +92,12 @@ def window_loaded():
     js = bytes(js.readAll()).decode('utf-8')
 
 
-    def searchCol(self):
+    def searchCol(self) -> None:
         text = selectedText(self)
         performColSearch(text)
 
 
-    def performColSearch(text):
+    def performColSearch(text: str) -> None:
         if text:
             text = text.strip()
             browser = aqt.DialogManager._dialogs["Browser"][1]
@@ -124,88 +126,93 @@ def window_loaded():
         if char not in mw.currentlyPressed:
                 mw.currentlyPressed.append(char)
         if is_win:
+            thread = threader.get()
+
             if 'Key.ctrl_l' in mw.currentlyPressed and "'c'" in mw.currentlyPressed and'Key.space'  in mw.currentlyPressed:
-                mw.hkThread.handleSystemSearch()
+                thread.handleSystemSearch()
                 mw.currentlyPressed = []
             elif 'Key.ctrl_l' in mw.currentlyPressed and "'c'" in mw.currentlyPressed and "'b'"  in mw.currentlyPressed:
-                mw.hkThread.handleColSearch()
+                thread.handleColSearch()
                 mw.currentlyPressed = []
             elif 'Key.ctrl_l' in mw.currentlyPressed and "'c'" in mw.currentlyPressed and 'Key.alt_l' in mw.currentlyPressed:
-                mw.hkThread.handleSentenceExport()
+                thread.handleSentenceExport()
                 mw.currentlyPressed = []
             elif 'Key.ctrl_l' in mw.currentlyPressed and 'Key.enter' in mw.currentlyPressed:
-                mw.hkThread.attemptAddCard()
+                thread.attemptAddCard()
                 mw.currentlyPressed = []
             elif 'Key.ctrl_l' in mw.currentlyPressed and 'Key.shift' in mw.currentlyPressed and "'v'" in mw.currentlyPressed:
-                mw.hkThread.handleImageExport()
+                thread.handleImageExport()
                 mw.currentlyPressed = []
         elif is_lin:
             if 'Key.ctrl' in mw.currentlyPressed and "'c'" in mw.currentlyPressed and'Key.space'  in mw.currentlyPressed:
-                mw.hkThread.handleSystemSearch()
+                thread.handleSystemSearch()
                 mw.currentlyPressed = []
             elif 'Key.ctrl' in mw.currentlyPressed and "'c'" in mw.currentlyPressed and 'Key.alt' in mw.currentlyPressed:
-                mw.hkThread.handleSentenceExport()
+                thread.handleSentenceExport()
                 mw.currentlyPressed = []
             elif 'Key.ctrl' in mw.currentlyPressed and 'Key.enter' in mw.currentlyPressed:
-                mw.hkThread.attemptAddCard()
+                thread.attemptAddCard()
                 mw.currentlyPressed = []
             elif 'Key.ctrl' in mw.currentlyPressed and 'Key.shift' in mw.currentlyPressed and "'v'" in mw.currentlyPressed:
-                mw.hkThread.handleImageExport()
+                thread.handleImageExport()
                 mw.currentlyPressed = []
         else:
             if ('Key.cmd' in mw.currentlyPressed or 'Key.cmd_r' in mw.currentlyPressed)  and "'c'" in mw.currentlyPressed and "'b'"  in mw.currentlyPressed:
-                mw.hkThread.handleColSearch()
+                thread.handleColSearch()
                 mw.currentlyPressed = []
             elif ('Key.cmd' in mw.currentlyPressed or 'Key.cmd_r' in mw.currentlyPressed) and "'c'" in mw.currentlyPressed and 'Key.ctrl' in mw.currentlyPressed:
-                mw.hkThread.handleSentenceExport()
+                thread.handleSentenceExport()
                 mw.currentlyPressed = []
             elif ('Key.cmd' in mw.currentlyPressed or 'Key.cmd_r' in mw.currentlyPressed) and 'Key.enter' in mw.currentlyPressed:
-                mw.hkThread.attemptAddCard()
+                thread.attemptAddCard()
                 mw.currentlyPressed = []
             elif ('Key.cmd' in mw.currentlyPressed or 'Key.cmd_r' in mw.currentlyPressed) and 'Key.shift' in mw.currentlyPressed and "'v'" in mw.currentlyPressed:
-                mw.hkThread.handleImageExport()
+                thread.handleImageExport()
                 mw.currentlyPressed = []
 
 
-    def releaseKey(keyList):
+    def releaseKey(keyList: list[str]) -> None:
         key = keyList[0]
         try:
             mw.currentlyPressed.remove(str(key))
         except:
+            # TODO: @ColinKennedy - docstring / logging
             return
 
 
-    def exportSentence(sentence):
-        if mw.migakuDictionary and mw.migakuDictionary.isVisible():
-            mw.migakuDictionary.dict.exportSentence(sentence)
+    def exportSentence(sentence: str) -> None:
+        if dictionary := migaku_dictionary.get_visible_dictionary():
+            dictionary.dict.exportSentence(sentence)
             showCardExporterWindow()
 
-    def exportImage(img):
-        if mw.migakuDictionary and mw.migakuDictionary.isVisible():
+    def exportImage(img: str) -> None:
+        if dictionary := migaku_dictionary.get_visible_dictionary():
             if img[1].startswith('[sound:'):
-                mw.migakuDictionary.dict.exportAudio(img)
+                dictionary.dict.exportAudio(img)
             else:
-                mw.migakuDictionary.dict.exportImage(img)
+                dictionary.dict.exportImage(img)
             showCardExporterWindow()
 
-    def extensionBulkTextExport(cards):
-        if not mw.migakuDictionary or not mw.migakuDictionary.isVisible():
-            mw.dictionaryInit()
-        mw.migakuDictionary.dict.bulkTextExport(cards)
+    def _initialize_dictionary_if_needed() -> midict.DictInterface:
+        if not migaku_dictionary.get_visible_dictionary():
+            dictionaryInit()
+
+        return migaku_dictionary.get()
+
+    def extensionBulkTextExport(cards) -> None:
+        dictionary = _initialize_dictionary_if_needed()
+        dictionary.dict.bulkTextExport(cards)
+
+    def extensionBulkMediaExport(card) -> None:
+        dictionary = _initialize_dictionary_if_needed()
+        dictionary.dict.bulkMediaExport(card)
+
+    def cancelBulkMediaExport() -> None:
+        if dictionary := migaku_dictionary.get_visible_dictionary():
+            dictionary.dict.cancelBulkMediaExport()
 
 
-    def extensionBulkMediaExport(card):
-        if not mw.migakuDictionary or not mw.migakuDictionary.isVisible():
-            mw.dictionaryInit()
-        mw.migakuDictionary.dict.bulkMediaExport(card)
-
-
-    def cancelBulkMediaExport():
-        if mw.migakuDictionary and mw.migakuDictionary.isVisible():
-            mw.migakuDictionary.dict.cancelBulkMediaExport()
-
-
-    def extensionCardExport(card):
+    def extensionCardExport(card) -> None:
         primary = card["primary"]
         secondary = card["secondary"]
         image = card["image"]
@@ -216,24 +223,25 @@ def window_loaded():
         if len(unknownWords) > 0:
             if not autoExportCards:
                 searchTermList(unknownWords)
-            elif not mw.migakuDictionary or not mw.migakuDictionary.isVisible():
-                mw.dictionaryInit()
-            mw.migakuDictionary.dict.exportWord(unknownWords[0])
+                dictionary = migaku_dictionary.get()
+            else:
+                dictionary = _initialize_dictionary_if_needed()
+
+            dictionary.dict.exportWord(unknownWords[0])
         else:
-            if not mw.migakuDictionary or not mw.migakuDictionary.isVisible():
-                    mw.dictionaryInit()
-            mw.migakuDictionary.dict.exportWord('')
+            dictionary = _initialize_dictionary_if_needed()
+            dictionary.dict.exportWord('')
         if audio:
-            mw.migakuDictionary.dict.exportAudio([join(mw.col.media.dir(), audio), '[sound:' + audio +']', audio])
+            dictionary.dict.exportAudio([join(mw.col.media.dir(), audio), '[sound:' + audio +']', audio])
         if image:
-            mw.migakuDictionary.dict.exportImage([join(mw.col.media.dir(), image), image])
-        mw.migakuDictionary.dict.exportSentence(primary, secondary)
-        mw.migakuDictionary.dict.addWindow.focusWindow()
-        mw.migakuDictionary.dict.attemptAutoAdd(False)
+            dictionary.dict.exportImage([join(mw.col.media.dir(), image), image])
+        dictionary.dict.exportSentence(primary, secondary)
+        dictionary.dict.addWindow.focusWindow()
+        dictionary.dict.attemptAutoAdd(False)
         showCardExporterWindow()
 
-    def showCardExporterWindow():
-        adder = mw.migakuDictionary.dict.addWindow
+    def showCardExporterWindow() -> None:
+        adder = migaku_dictionary.get().dict.addWindow
         cardWindow = adder.scrollArea
         if not is_win:
             cardWindow.setWindowState(cardWindow.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
@@ -245,33 +253,38 @@ def window_loaded():
                 cardWindow.setWindowFlags(cardWindow.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint)
                 cardWindow.show()
 
-    def trySearch(term):
-        if mw.migakuDictionary and mw.migakuDictionary.isVisible():
-            mw.migakuDictionary.initSearch(term)
+    def trySearch(term: str) -> None:
+        if dictionary := migaku_dictionary.get_visible_dictionary():
+            dictionary.initSearch(term)
             showAfterGlobalSearch()
-        elif mw.MigakuDictConfig['openOnGlobal'] and (not mw.migakuDictionary or not mw.migakuDictionary.isVisible()):
-            mw.dictionaryInit([term])
+        elif mw.MigakuDictConfig['openOnGlobal'] and not migaku_dictionary.get_visible_dictionary():
+            dictionaryInit([term])
 
+    def showAfterGlobalSearch() -> None:
+        dictionary = migaku_dictionary.get()
+        dictionary.activateWindow()
 
-    def showAfterGlobalSearch():
-        mw.migakuDictionary.activateWindow()
         if not is_win:
-            mw.migakuDictionary.setWindowState(mw.migakuDictionary.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
-            mw.migakuDictionary.raise_()
-        else:
-            mw.migakuDictionary.setWindowFlags(mw.migakuDictionary.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
-            mw.migakuDictionary.show()
-            if not mw.migakuDictionary.alwaysOnTop:
-                mw.migakuDictionary.setWindowFlags(mw.migakuDictionary.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint)
-                mw.migakuDictionary.show()
+            dictionary.setWindowState(dictionary.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
+            dictionary.raise_()
 
-    def attemptAddCard(add):
-        if mw.migakuDictionary and mw.migakuDictionary.isVisible() and mw.migakuDictionary.dict.addWindow and mw.migakuDictionary.dict.addWindow.scrollArea.isVisible():
-            time.sleep(.3)
-            mw.migakuDictionary.dict.addWindow.addCard()
+            return
+
+        dictionary.setWindowFlags(dictionary.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
+        dictionary.show()
+
+        if not dictionary.alwaysOnTop:
+            dictionary.setWindowFlags(dictionary.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint)
+            dictionary.show()
+
+    def attemptAddCard(*_, **__) -> None:
+        if dictionary := migaku_dictionary.get_visible_dictionary():
+            if dictionary.dict.addWindow.scrollArea.isVisible():
+                time.sleep(0.3)
+                dictionary.dict.addWindow.addCard()
 
 
-    def openDictionarySettings():
+    def openDictionarySettings() -> str:
         if not mw.dictSettings:
             mw.dictSettings = SettingsGui(mw, addon_path, openDictionarySettings)
         mw.dictSettings.show()
@@ -281,13 +294,13 @@ def window_loaded():
         mw.dictSettings.activateWindow()
 
 
-    def getWelcomeScreen():
+    def getWelcomeScreen() -> str:
         htmlPath = join(addon_path, 'welcome.html')
         with open(htmlPath,'r', encoding="utf-8") as fh:
             file =  fh.read()
         return file
 
-    def getMacWelcomeScreen():
+    def getMacWelcomeScreen() -> str:
         htmlPath = join(addon_path, 'macwelcome.html')
         with open(htmlPath,'r', encoding="utf-8") as fh:
             file =  fh.read()
@@ -298,27 +311,31 @@ def window_loaded():
     else:
         welcomeScreen = getWelcomeScreen()
 
-    def dictionaryInit(terms = False):
+    def dictionaryInit(terms: typing.Union[list[str], typing.Literal[False]]=False):
         if terms and isinstance(terms, str):
             terms = [terms]
         shortcut = '(Ctrl+W)'
         if is_mac:
             shortcut = '⌘W'
-        if not mw.migakuDictionary:
-            mw.migakuDictionary = DictInterface(mw.miDictDB, mw, addon_path, welcomeScreen, terms = terms)
+        if not migaku_dictionary.get_unsafe():
+            migaku_dictionary.set(
+                midict.DictInterface(dictdb.get(), mw, addon_path, welcomeScreen, terms = terms)
+            )
             mw.openMiDict.setText("Close Dictionary " + shortcut)
             showAfterGlobalSearch()
-        elif not mw.migakuDictionary.isVisible():
-            mw.migakuDictionary.show()
-            mw.migakuDictionary.resetConfiguration(terms)
+        elif not migaku_dictionary.get_visible_dictionary():
+            dictionary = migaku_dictionary.get()
+            dictionary.show()
+            dictionary.resetConfiguration(terms)
             mw.openMiDict.setText("Close Dictionary " + shortcut)
             showAfterGlobalSearch()
         else:
-            mw.migakuDictionary.hide()
+            dictionary = migaku_dictionary.get()
+            dictionary.hide()
 
     mw.dictionaryInit = dictionaryInit
 
-    def setupGuiMenu():
+    def setupGuiMenu() -> None:
         addMenu = False
         if not hasattr(mw, 'MigakuMainMenu'):
             mw.MigakuMainMenu = QMenu('Migaku',  mw)
@@ -348,37 +365,41 @@ def window_loaded():
 
     setupGuiMenu()
 
-    mw.migakuDictionary = False
+    migaku_dictionary.clear()
 
-    def searchTermList(terms):
+    def searchTermList(terms: list[str]) -> None:
         limit = mw.MigakuDictConfig.get("unknownsToSearch", 3)
         terms = terms[:limit]
-        if not mw.migakuDictionary or not mw.migakuDictionary.isVisible():
-            mw.dictionaryInit(terms)
-        else:
-            for term in terms:
-                mw.migakuDictionary.initSearch(term)
-            showAfterGlobalSearch()
 
-    def extensionFileNotFound():
+        if not (dictionary := migaku_dictionary.get_visible_dictionary()):
+            dictionaryInit(terms)
+
+            return
+
+        for term in terms:
+            dictionary.initSearch(term)
+
+        showAfterGlobalSearch()
+
+    def extensionFileNotFound() -> None:
         miInfo("The media files were not found in your \"Download Directory\", please make sure you have selected the correct directory.")
 
-    def initGlobalHotkeys():
-        mw.hkThread = ClipThread(mw, addon_path)
-        mw.hkThread.sentence.connect(exportSentence)
-        mw.hkThread.search.connect(trySearch)
-        mw.hkThread.colSearch.connect(performColSearch)
-        mw.hkThread.image.connect(exportImage)
-        mw.hkThread.bulkTextExport.connect(extensionBulkTextExport)
-        mw.hkThread.add.connect(attemptAddCard)
-        mw.hkThread.test.connect(captureKey)
-        mw.hkThread.release.connect(releaseKey)
-        mw.hkThread.pageRefreshDuringBulkMediaImport.connect(cancelBulkMediaExport)
-        mw.hkThread.bulkMediaExport.connect(extensionBulkMediaExport)
-        mw.hkThread.extensionCardExport.connect(extensionCardExport)
-        mw.hkThread.searchFromExtension.connect(searchTermList)
-        mw.hkThread.extensionFileNotFound.connect(extensionFileNotFound)
-        mw.hkThread.run()
+    def initGlobalHotkeys() -> None:
+        thread = threader.initialize(midict.ClipThread(mw, addon_path))
+        thread.sentence.connect(exportSentence)
+        thread.search.connect(trySearch)
+        thread.colSearch.connect(performColSearch)
+        thread.image.connect(exportImage)
+        thread.bulkTextExport.connect(extensionBulkTextExport)
+        thread.add.connect(attemptAddCard)
+        thread.test.connect(captureKey)
+        thread.release.connect(releaseKey)
+        thread.pageRefreshDuringBulkMediaImport.connect(cancelBulkMediaExport)
+        thread.bulkMediaExport.connect(extensionBulkMediaExport)
+        thread.extensionCardExport.connect(extensionCardExport)
+        thread.searchFromExtension.connect(searchTermList)
+        thread.extensionFileNotFound.connect(extensionFileNotFound)
+        thread.run()
 
     if mw.addonManager.getConfig(__name__)['globalHotkeys']:
         initGlobalHotkeys()
@@ -386,29 +407,31 @@ def window_loaded():
     mw.hotkeyW = QShortcut(QKeySequence("Ctrl+W"), mw)
     mw.hotkeyW.activated.connect(dictionaryInit)
 
-
-    def selectedText(page):
+    # TODO: @ColinKennedy - Replace False
+    def selectedText(page) -> typing.Union[str, typing.Literal[False]]:
         text = page.selectedText()
         if not text:
             return False
         else:
             return text
 
-    def searchTerm(self):
+    def searchTerm(self) -> None:
         text = selectedText(self)
         if text:
             text = re.sub(r'\[[^\]]+?\]', '', text)
             text = text.strip()
-            if not mw.migakuDictionary or not mw.migakuDictionary.isVisible():
+            if not migaku_dictionary.get_visible_dictionary():
                 dictionaryInit([text])
-            mw.migakuDictionary.ensureVisible()
-            mw.migakuDictionary.initSearch(text)
+
+            dictionary = migaku_dictionary.get()
+            dictionary.ensureVisible()
+            dictionary.initSearch(text)
             if self.title == 'main webview':
                 if mw.state == 'review':
-                    mw.migakuDictionary.dict.setReviewer(mw.reviewer)
+                    dictionary.dict.setReviewer(mw.reviewer)
             elif self.title == 'editor':
                 target = getTarget(type(self.parentEditor.parentWindow).__name__)
-                mw.migakuDictionary.dict.setCurrentEditor(self.parentEditor, target)
+                dictionary.dict.setCurrentEditor(self.parentEditor, target)
             showAfterGlobalSearch()
 
 
@@ -426,14 +449,14 @@ def window_loaded():
     mw.hotkeyS.activated.connect(lambda: searchCol(mw.web))
 
 
-    def addToContextMenu(self, m):
+    def addToContextMenu(self, m: QMenu) -> None:
         a = m.addAction("Search (Ctrl+S)")
         a.triggered.connect(self.searchTerm)
         b = m.addAction("Search Collection (Ctrl/⌘+Shift+B)")
         b.triggered.connect(self.searchCol)
 
     # TODO: @ColinKennedy dedent
-    def exportDefinitionsWidget(browser):
+    def exportDefinitionsWidget(browser: Browser) -> None:
         import anki.find
         notes = browser.selectedNotes()
         if notes:
@@ -449,8 +472,10 @@ def window_loaded():
             dict3 = QComboBox()
             dictDict = {}
             tempdicts = []
-            for d in mw.miDictDB.getAllDicts():
-                dictName = mw.miDictDB.cleanDictName(d)
+            database = dictdb.get()
+
+            for d in database.getAllDicts():
+                dictName = database.cleanDictName(d)
                 dictDict[dictName] = d;
                 tempdicts.append(dictName)
             tempdicts.append('Google Images')
@@ -534,7 +559,7 @@ def window_loaded():
         else:
             miInfo('Please select some cards before attempting to export definitions.', level='not')
 
-    def getProgressWidgetDefs():
+    def getProgressWidgetDefs() -> tuple[QWidget, QProgressBar]:
         progressWidget = QWidget(None)
         layout = QVBoxLayout()
         progressWidget.setFixedSize(400, 70)
@@ -552,8 +577,7 @@ def window_loaded():
         progressWidget.show()
         return progressWidget, bar;
 
-    def getTermHeaderText(th, entry, fb, bb):
-        headerList = []
+    def getTermHeaderText(th: str, entry: typer.HeaderTerm, fb: str, bb: str) -> str:
         term = entry['term']
         altterm = entry['altterm']
         if altterm == term:
@@ -596,84 +620,13 @@ def window_loaded():
             definitions.append(text)
         return '<br><br>'.join(definitions).replace('<br><br><br>', '<br><br>')
 
-    googleImager = None
-
-    def initImager():
-        global googleImager
-
-        googleImager = googleimages.Google()
-        config = mw.addonManager.getConfig(__name__)
-        googleImager.setSearchRegion(config['googleSearchRegion'])
-        googleImager.setSafeSearch(config["safeSearch"])
-
-    def exportGoogleImages(term, howMany):
-        global googleImager
-
-        config = mw.addonManager.getConfig(__name__)
-        maxW = config['maxWidth']
-        maxH = config['maxHeight']
-        if not googleImager:
-            initImager()
-        imgSeparator = ''
-        imgs = []
-        urls = googleImager.search(term, 80)
-        if len(urls) < 1:
-            time.sleep(.1)
-            urls = googleImager.search(term, 80, 'countryUS')
-        for url in urls:
-            time.sleep(.1)
-            img = downloadImage(url, maxW, maxH)
-            if img:
-                imgs.append(img)
-            if len(imgs) == howMany:
-                break
-        return imgSeparator.join(imgs)
-
-    def downloadImage(url, maxW, maxH):
-        try:
-            filename = str(time.time()).replace('.', '') + '.png'
-            req = Request(url , headers={'User-Agent':  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'})
-            file = urlopen(req).read()
-            image = QImage()
-            image.loadFromData(file)
-            image = image.scaled(QSize(maxW,maxH), Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            image.save(filename)
-            return '<img src="' + filename + '">'
-        except:
-            return False
-
     forvoDler = False;
-    def initForvo():
+
+    def initForvo() -> None:
         global forvoDler
         forvoDler= Forvo(mw.addonManager.getConfig(__name__)['ForvoLanguage'])
 
-
-    import base64
-    def decodeURL(url1, url2, protocol, audiohost, server):
-        url2 = protocol + "//" + server + "/player-mp3-highHandler.php?path=" + url2;
-        url1 = protocol + "//" + audiohost + "/mp3/" + base64.b64decode(url1).decode("utf-8", "strict")
-        return url1, url2
-
-
-
-    def generateURLS(results, language):
-        audio = re.findall(r'var pronunciations = \[([\w\W\n]*?)\];', results)
-        if not audio:
-            return []
-        audio = audio[0]
-        data = re.findall(language + r'.*?Pronunciation by (?:<a.*?>)?(\w+).*?class="lang_xx"\>(.*?)\<.*?,.*?,.*?,.*?,\'(.+?)\',.*?,.*?,.*?\'(.+?)\'', audio)
-        if data:
-            server = re.search(r"var _SERVER_HOST=\'(.+?)\';", results).group(1)
-            audiohost = re.search(r'var _AUDIO_HTTP_HOST=\'(.+?)\';', results).group(1)
-            protocol = 'https:'
-            urls = []
-            for datum in data:
-                urls.append(decodeURL(datum[2],datum[3],protocol, audiohost, server))
-            return urls
-
-
-
-    def exportForvoAudio(term, howMany, lang):
+    def exportForvoAudio(term: str, howMany: int, lang: str) -> str:
         if not forvoDler:
             initForvo()
         audioSeparator = ''
@@ -682,13 +635,16 @@ def window_loaded():
             time.sleep(.1)
             urls = forvoDler.search(term)
         tags = downloadForvoAudio(urls, howMany)
+
         return audioSeparator.join(tags)
 
-    def downloadForvoAudio( urls, howMany):
-        tags = []
+    def downloadForvoAudio(urls: typing.Iterable[str], howMany: int) -> list[str]:
+        tags: list[str] = []
+
         for url in urls:
             if len(tags) == howMany:
                 break
+
             try:
                 req = Request(url[3] , headers={'User-Agent':  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'})
                 file = urlopen(req).read()
@@ -711,19 +667,22 @@ def window_loaded():
                     continue
         return tags
 
-
-
-    def closeBar(event):
+    def closeBar(event: QCloseEvent) -> None:
         mw.MigakuExportingDefinitions = False
         event.accept()
 
-
-    def addDefinitionsToCardExporterNote(note, term, dictionaryConfigurations):
+    def addDefinitionsToCardExporterNote(
+        note: Note,
+        term: str,
+        dictionaryConfigurations: _DictionaryConfiguration,
+    ) -> Note:
         config = mw.addonManager.getConfig(__name__)
         fb = config['frontBracket']
         bb = config['backBracket']
         lang = config['ForvoLanguage']
         fields = mw.col.models.fieldNames(note.model())
+        database = dictdb.get()
+
         for dictionary in dictionaryConfigurations:
             tableName = dictionary["tableName"]
             dictName  = dictionary["dictName"]
@@ -732,15 +691,18 @@ def window_loaded():
             if targetField in fields:
                 term = re.sub(r'<[^>]+>', '', term)
                 term = re.sub(r'\[[^\]]+?\]', '', term)
-                if term == '':
+
+                if not term:
                     continue
-                tresults = []
+
+                tresults: list[str] = []
+
                 if tableName == 'Google Images':
-                    tresults.append(exportGoogleImages(term, limit))
+                    tresults.append(google_imager.export_images(term, limit))
                 elif tableName == 'Forvo':
                     tresults.append(exportForvoAudio(term, limit, lang))
                 elif tableName != 'None':
-                    dresults, dh, th = mw.miDictDB.getDefForMassExp(term, tableName, str(limit), dictName)
+                    dresults, dh, th = database.getDefForMassExp(term, tableName, str(limit), dictName)
                     tresults.append(formatDefinitions(dresults, th, dh, fb, bb))
                 results = '<br><br>'.join([i for i in tresults if i != ''])
                 if results != "":
@@ -752,7 +714,7 @@ def window_loaded():
 
     mw.addDefinitionsToCardExporterNote = addDefinitionsToCardExporterNote
 
-    def exportDefinitions(og, dest, addType, dictNs, howMany, notes, generateWidget, rawNames):
+    def exportDefinitions(og: str, dest: str, addType: str, dictNs: list[str], howMany: int, notes: typing.Sequence[int], generateWidget: QWidget, rawNames) -> None:
         config = mw.addonManager.getConfig(__name__)
         config["massGenerationPreferences"] = {
             "dict1" : rawNames[0],
@@ -776,6 +738,8 @@ def window_loaded():
         bb = config['backBracket']
         lang = config['ForvoLanguage']
         mw.MigakuExportingDefinitions = True
+        database = dictdb.get()
+
         for nid in notes:
             if not mw.MigakuExportingDefinitions:
                 break
@@ -790,11 +754,11 @@ def window_loaded():
                 dCount = 0
                 for dictN in dictNs:
                     if dictN == 'Google Images':
-                        tresults.append(exportGoogleImages( term, howMany))
+                        tresults.append(google_imager.export_images(term, howMany))
                     elif dictN == 'Forvo':
                         tresults.append(exportForvoAudio( term, howMany, lang))
                     elif dictN != 'None':
-                        dresults, dh, th = mw.miDictDB.getDefForMassExp(term, dictN, str(howMany), rawNames[dCount])
+                        dresults, dh, th = database.getDefForMassExp(term, dictN, str(howMany), rawNames[dCount])
                         tresults.append(formatDefinitions(dresults, th, dh, fb, bb))
                     dCount+= 1
                 results = '<br><br>'.join([i for i in tresults if i != ''])
@@ -817,20 +781,20 @@ def window_loaded():
         generateWidget.hide()
         generateWidget.deleteLater()
 
-    def dictOnStart():
+    def dictOnStart() -> None:
         if mw.addonManager.getConfig(__name__)['dictOnStart']:
             mw.dictionaryInit()
 
-    def setupMenu(browser):
+    def setupMenu(browser: aqt.Browser):
         a = QAction("Export Definitions", browser)
         a.triggered.connect(lambda: exportDefinitionsWidget(browser))
         browser.form.menuEdit.addSeparator()
         browser.form.menuEdit.addAction(a)
 
-    def closeDictionary():
-        if mw.migakuDictionary and mw.migakuDictionary.isVisible():
-            mw.migakuDictionary.saveSizeAndPos()
-            mw.migakuDictionary.hide()
+    def closeDictionary() -> None:
+        if dictionary := migaku_dictionary.get_visible_dictionary():
+            dictionary.saveSizeAndPos()
+            dictionary.hide()
             mw.openMiDict.setText("Open Dictionary (Ctrl+W)")
 
 
@@ -842,7 +806,7 @@ def window_loaded():
     addHook("profileLoaded", dictOnStart)
     addHook("browser.setupMenus", setupMenu)
 
-    def bridgeReroute(self, cmd):
+    def bridgeReroute(self, cmd: str) -> None:
         if cmd == "bodyClick":
             if mw.migakuDictionary and mw.migakuDictionary.isVisible() and self.note:
                 widget = type(self.widget.parentWidget()).__name__
@@ -866,16 +830,16 @@ def window_loaded():
     ogReroute = aqt.editor.Editor.onBridgeCmd
     aqt.editor.Editor.onBridgeCmd = bridgeReroute
 
-    def setBrowserEditor(browser):
-        if mw.migakuDictionary and mw.migakuDictionary.isVisible():
-            if browser.editor.note:
-                mw.migakuDictionary.dict.setCurrentEditor(browser.editor, 'Browser')
+    def setBrowserEditor(self: aqt.Browser) -> None:
+        if dictionary := migaku_dictionary.get_visible_dictionary():
+            if self.editor.note:
+                dictionary.dict.setCurrentEditor(self.editor, "Browser")
             else:
-                mw.migakuDictionary.dict.closeEditor()
+                dictionary.dict.closeEditor()
 
-    def checkCurrentEditor(self):
-        if mw.migakuDictionary and mw.migakuDictionary.isVisible():
-            mw.migakuDictionary.dict.checkEditorClose(self.editor)
+    def checkCurrentEditor(self) -> None:
+        if dictionary := migaku_dictionary.get_visible_dictionary():
+            dictionary.dict.checkEditorClose(self.editor)
 
     Browser.on_all_or_selected_rows_changed = wrap(Browser.on_all_or_selected_rows_changed, setBrowserEditor)
 
@@ -883,25 +847,22 @@ def window_loaded():
     #EditCurrent._saveAndClose = wrap(EditCurrent._saveAndClose, checkCurrentEditor)
     #Browser._closeWindow = wrap(Browser._closeWindow, checkCurrentEditor)
 
-    def addEditActivated(self, event = False):
-        if mw.migakuDictionary and mw.migakuDictionary.isVisible():
-            mw.migakuDictionary.dict.setCurrentEditor(self.editor, getTarget(type(self).__name__))
+    def addEditActivated(self, event: bool = False) -> None:
+        if dictionary := migaku_dictionary.get_visible_dictionary():
+            dictionary.dict.setCurrentEditor(self.editor, getTarget(type(self).__name__))
 
     bodyClick = '''document.addEventListener("click", function (ev) {
             pycmd("bodyClick")
         }, false);'''
 
-    def addBodyClick(self):
+    def addBodyClick(self) -> None:
         self.web.eval(bodyClick)
-
-    def addClickEvent(self):
-        self.historyButton.clicked.connect(lambda: attention(self))
 
     AddCards.addCards = wrap(AddCards.addCards, addEditActivated)
     AddCards.onHistory = wrap(AddCards.onHistory, addEditActivated)
 
 
-    def addHotkeys(self):
+    def addHotkeys(self) -> None:
         self.parentWindow.hotkeyS = QShortcut(QKeySequence("Ctrl+S"), self.parentWindow)
         self.parentWindow.hotkeyS.activated.connect(lambda: searchTerm(self.web))
         self.parentWindow.hotkeyS = QShortcut(QKeySequence("Ctrl+Shift+B"), self.parentWindow)
@@ -910,7 +871,7 @@ def window_loaded():
         self.parentWindow.hotkeyW.activated.connect(dictionaryInit)
 
 
-    def addHotkeysToPreview(self):
+    def addHotkeysToPreview(self) -> None:
         self._web.hotkeyS = QShortcut(QKeySequence("Ctrl+S"), self._web)
         self._web.hotkeyS.activated.connect(lambda: searchTerm(self._web))
         self._web.hotkeyS = QShortcut(QKeySequence("Ctrl+Shift+B"), self._web)
@@ -921,15 +882,15 @@ def window_loaded():
     Previewer.open = wrap(Previewer.open, addHotkeysToPreview)
 
 
-    def addEditorFunctionality(self):
+    def addEditorFunctionality(self) -> None:
         self.web.parentEditor = self
         addBodyClick(self)
         addHotkeys(self)
 
-    def gt(obj):
+    def gt(obj: typing.Any) -> str:
         return type(obj).__name__
 
-    def getTarget(name):
+    def getTarget(name: str) -> typing.Optional[str]:
         if name == 'AddCards':
             return 'Add'
         elif name == "EditCurrent" or name == "MigakuEditCurrent":
@@ -937,29 +898,31 @@ def window_loaded():
         elif name == 'Browser':
             return name
 
-    def announceParent(self, event = False):
-        if mw.migakuDictionary and mw.migakuDictionary.isVisible():
+    def announceParent(self, event: bool = False) -> None:
+        if dictionary := migaku_dictionary.get_visible_dictionary():
             parent = self.parentWidget().parentWidget().parentWidget()
             pName = gt(parent)
+
             if gt(parent) not in ['AddCards', 'EditCurrent']:
                 parent =  aqt.DialogManager._dialogs["Browser"][1]
                 pName = 'Browser'
+
                 if not parent:
                     return
-            mw.migakuDictionary.dict.setCurrentEditor(parent.editor, getTarget(pName))
 
-    def addClickToTags(self):
-        self.tags.clicked.connect(lambda: announceParent(self))
+            dictionary.dict.setCurrentEditor(parent.editor, getTarget(pName))
 
     TagEdit.focusInEvent = wrap(TagEdit.focusInEvent, announceParent)
     aqt.editor.Editor.setupWeb = wrap(aqt.editor.Editor.setupWeb, addEditorFunctionality)
     AddCards.mousePressEvent = addEditActivated
     EditCurrent.mousePressEvent = addEditActivated
 
-    def miLinks(self, cmd):
-        if mw.migakuDictionary and mw.migakuDictionary.isVisible():
-            mw.migakuDictionary.dict.setReviewer(self)
-        return ogLinks(self, cmd)
+    # TODO: @ColinKennedy - replace with funtools.partial
+    def miLinks(self, cmd: str) -> None:
+        if dictionary := migaku_dictionary.get_visible_dictionary():
+            dictionary.dict.setReviewer(self)
+
+        ogLinks(self, cmd)
 
     ogLinks = Reviewer._linkHandler
     Reviewer._linkHandler = miLinks  # type: ignore

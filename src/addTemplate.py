@@ -33,11 +33,11 @@ class _Template(typing.TypedDict):
 class TemplateEditor(QDialog):
     def __init__(
         self,
-        mw: aqt.mw,
+        mw: aqt.AnkiQt,
         parent: typing.Optional[QWidget]= None,
-        dictionaries: typing.Iterable[str] = None,
-        toEdit: bool = False,
-        tName: bool = False,
+        dictionaries: typing.Optional[typing.Iterable[str]] = None,
+        toEdit: _Template = False,
+        tName: str = "",
     ) -> None:
         super().__init__(parent, Qt.Window)
 
@@ -100,12 +100,7 @@ class TemplateEditor(QDialog):
         self.dictFieldsTable.setRowCount(0)
         self.entrySeparator.clear()
 
-    def loadTemplateEditor(
-        self,
-        toEdit: bool = False,
-        tName: bool = False,
-        first: bool = False,
-    ) -> None:
+    def loadTemplateEditor(self, toEdit: _Template = False, tName: str = "") -> None:
         self.clearTemplateEditor()
 
         self.loadDictionaries()

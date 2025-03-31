@@ -1,17 +1,21 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import annotations
+
 import typing
 
 import sqlite3
 import os.path
 from aqt.utils import showInfo
 from .miutils import miInfo
+from . import typer
 import re
 import json
 addon_path = os.path.dirname(__file__)
 from aqt import mw
 
 
+_INSTANCE: typing.Optional[DictDB] = None
 AddType = typing.Union[typing.Literal["add"], typing.Literal["no"]]
 
 
@@ -176,16 +180,17 @@ class DictDB:
         except:
             return []
 
-    def getDefaultGroups(self):
+    def getDefaultGroups(self) -> dict[str, typer.DictionaryGroup]:
         langs = self.getCurrentDbLangs()
         dictsByLang = {}
         for lang in langs:
             self.c.execute("SELECT dictname, lid FROM dictnames INNER JOIN langnames ON langnames.id = dictnames.lid WHERE langname = ?;", (lang,)) 
             allDs = self.c.fetchall()
-            dicts = {}
-            dicts['customFont'] = False
-            dicts['font'] = False
-            dicts['dictionaries'] = []
+            dicts: typer.DictionaryGroup = {
+                'customFont': False,
+                'dictionaries': [],
+                'font': False,
+            }
             if len(allDs) > 0:
                 for d in allDs:
                     dicts['dictionaries'].append({'dict' : self.formatDictName(d[1], d[0]), 'lang' : lang})
@@ -457,3 +462,16 @@ class DictDB:
 
     def commitChanges(self) -> None:
         self.conn.commit()
+
+
+def get() -> DictDB:
+    if _INSTANCE:
+        return _INSTANCE
+
+    raise RuntimeError("No database has been initialized yet.")
+
+
+def set(database: DictDB) -> None:
+    global _INSTANCE
+
+    _INSTANCE = database

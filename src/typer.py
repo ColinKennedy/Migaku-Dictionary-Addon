@@ -1,13 +1,24 @@
 import typing
 
 
+class Card(typing.TypedDict):
+    # unknowns: list[str]
+    audio: str
+    bulk: bool
+    image: str
+    primary: str
+    secondary: str
+    total: int
+    unknownWords: list[str]
+
+
 # TODO: @ColinKennedy - Probably the Literal[False] is should be `| None`
 class Configuration(typing.TypedDict):
     autoAddCards: bool
     autoAddDefinitions: bool
     autoDefinitionSettings: bool
     backBracket: str
-    condensedAudioDirectory: typing.Union[str, typing.Literal[False]]
+    condensedAudioDirectory: typing.Optional[str]
     currentDeck: typing.Union[str, typing.Literal[False]]
     currentGroup: typing.Union[typing.Literal["All"], typing.Literal["Google Images"], typing.Literal["Forvo"]]
     currentTemplate: typing.Union[str, typing.Literal[False]]
@@ -47,5 +58,23 @@ class Configuration(typing.TypedDict):
     GoogleImageFields: list
     ForvoFields: list
     ForvoAddType: typing.Literal["add"]
-    ForvoLanguage: typing.Literal["Japanese"]  # TODO: @ColinKennedy add more languages later
+    ForvoLanguage: str  # typing.Literal["Japanese"]  # TODO: @ColinKennedy add more languages later
     GoogleImageAddType: typing.Literal["add"]
+
+
+class Dictionary(typing.NamedTuple):
+    index: int
+    order: int
+    text: str
+
+
+class DictionaryGroup(typing.TypedDict):
+    customFont: bool
+    dictionaries: typing.List[Dictionary]
+    font: str
+
+
+class HeaderTerm(typing.TypedDict):
+    altterm: str
+    pronunciation: str
+    term: str

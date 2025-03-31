@@ -5,6 +5,7 @@ import math
 import sys
 import typing
 
+from aqt import qt, main
 from aqt import mw as mw_
 from anki.hooks import addHook, wrap
 from aqt.qt import *
@@ -23,7 +24,7 @@ from .miutils import miInfo, miAsk
 from . dictionaryManager import DictionaryManagerWidget
 from .ffmpegInstaller import FFMPEGInstaller
 
-from . import typer
+from . import dictdb, migaku_configuration, migaku_dictionary, typer
 
 verNumber = "1.3.8"
 
@@ -37,11 +38,8 @@ def attemptOpenLink(cmd: str) -> None:
 class MigakuSVG(QSvgWidget):
     clicked=pyqtSignal()
 
-    def __init__(self, parent: typing.Optional[QWidget]=None):
-        super().__init__(parent)
-
     # TODO: @ColinKennedy Check if this returns bool
-    def mousePressEvent(self, ev: QMouseEvent) -> None:
+    def mousePressEvent(self, ev: typing.Optional[QMouseEvent]) -> None:
         self.clicked.emit()
 
 class MigakuLabel(QLabel):
@@ -51,11 +49,11 @@ class MigakuLabel(QLabel):
         super().__init__(parent)
 
     # TODO: @ColinKennedy Check if this returns bool
-    def mousePressEvent(self, ev: QMouseEvent) -> None:
+    def mousePressEvent(self, ev: typing.Optional[QMouseEvent]) -> None:
         self.clicked.emit()
 
 class SettingsGui(QTabWidget):
-    def __init__(self, mw: mw_, path: str, reboot: typing.Callable[[], None]) -> None:
+    def __init__(self, mw: main.AnkiQt, path: str, reboot: typing.Callable[[], None]) -> None:
         super(SettingsGui, self).__init__()
         self.mw = mw
         self.ffmpegInstaller = FFMPEGInstaller(self.mw)
@@ -109,7 +107,7 @@ class SettingsGui(QTabWidget):
         self.restoreButton = QPushButton('Restore Defaults')
         self.cancelButton = QPushButton('Cancel')
         self.applyButton = QPushButton('Apply')
-        self.layout = QVBoxLayout()
+        self._main_layout = QVBoxLayout()
         self.settingsTab = QWidget(self)
         self.userGuideTab = self.getUserGuideTab()
         self.setupLayout()
@@ -127,19 +125,31 @@ class SettingsGui(QTabWidget):
 
         self.show()
 
-    # TODO: @ColinKennedy Check if this returns bool
-    def hideEvent(self, event: QHideEvent) -> None:
-        self.mw.dictSettings = None
-        self.userGuideTab.close()
-        self.userGuideTab.deleteLater()
-        event.accept()
+    def _get_group_text(self, row: int) -> str:
+        item = self.dictGroups.item(row, 0)
+
+        if not item:
+            raise RuntimeError(f'No dict group could be found for "{row}"')
+
+        return item.text()
 
     # TODO: @ColinKennedy Check if this returns bool
-    def closeEvent(self, event: QCloseEvent) -> None:
+    def hideEvent(self, event: typing.Optional[QHideEvent]) -> None:
         self.mw.dictSettings = None
         self.userGuideTab.close()
         self.userGuideTab.deleteLater()
-        event.accept()
+
+        if event:
+            event.accept()
+
+    # TODO: @ColinKennedy Check if this returns bool
+    def closeEvent(self, event: typing.Optional[QCloseEvent]) -> None:
+        self.mw.dictSettings = None
+        self.userGuideTab.close()
+        self.userGuideTab.deleteLater()
+
+        if event:
+            event.accept()
 
     def initTooltips(self) -> None:
         self.addDictGroup.setToolTip('Add a new dictionary group.\nDictionary groups allow you to specify which dictionaries to search\nwithin. You can also set a specific font for that group.')
@@ -223,13 +233,18 @@ class SettingsGui(QTabWidget):
         if self.chooseAudioDirectory.text() != "Choose Directory":
             nc ['condensedAudioDirectory'] = self.chooseAudioDirectory.text()
         else:
-            nc ['condensedAudioDirectory'] = False
-        self.mw.addonManager.writeConfig(__name__, nc)
+            nc ['condensedAudioDirectory'] = None
+        self.mw.addonManager.writeConfig(
+            __name__,
+            typing.cast(dict[typing.Any, typing.Any], nc),
+        )
         self.hide()
-        self.mw.refreshMigakuDictConfig()
+        migaku_configuration.initialize_by_namespace()
+
         if nc['mp3Convert']:
             self.ffmpegInstaller.installFFMPEG()
-        if self.mw.migakuDictionary and self.mw.migakuDictionary.isVisible():
+
+        if migaku_dictionary.get_visible_dictionary():
             miInfo('Please be aware that the dictionary window will not reflect any setting changes until it is closed and reopened.', level='not')
 
     def updateAudioDirectory(self) -> None:
@@ -246,6 +261,10 @@ class SettingsGui(QTabWidget):
         groupTemplates = QTableWidget()
         groupTemplates.setColumnCount(3)
         tableHeader = groupTemplates.horizontalHeader()
+
+        if not tableHeader:
+            raise RuntimeError("Group templates has no horizontal header.")
+
         tableHeader.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         tableHeader.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
         tableHeader.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
@@ -291,11 +310,11 @@ class SettingsGui(QTabWidget):
         return lambda: self.removeGroup(x)
 
     # TODO: @ColinKennedy Remove later
-    def editGroupRow(self, x) -> typing.Callable[[], None]:
+    def editGroupRow(self, x: int) -> typing.Callable[[], None]:
         return lambda: self.editGroup(x)
 
     def editGroup(self, row: int) -> None:
-        groupName  = self.dictGroups.item(row, 0).text()
+        groupName  = self._get_group_text(row)
         dictGroups = self.getConfig()['DictionaryGroups']
         if groupName in dictGroups:
             group = dictGroups[groupName]
@@ -303,14 +322,19 @@ class SettingsGui(QTabWidget):
             dictEditor.exec()
 
     def removeGroup(self, row: int) -> None:
-        if miAsk('Are you sure you would like to remove this dictionary group? This action will happen immediately and is not un-doable.', self):
-            newConfig = self.getConfig()
-            dictGroups = newConfig['DictionaryGroups']
-            groupName = self.dictGroups.item(row, 0).text()
-            del dictGroups[groupName]
-            self.mw.addonManager.writeConfig(__name__, newConfig)
-            self.dictGroups.removeRow(row)
-            self.loadGroupTable()
+        if not miAsk('Are you sure you would like to remove this dictionary group? This action will happen immediately and is not un-doable.', self):
+            return
+
+        newConfig = self.getConfig()
+        dictGroups = newConfig['DictionaryGroups']
+        groupName = self._get_group_text(row)
+        del dictGroups[groupName]
+        self.mw.addonManager.writeConfig(
+            __name__,
+            typing.cast(dict[typing.Any, typing.Any], newConfig),
+        )
+        self.dictGroups.removeRow(row)
+        self.loadGroupTable()
 
     def loadTemplateTable(self) -> None:
         self.exportTemplates.setRowCount(0)
@@ -342,9 +366,12 @@ class SettingsGui(QTabWidget):
 
         newConfig = self.getConfig()
         exportTemplates = newConfig['ExportTemplates']
-        templateName = self.exportTemplates.item(row, 0).text()
+        templateName = self._get_template_text(row)
         del exportTemplates[templateName]
-        self.mw.addonManager.writeConfig(__name__, newConfig)
+        self.mw.addonManager.writeConfig(
+            __name__,
+            typing.cast(dict[typing.Any, typing.Any], newConfig),
+        )
         self.exportTemplates.removeRow(row)
         self.loadTemplateTable()
 
@@ -356,17 +383,32 @@ class SettingsGui(QTabWidget):
     def editTempRow(self, x: int) -> typing.Callable[[], None]:
         return lambda: self.editTemplate(x)
 
+    def _get_template_text(self, row: int) -> str:
+        item = self.exportTemplates.item(row, 0)
+
+        if item:
+            return item.text()
+
+        raise RuntimeError(f'Row / Column "{row} / column" has no item.')
+
     def editTemplate(self, row: int) -> None:
-        templateName = self.exportTemplates.item(row, 0).text()
+        templateName = self._get_template_text(row)
         exportTemplates = self.getConfig()['ExportTemplates']
+
         if templateName in exportTemplates:
             template = exportTemplates[templateName]
-            templateEditor = TemplateEditor(self.mw, self, self.getDictionaryNames(), template, templateName)
+            templateEditor = TemplateEditor(
+                self.mw,
+                self,
+                self.getDictionaryNames(),
+                template,
+                templateName,
+            )
             templateEditor.loadTemplateEditor(template, templateName)
             templateEditor.exec()
 
     def getDictionaryNames(self) -> list[str]:
-        dictList = self.mw.miDictDB.getAllDictsWithLang()
+        dictList = dictdb.get().getAllDictsWithLang()
         dictionaryList = []
         for dictionary in dictList:
             dictName = self.cleanDictName(dictionary['dict'])
@@ -388,7 +430,14 @@ class SettingsGui(QTabWidget):
         if not miAsk('This will remove any export templates and dictionary groups you have created, and is not undoable. Are you sure you would like to restore the default settings?'):
             return
 
-        conf = self.mw.addonManager.addonConfigDefaults(dirname(__file__))
+        directory = dirname(__file__)
+        conf = self.mw.addonManager.addonConfigDefaults(directory)
+
+        if not conf:
+            raise EnvironmentError(
+                f'Could not read a configuration file from "{directory}" directory.'
+            )
+
         self.mw.addonManager.writeConfig(__name__, conf)
         self.userGuideTab.close()
         self.userGuideTab.deleteLater()
@@ -432,7 +481,7 @@ class SettingsGui(QTabWidget):
 
         groupLayout.addLayout(dictsLayout)
         groupLayout.addLayout(exportsLayout)
-        self.layout.addLayout(groupLayout)
+        self._main_layout.addLayout(groupLayout)
 
         optionsBox = QGroupBox('Options')
         optionsLayout = QHBoxLayout()
@@ -572,8 +621,8 @@ class SettingsGui(QTabWidget):
         optionsLayout.addLayout(optLay3)
 
         optionsBox.setLayout(optionsLayout)
-        self.layout.addWidget(optionsBox)
-        self.layout.addStretch()
+        self._main_layout.addWidget(optionsBox)
+        self._main_layout.addStretch()
 
         buttonsLayout = QHBoxLayout()
         buttonsLayout.addWidget(self.restoreButton)
@@ -581,8 +630,8 @@ class SettingsGui(QTabWidget):
         buttonsLayout.addWidget(self.cancelButton)
         buttonsLayout.addWidget(self.applyButton)
 
-        self.layout.addLayout(buttonsLayout)
-        self.settingsTab.setLayout(self.layout)
+        self._main_layout.addLayout(buttonsLayout)
+        self.settingsTab.setLayout(self._main_layout)
 
     def cleanDictName(self, name: str) -> str:
         return re.sub(r'l\d+name', '', name)
@@ -592,7 +641,7 @@ class SettingsGui(QTabWidget):
         widget.setFixedSize(27,27)
         return widget
 
-    def getHTML(self) -> tuple[str, str]:
+    def getHTML(self) -> tuple[str, qt.QUrl]:
         htmlPath = join(self.addonPath, 'guide.html')
         url = QUrl.fromLocalFile(htmlPath)
         with open(htmlPath,'r', encoding="utf-8") as fh:
@@ -601,7 +650,12 @@ class SettingsGui(QTabWidget):
 
     def getUserGuideTab(self) -> AnkiWebView:
         guide = AnkiWebView()
-        guide._page.profile().setHttpUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36')
+        profile = guide._page.profile()
+
+        if not profile:
+            raise RuntimeError("No Anki profile could be found.")
+
+        profile.setHttpUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36')
         guide._page._bridge.onCmd = attemptOpenLink
         html, url = self.getHTML()
         guide._page.setHtml(html, url)
@@ -684,4 +738,5 @@ class SettingsGui(QTabWidget):
         migakuInfoYT.clicked.connect(lambda: openLink('https://www.youtube.com/channel/UCQFe3x4WAgm7joN5daMm5Ew'))
         migakuInfoTW.clicked.connect(lambda: openLink('https://twitter.com/Migaku_Yoga'))
         gitHubIcon.clicked.connect(lambda: openLink('https://github.com/migaku-official/Migaku-Dictionary-Addon'))
+
         return tab_4

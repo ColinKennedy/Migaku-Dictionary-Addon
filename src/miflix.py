@@ -22,6 +22,8 @@ from anki.collection import Collection
 from threading import Timer
 from anki.utils import is_win
 
+from . import threader
+
 
 class _Field(typing.TypedDict):
     name: str
@@ -119,10 +121,12 @@ class ImportHandler(MigakuHTTPHandler):
     def post(self) -> None:
         # TODO: @ColinKennedy - dedent this
         if self.checkVersion():
+            thread = threader.get()
+
             config = self.getConfig()
             previousBulkTimeStamp = self.application.settings.get('previousBulkTimeStamp')
             if self.parseBoolean(self.get_body_argument("pageRefreshCancelBulkMediaExporting", default=False)):
-                self.mw.hkThread.handlePageRefreshDuringBulkMediaImport()
+                thread.handlePageRefreshDuringBulkMediaImport()
                 self.removeCondensedAudioInProgressMessage()
                 self.finish("Cancelled through browser.")
                 return
@@ -144,7 +148,7 @@ class ImportHandler(MigakuHTTPHandler):
 
             if bulk and requestType == "text":
                     cards = json.loads(self.get_body_argument("cards", default="[]"))
-                    self.mw.hkThread.handleBulkTextExport(cards)
+                    thread.handleBulkTextExport(cards)
                     self.finish("Bulk Text Export")
                     return
 
@@ -189,7 +193,7 @@ class ImportHandler(MigakuHTTPHandler):
                         imageFile = self.request.files['image'][0]
                         imageFileName = imageFile["filename"]
                         self.copyFileToTempDir(imageFile, imageFileName)
-                    cardToExport = {
+                    cardToExport: typer.Card = {
                         "primary" : primary,
                         "secondary" : secondary,
                         "unknownWords" : unknownWords,
@@ -198,7 +202,7 @@ class ImportHandler(MigakuHTTPHandler):
                         "image" : imageFileName,
                         "total" : total,
                     }
-                    self.mw.hkThread.handleExtensionCardExport(cardToExport)
+                    thread.handleExtensionCardExport(cardToExport)
                     self.finish("Card Exported")
                     return
         self.finish("Invalid Request")
@@ -349,9 +353,11 @@ class SearchHandler(MigakuHTTPHandler):
         if self.checkVersion():
             terms = self.get_body_argument("terms", default=False)
             if terms is not False:
-                self.mw.hkThread.handleExtensionSearch(json.loads(terms))  
+                threader.get().handleExtensionSearch(json.loads(terms))
                 self.finish("Searched")
+
                 return
+
         self.finish("Invalid Request")
 
 class MigakuHTTPServer(tornado.web.Application):

@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import functools
 from aqt.utils import shortcut, saveGeom, saveSplitter, showInfo, askUser, ensureWidgetInScreenBoundaries
+from aqt import qt
 import typing
 import json
 import sys
@@ -46,15 +48,16 @@ class _DictionaryGroupEntry(typing.TypedDict):
     lang: str
 
 
-class _DictionaryGroup(typing.TypedDict):
-    dictionaries: list[_DictionaryGroupEntry]
-    customFont: bool
-    font: bool
-
-
 class MIDict(AnkiWebView):
 
-    def __init__(self, dictInt, db: dictdb_.DictDB, path: str, day, terms  = False):
+    def __init__(
+        self,
+        dictInt: midict.DictInterface,
+        db: dictdb_.DictDB,
+        path: str,
+        day: str,
+        terms: bool  = False,
+    ) -> None:
         AnkiWebView.__init__(self)
         self._page.profile().setHttpUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36')
         self.terms = terms
@@ -80,27 +83,30 @@ class MIDict(AnkiWebView):
 
         gui_hooks.editor_did_init.append(self.on_editor_loaded)
 
-    def on_editor_loaded(self, editor):
+    def on_editor_loaded(self, editor: aqt.Editor) -> None:
         self.currentEditor = editor
 
-    def resetConfiguration(self, config):
+    def resetConfiguration(self, config: typer.Configuration) -> None:
         self.config = config
         self.jSend = self.config['jReadingEdit']
         self.maxW = self.config['maxWidth']
         self.maxH = self.config['maxHeight']
 
-    def showGoogleForvoMessage(self, message):
+    def showGoogleForvoMessage(self, message: str) -> None:
         miInfo(message, level='err')
 
-    def loadImageResults(self, results):
+    def loadImageResults(self, results: tuple[str, str]) -> None:
         html, idName = results
         self.eval("loadImageForvoHtml('%s', '%s');"%(html.replace('"', '\\"'), idName))
 
-    def loadHTMLURL(self, html, url):
+    def loadHTMLURL(self, html: str, url: aqt.QUrl) -> None:
         self._page.setHtml(html, url)
 
 
-    def formatTermHeaders(self, ths):
+    def formatTermHeaders(
+        self,
+        ths: typing.Sequence[str],
+    ) -> typing.Optional[dict[str, tuple[str, str]]]:
         formattedHeaders = {}
         if not ths:
             return None
@@ -117,10 +123,10 @@ class MIDict(AnkiWebView):
                 elif header == 'pronunciation':
                     headerString += '<span class="pronunciation">◳p</span>'
                     sbHeaderString += '<span class="listPronunciation">◳p</span>'
-            formattedHeaders[dictname] = [headerString, sbHeaderString]
+            formattedHeaders[dictname] = (headerString, sbHeaderString)
         return formattedHeaders
 
-    def setSType(self, sType):
+    def setSType(self, sType: QComboBox) -> None:
         self.sType = sType
 
     def loadConjugations(self):
@@ -136,10 +142,10 @@ class MIDict(AnkiWebView):
                 conjugations[lang] = json.loads(conjugationsFile.read())
         return conjugations
 
-    def cleanTerm(self, term):
+    def cleanTerm(self, term: str) -> str:
         return term.replace("'", "\'").replace('%', '').replace('_', '').replace('「', '').replace('」', '')
 
-    def getFontFamily(self, group):
+    def getFontFamily(self, group: typer.DictionaryGroup) -> str:
         if not group['font']:
             return ' '
         if group['customFont']:
@@ -147,16 +153,20 @@ class MIDict(AnkiWebView):
         else:
             return ' style="font-family:'+ group['font'] + ';" '
 
-    def injectFont(self, font):
+    def injectFont(self, font: str) -> None:
         name = re.sub(r'\..*$', '' , font)
         self.eval("addCustomFont('%s', '%s');"%(font, name))
 
-    def getTabMode(self):
+    def getTabMode(self) -> str:
         if self.dictInt.tabB.singleTab:
             return 'true'
         return 'false'
 
-    def getHTMLResult(self,term, selectedGroup):
+    def getHTMLResult(
+        self,
+        term: str,
+        selectedGroup: typer.DictionaryGroup,
+    ) -> tuple[str, str, str]:
         singleTab = self.getTabMode()
         cleaned = self.cleanTerm(term)
         font = self.getFontFamily(selectedGroup)
@@ -167,33 +177,40 @@ class MIDict(AnkiWebView):
         return html, cleaned, singleTab;
 
 
-    def addNewTab(self, term, selectedGroup):
+    def addNewTab(self, term: str, selectedGroup: typer.DictionaryGroup) -> None:
         if selectedGroup['customFont'] and selectedGroup['font'] not in self.customFontsLoaded:
             self.customFontsLoaded.append(selectedGroup['font'])
             self.injectFont(selectedGroup['font'])
         html, cleaned, singleTab= self.getHTMLResult(term, selectedGroup)
         self.eval("addNewTab('%s', '%s', %s);"%(html.replace('\r', '<br>').replace('\n','<br>'), cleaned, singleTab))
 
-    def addResultWrappers(self, results):
+    def addResultWrappers(self, results: typing.Iterable[str]) -> dict[int, str]:
         for idx, result in enumerate(results):
             if 'dictionaryTitleBlock' not in result:
                 results[idx] = '<div class="definitionBlock">' + result + '</div>'
         return results
 
-    def escapePunctuation(self, term):
+    def escapePunctuation(self, term: str) -> str:
         return re.sub(r'([.*+(\[\]{}\\?)!])', '\\\1', term)
 
-    def highlightTarget(self, text, term):
+    def highlightTarget(self, text: str, term: str) -> str:
         if self.config['highlightTarget']:
             return  re.sub(u'('+ self.escapePunctuation(term) + ')', r'<span class="targetTerm">\1</span>', text)
         return text
 
-    def highlightExamples(self, text):
+    def highlightExamples(self, text: str) -> str:
         if self.config['highlightSentences']:
             return re.sub(u'(「[^」]+」)', r'<span class="exampleSentence">\1</span>', text)
         return text
 
-    def getSideBar(self, results, term, font, frontBracket, backBracket):
+    def getSideBar(
+        self,
+        results: dict[str, list[typer.HeaderTerm]],
+        term: str,
+        font: str,
+        frontBracket: str,
+        backBracket: str,
+    ) -> str:
         html = '<div' + font +'class="definitionSideBar"><div class="innerSideBar">'
         dictCount = 0
         entryCount = 0
@@ -211,7 +228,17 @@ class MIDict(AnkiWebView):
                 html += '</ol>'
         return html + '<br></div><div class="resizeBar" onmousedown="hresize(event)"></div></div>'
 
-    def getPreparedTermHeader(self, dictName, frontBracket, backBracket, target,  term, altterm, pronunciation, sb = False):
+    def getPreparedTermHeader(
+        self,
+        dictName: str,
+        frontBracket: str,
+        backBracket: str,
+        target: str,
+        term: str,
+        altterm: str,
+        pronunciation: str,
+        sb: bool = False,
+    ) -> str:
         altFB = frontBracket
         altBB = backBracket
         if pronunciation == term:
@@ -232,9 +259,15 @@ class MIDict(AnkiWebView):
             else:
                 header = self.termHeaders[dictName][0]
 
+        # TODO: @ColinKennedy - this code is awful
         return header.replace('◳t', self.highlightTarget(term, target)).replace('◳a', self.highlightTarget(altterm, target)).replace('◳p', self.highlightTarget(pronunciation, target)).replace('◳f', frontBracket).replace('◳b', backBracket).replace('◳x', altFB).replace('◳y', altBB)
 
-    def prepareResults(self, results, term, font):
+    def prepareResults(
+        self,
+        results: dict[str, list[typer.HeaderTerm]],
+        term: str,
+        font: str,
+    ) -> str:
         frontBracket = self.config['frontBracket']
         backBracket = self.config['backBracket']
         if len(results) > 0:
@@ -275,7 +308,7 @@ class MIDict(AnkiWebView):
             html = '<style>.noresults{font-family: Arial;}.vertical-center{height: 400px; width: 60%; margin: 0 auto; display: flex; justify-content: center; align-items: center;}</style> </head> <div class="vertical-center noresults"> <div align="center"> <img src="icons/searchzero.svg" width="50px" height="40px"> <h3 align="center">No dictionary entries were found for "' + term + '".</h3> </div></div>'
         return html.replace("'", "\\'")
 
-    def attemptFetchForvo(self, term, idName):
+    def attemptFetchForvo(self, term: str, idName: str) -> str:
         forvo =  Forvo(self.config['ForvoLanguage'])
         forvo.setTermIdName(term, idName)
         forvo.signals.resultsFound.connect(self.loadForvoResults)
@@ -283,7 +316,7 @@ class MIDict(AnkiWebView):
         self.threadpool.start(forvo)
         return 'Loading...'
 
-    def loadForvoResults(self, results):
+    def loadForvoResults(self, results: tuple[str, str]) -> str:
         forvoData, idName = results
         if forvoData:
             html = "<div class=\\'forvo\\'  data-urls=\\'" + forvoData +"\\'></div>"
@@ -291,7 +324,15 @@ class MIDict(AnkiWebView):
             html = '<div class="no-forvo">No Results Found.</div>'
         self.eval("loadImageForvoHtml('%s', '%s');loadForvoDict(false, '%s');"%(html.replace('"', '\\"'), idName, idName))
 
-    def getForvoDictionaryResults(self, term, dictCount, bracketFront, bracketBack, entryCount, font):
+    def getForvoDictionaryResults(
+        self,
+        term: str,
+        dictCount: int,
+        bracketFront: str,
+        bracketBack: str,
+        entryCount: int,
+        font: str,
+    ) -> str:
         dictName = 'Forvo'
         overwrite = self.getOverwriteChecks(dictCount, dictName )
         select = self.getFieldChecks(dictName)
@@ -305,7 +346,15 @@ class MIDict(AnkiWebView):
         html += '</div>'
         return html
 
-    def getGoogleDictionaryResults(self, term, dictCount, bracketFront, bracketBack, entryCount, font):
+    def getGoogleDictionaryResults(
+        self,
+        term: str,
+        dictCount: int,
+        bracketFront: str,
+        bracketBack: str,
+        entryCount: int,
+        font: str,
+    ) -> str:
         dictName = 'Google Images'
         overwrite = self.getOverwriteChecks(dictCount, dictName )
         select = self.getFieldChecks( dictName)
@@ -317,7 +366,7 @@ class MIDict(AnkiWebView):
                          + '</div></div>')
         return html
 
-    def getGoogleImages(self, term, idName):
+    def getGoogleImages(self, term: str, idName: str) -> str:
         imager = googleimages.Google()
         imager.setTermIdName(term, idName)
         imager.setSearchRegion(self.config['googleSearchRegion'])
@@ -329,11 +378,10 @@ class MIDict(AnkiWebView):
 
         return 'Loading...'
 
-
-    def getCleanedUrls(self, urls):
+    def getCleanedUrls(self, urls: typing.Iterable[str]) -> list[str]:
         return [x.replace('\\', '\\\\') for x in urls]
 
-    def getDuplicateHeaderCB(self, dictName):
+    def getDuplicateHeaderCB(self, dictName: str) -> str:
         tooltip = ''
         if self.config['tooltips']:
             tooltip = ' title="Enable this option if this dictionary has the target word\'s header within the definition. Enabling this will prevent the addon from exporting duplicate header."'
@@ -345,13 +393,14 @@ class MIDict(AnkiWebView):
                 checked = ' checked '
         return '<div class="dupHeadCB" data-dictname="' + dictName + '">Duplicate Header:<input ' + checked + tooltip + ' class="' + className + '" onclick="handleDupChange(this, \'' + className + '\')" type="checkbox"></div>'
 
-    def maybeSearchTerms(self, terms):
+    def maybeSearchTerms(self, terms) -> None:
+        # TODO: @ColinKennedy - Not sure about ``terms``
         if self.terms:
             for t in self.terms:
                 self.dictInt.initSearch(t)
             self.terms = False
 
-    def handleDictAction(self, dAct):
+    def handleDictAction(self, dAct: str) -> None:
         if dAct.startswith("MigakuDictionaryLoaded"):
             self.maybeSearchTerms(dAct)
         elif dAct.startswith('forvo:'):
@@ -406,7 +455,7 @@ class MIDict(AnkiWebView):
             word, urls = dAct[10:].split('◳◴')
             self.addImgsToExportWindow( word, json.loads(urls))
 
-    def addImgsToExportWindow(self, word, urls):
+    def addImgsToExportWindow(self, word: str, urls: typing.Iterable[str]) -> None:
         self.initCardExporterIfNeeded()
         imgSeparator = ''
         imgs = []
@@ -424,7 +473,7 @@ class MIDict(AnkiWebView):
         if len(imgs) > 0:
             self.addWindow.addImgs(word, imgSeparator.join(imgs), self.getThumbs(rawPaths))
 
-    def saveQImage(self, url, filename):
+    def saveQImage(self, url: str, filename: str) -> None:
         req = Request(url , headers={'User-Agent':  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'})
         file = urlopen(req).read()
         image = QImage()
@@ -432,7 +481,7 @@ class MIDict(AnkiWebView):
         image = image.scaled(QSize(self.maxW,self.maxH), Qt.KeepAspectRatio, Qt.SmoothTransformation)
         image.save(filename)
 
-    def getThumbs(self, paths):
+    def getThumbs(self, paths: typing.Iterable[str]) -> QWidget:
         thumbCase = QWidget()
         thumbCase.setContentsMargins(0,0,0,0)
         vLayout = QVBoxLayout()
@@ -454,11 +503,11 @@ class MIDict(AnkiWebView):
         thumbCase.setLayout(vLayout)
         return thumbCase
 
-    def addDefToExportWindow(self, dictName, word, text):
+    def addDefToExportWindow(self, dictName: str, word: str) -> None:
         self.initCardExporterIfNeeded()
         self.addWindow.addDefinition(dictName, word, text)
 
-    def exportImage(self, pathAndName):
+    def exportImage(self, pathAndName: str) -> None:
         self.dictInt.ensureVisible()
         path, name = pathAndName
         self.initCardExporterIfNeeded()
@@ -466,48 +515,49 @@ class MIDict(AnkiWebView):
         self.addWindow.exportImage(path, name)
 
 
-    def initCardExporterIfNeeded(self):
+    def initCardExporterIfNeeded(self) -> None:
         if not self.addWindow:
             self.addWindow = CardExporter(self.dictInt, self)
 
-    def bulkTextExport(self, cards):
+    def bulkTextExport(self, cards: typing.Sequence[typer.Card]) -> None:
         self.initCardExporterIfNeeded()
         self.addWindow.bulkTextExport(cards)
 
-    def bulkMediaExport(self, card):
+    def bulkMediaExport(self, card: typer.Card) -> None:
         self.initCardExporterIfNeeded()
         self.addWindow.bulkMediaExport(card)
 
-    def cancelBulkMediaExport(self):
+    def cancelBulkMediaExport(self) -> None:
         if self.addWindow:
             self.addWindow.bulkMediaExportCancelledByBrowserRefresh()
 
 
-    def exportAudio(self, audioList):
+    def exportAudio(self, audioList: tuple[str, str, str]) -> None:
         self.dictInt.ensureVisible()
         temp, tag, name = audioList
         self.initCardExporterIfNeeded()
         self.addWindow.scrollArea.show()
         self.addWindow.exportAudio(temp, tag,  name)
 
-    def exportSentence(self, sentence, secondary = ""):
+    def exportSentence(self, sentence: str, secondary: str = "") -> None:
         self.dictInt.ensureVisible()
         self.initCardExporterIfNeeded()
         self.addWindow.scrollArea.show()
         self.addWindow.exportSentence(sentence)
         self.addWindow.exportSecondary(secondary)
 
-    def exportWord(self, word):
+    def exportWord(self, word: str) -> None:
         self.dictInt.ensureVisible()
         self.initCardExporterIfNeeded()
         self.addWindow.scrollArea.show()
         self.addWindow.exportWord(word)
 
-    def attemptAutoAdd(self, bulkExport):
+    def attemptAutoAdd(self, bulkExport: bool) -> None:
         self.addWindow.attemptAutoAdd(bulkExport)
 
-    def getFieldContent(self, fContent, definition, addType):
-        fieldText = False
+    def getFieldContent(self, fContent: str, definition: str, addType: str) -> str:
+        fieldText = ""
+
         if addType == 'overwrite':
             fieldText = definition
 
@@ -519,25 +569,26 @@ class MIDict(AnkiWebView):
         elif addType == 'no':
             if fContent == '':
                 fieldText = definition
+
         return fieldText
 
-    def addAudioToExportWindow(self, word, urls):
+    def addAudioToExportWindow(self, word: str, urls: str) -> None:
         self.initCardExporterIfNeeded()
         audioSeparator = ''
         soundFiles = self.downloadForvoAudio(json.loads(urls))
         if len(soundFiles) > 0:
             self.addWindow.addDefinition('Forvo', word, audioSeparator.join(soundFiles))
 
-
-
-    def sendAudioToField(self, urls):
+    def sendAudioToField(self, urls: str) -> None:
         audioSeparator = ''
         soundFiles = self.downloadForvoAudio(json.loads(urls))
         self.sendToField('Forvo', audioSeparator.join(soundFiles))
 
-    def downloadForvoAudio(self, urls):
-        tags = []
+    def downloadForvoAudio(self, urls: typing.Iterable[str]) -> list[str]:
+        tags: list[str] = []
+
         for url in urls:
+            # TODO: @ColinKennedy - try/except
             try:
                 req = Request(url , headers={'User-Agent':  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'})
                 file = urlopen(req).read()
@@ -546,13 +597,15 @@ class MIDict(AnkiWebView):
                 tags.append('[sound:' + filename + ']')
             except:
                 continue
+
         return tags
 
-    def sendImgToField(self, urls):
+    def sendImgToField(self, urls: str) -> None:
         if (self.reviewer and self.reviewer.card) or (self.currentEditor and self.currentEditor.note):
             urlsList = []
             imgSeparator = ''
             urls = json.loads(urls)
+            urls = typing.cast(list[str], urls)
             for imgurl in urls:
                 try:
                     url = re.sub(r'\?.*$', '', imgurl)
@@ -564,7 +617,7 @@ class MIDict(AnkiWebView):
             if len(urlsList) > 0 :
                 self.sendToField('Google Images', imgSeparator.join(urlsList))
 
-    def sendToField(self, name, definition):
+    def sendToField(self, name: str, definition: str) -> None:
         if self.reviewer and self.reviewer.card:
             if name == 'Google Images':
                 tFields = self.config['GoogleImageFields']
@@ -629,7 +682,7 @@ class MIDict(AnkiWebView):
                     note.fields[field_index] = new_value
             self.currentEditor.loadNote()
 
-    def getOverwriteChecks(self, dictCount,dictName):
+    def getOverwriteChecks(self, dictCount: int, dictName: str) -> str:
         addType: dictdb_.AddType
 
         if dictName == 'Google Images':
@@ -651,7 +704,7 @@ class MIDict(AnkiWebView):
            self.getSelectedOverwriteType(dictName, addType) + '</div>')
         return select
 
-    def getSelectedOverwriteType(self, dictName, addType):
+    def getSelectedOverwriteType(self, dictName: str, addType: str) -> str:
         count = str(self.radioCount)
         checked = ''
         if addType == 'add' :
@@ -671,7 +724,7 @@ class MIDict(AnkiWebView):
         self.radioCount += 1
         return checks
 
-    def getFieldChecks(self, dictName):
+    def getFieldChecks(self, dictName: str) -> str:
         if dictName == 'Google Images':
             selF = self.config['GoogleImageFields']
         elif dictName == 'Forvo':
@@ -689,43 +742,50 @@ class MIDict(AnkiWebView):
             self.getCheckBoxes(dictName, selF) +'</div>')
         return select
 
-    def getCheckBoxes(self, dictName, selF):
+    def getCheckBoxes(self, dictName: str, selF) -> str:
         fields = self.getFieldNames()
         options = '<div class="fieldCheckboxes"  data-dictname="' + dictName + '">'
+
         for f in fields:
             checked = ''
+
             if f in selF:
                 checked = ' checked'
+
             options += '<label class="inCheckBox"><input'+ checked + ' onclick="handleFieldCheck(this)" class="inCheckBox" type="checkbox" value="'+ f + '" />'+ f + '</label>'
+
         return options + '</div>'
 
-    def getFieldNames(self):
+    def getFieldNames(self) -> list[str]:
         mw = self.dictInt.mw
         models = mw.col.models.all()
-        fields = []
+        fields: list[str] = []
+
         for model in models:
             for fld in model['flds']:
                 if fld['name'] not in fields:
                     fields.append(fld['name'])
+
         fields.sort()
+
         return fields
 
-    def setCurrentEditor(self, editor, target = ''):
+    def setCurrentEditor(self, editor: aqt.Editor, target: str = '') -> None:
         if editor != self.currentEditor:
             self.currentEditor = editor
             self.reviewer = False
             self.dictInt.currentTarget.setText(target)
 
-    def setReviewer(self, reviewer):
+    def setReviewer(self, reviewer: aqt.Reviewer) -> None:
         self.reviewer = reviewer
         self.currentEditor = False
         self.dictInt.currentTarget.setText('Reviewer')
 
-    def checkEditorClose(self, editor):
+    def checkEditorClose(self, editor: aqt.Editor) -> None:
         if self.currentEditor == editor:
             self.closeEditor()
 
-    def closeEditor(self):
+    def closeEditor(self) -> None:
         self.reviewer = False
         self.currentEditor = False
         self.dictInt.currentTarget.setText('')
@@ -733,14 +793,15 @@ class MIDict(AnkiWebView):
 class HoverButton(QPushButton):
     mouseHover = pyqtSignal(bool)
     mouseOut =  pyqtSignal(bool)
-    def __init__(self, parent=None):
+
+    def __init__(self, parent: typing.Optional[aqt.QWidget]=None) -> None:
         QPushButton.__init__(self, parent)
         self.setMouseTracking(True)
 
-    def enterEvent(self, event):
+    def enterEvent(self, event: aqt.QEvent) -> None:
         self.mouseHover.emit(True)
 
-    def leaveEvent(self, event):
+    def leaveEvent(self, event: aqt.QEvent) -> None:
         self.mouseHover.emit(False)
         self.mouseOut.emit(True)
 
@@ -769,7 +830,7 @@ class ClipThread(QObject):
     bulkMediaExport = pyqtSignal(dict)
     pageRefreshDuringBulkMediaImport = pyqtSignal()
 
-    def __init__(self, mw, path):
+    def __init__(self, mw: aqt.AnkiQt, path: str) -> None:
         if is_mac:
             import ssl
             ssl._create_default_https_context = ssl._create_unverified_context
@@ -779,18 +840,23 @@ class ClipThread(QObject):
             self.CGEventGetIntegerValueField = CGEventGetIntegerValueField
         elif is_lin:
             sys.path.insert(0, join(dirname(__file__), 'linux'))
+
         sys.path.insert(0, join(dirname(__file__)))
+
         from pynput import keyboard
-        super(ClipThread, self).__init__(mw)
+
+        super().__init__(mw)
+
         self.keyboard = keyboard
         self.addonPath = path
         self.mw = mw
         self.config = self.mw.addonManager.getConfig(__name__)
 
-    def on_press(self,key):
+    def on_press(self,key: list[str]) -> None:
         self.test.emit([key])
 
-    def on_release(self, key):
+    # TODO: @ColinKennedy - remove bool?
+    def on_release(self, key: str) -> bool:
         self.release.emit([key])
         return True
 
@@ -802,7 +868,7 @@ class ClipThread(QObject):
             return None
         return event
 
-    def run(self):
+    def run(self) -> None:
         if is_win:
             self.listener = self.keyboard.Listener(
                 on_press =self.on_press, on_release= self.on_release, migaku = self.mw, suppress= True)
@@ -814,31 +880,28 @@ class ClipThread(QObject):
                 on_press =self.on_press, on_release= self.on_release)
         self.listener.start()
 
-    def attemptAddCard(self):
+    def attemptAddCard(self) -> None:
         self.add.emit('add')
 
-    def checkDict(self):
-        if not self.mw.migakuDictionary or not self.mw.migakuDictionary.isVisible():
-            return False
-        return True
+    def checkDict(self) -> bool:
+        return not migaku_dictionary.get_visible_dictionary()
 
-    def handleExtensionSearch(self, terms):
+    def handleExtensionSearch(self, terms: list[str]) -> None:
         self.searchFromExtension.emit(terms)
 
-    def handleSystemSearch(self):
+    def handleSystemSearch(self) -> None:
         self.search.emit(self.mw.app.clipboard().text())
 
-    def handleColSearch(self):
+    def handleColSearch(self) -> None:
         self.colSearch.emit(self.mw.app.clipboard().text())
 
     def getConfig(self):
         return self.mw.addonManager.getConfig(__name__)
 
-
-    def handleBulkTextExport(self, cards):
+    def handleBulkTextExport(self, cards: list[typer.Card]) -> None:
         self.bulkTextExport.emit(cards)
 
-    def handleExtensionCardExport(self, card):
+    def handleExtensionCardExport(self, card: typer.Card) -> None:
         config = self.getConfig()
         audioFileName = card["audio"]
         imageFileName = card["image"]
@@ -965,7 +1028,7 @@ class DictInterface(QWidget):
     def __init__(
         self,
         dictdb: dictdb_.DictDB,
-        mw: aqt.mw,
+        mw: aqt.AnkiQt,
         path: str,
         welcome: str,
         parent: typing.Optional[QWidget]=None,
@@ -1023,7 +1086,7 @@ class DictInterface(QWidget):
             self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint)
             self.show()
 
-    def reloadConfig(self, config) -> None:
+    def reloadConfig(self, config: typer.Configuration) -> None:
         self.config = config
         self.dict.config = config
 
@@ -1143,7 +1206,7 @@ class DictInterface(QWidget):
 
         return html, url
 
-    def getAllGroups(self) -> _DictionaryGroup:
+    def getAllGroups(self) -> typer.DictionaryGroup:
         allGroups = {}
         allGroups['dictionaries'] = self.db.getAllDictsWithLang()
         allGroups['customFont'] = False
@@ -1252,7 +1315,7 @@ class DictInterface(QWidget):
         posSize = [x,y,width, height]
         self.writeConfig('dictSizePos', posSize)
 
-    def getUserGroups(self) -> dict[str, _DictionaryGroup]:
+    def getUserGroups(self) -> dict[str, typer.DictionaryGroup]:
         groups = self.config['DictionaryGroups']
         userGroups = {}
 
@@ -1536,26 +1599,41 @@ class DictInterface(QWidget):
     def incFont(self) -> None:
         self.dict.eval("scaleFont(true)")
 
-    def alignCenter(self, dictGroups):
-        for i in range(0, dictGroups.count()):
-            dictGroups.model().item(i).setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-
     def setupDictGroups(self, dictGroups: typing.Optional[QComboBox]=None) -> None:
+
+        def _get_item(model: qt.QAbstractItemModel, index: int) -> QComboBoxItem:
+            item = model.item(index)
+
+            if item:
+                return item
+
+            raise RuntimeError(f'Model "{model}" has no "{index}" index.')
+
+
         if not dictGroups:
             dictGroups =  QComboBox()
             dictGroups.setFixedHeight(30)
             dictGroups.setFixedWidth(80)
             dictGroups.setContentsMargins(0,0,0,0)
+
+        model = dictGroups.model()
+        get_item = functools.partial(_get_item, model)
+
+        if not model:
+            raise RuntimeError("No dictionary group model could be found.")
+
         ug = sorted(list(self.userGroups.keys()))
         dictGroups.addItems(ug)
         dictGroups.addItem('──────')
-        dictGroups.model().item(dictGroups.count() - 1).setEnabled(False)
-        dictGroups.model().item(dictGroups.count() - 1).setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        item = get_item(dictGroups.count() - 1)
+        item.setEnabled(False)
+        item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         defaults = ['All', 'Google Images', 'Forvo']
         dictGroups.addItems(defaults)
         dictGroups.addItem('──────')
-        dictGroups.model().item(dictGroups.count() - 1).setEnabled(False)
-        dictGroups.model().item(dictGroups.count() - 1).setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        item = get_item(dictGroups.count() - 1)
+        item.setEnabled(False)
+        item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         dg = sorted(list(self.defaultGroups.keys()))
         dictGroups.addItems(dg)
         current = self.config['currentGroup']
@@ -1582,8 +1660,9 @@ class DictInterface(QWidget):
         self.mw.addonManager.writeConfig(__name__, newConfig)
         self.reloadConfig(newConfig)
 
-    def getSelectedDictGroup(self) -> typing.Optional[_DictionaryGroup]:
+    def getSelectedDictGroup(self) -> typer.DictionaryGroup:
         cur = self.dictGroups.currentText()
+
         if cur in self.userGroups:
             return self.userGroups[cur]
         if cur == 'All':
@@ -1594,6 +1673,10 @@ class DictInterface(QWidget):
             return {'dictionaries' : [{'dict' : 'Forvo', 'lang' : ''}], 'customFont': False, 'font' : False}
         if cur in self.defaultGroups:
             return self.defaultGroups[cur]
+
+        raise RuntimeError(
+            f'Dictionary Group "{cur}" could not be mapped to a dict object.'
+        )
 
     def ensureVisible(self) -> None:
         if not self.isVisible():
@@ -1609,6 +1692,7 @@ class DictInterface(QWidget):
     def initSearch(self, term: typing.Optional[str]) -> None:
         self.ensureVisible()
         selectedGroup = self.getSelectedDictGroup()
+
         if not term:
             term = self.search.text()
             term = term.strip()
