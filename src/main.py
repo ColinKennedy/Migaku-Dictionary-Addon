@@ -285,13 +285,19 @@ def window_loaded() -> None:
 
 
     def openDictionarySettings():
-        if not mw.dictSettings:
-            mw.dictSettings = SettingsGui(mw, addon_path, openDictionarySettings)
-        mw.dictSettings.show()
-        if mw.dictSettings.windowState() == Qt.WindowState.WindowMinimized:
-            mw.dictSettings.setWindowState(Qt.WindowState.WindowNoState)
-        mw.dictSettings.setFocus()
-        mw.dictSettings.activateWindow()
+        widget = migaku_dict_settings_widget.get_unsafe()
+
+        if not widget:
+            widget = SettingsGui(mw, addon_path, openDictionarySettings)
+            migaku_dict_settings_widget.set(widget)
+
+        widget.show()
+
+        if widget.windowState() == Qt.WindowState.WindowMinimized:
+           widget.setWindowState(Qt.WindowState.WindowNoState)
+
+        widget.setFocus()
+        widget.activateWindow()
 
 
     def getWelcomeScreen() -> str:
@@ -333,37 +339,19 @@ def window_loaded() -> None:
             dictionary = migaku_dictionary.get()
             dictionary.hide()
 
-    mw.dictionaryInit = dictionaryInit
+    def initialize_menu() -> None:
+        menu = QMenu('Migaku')
 
-    def setupGuiMenu() -> None:
-        addMenu = False
-        if not hasattr(mw, 'MigakuMainMenu'):
-            mw.MigakuMainMenu = QMenu('Migaku',  mw)
-            addMenu = True
-        if not hasattr(mw, 'MigakuMenuSettings'):
-            mw.MigakuMenuSettings = []
-        if not hasattr(mw, 'MigakuMenuActions'):
-            mw.MigakuMenuActions = []
+        action = QAction("Dictionary Settings")
+        action.triggered.connect(openDictionarySettings)
+        menu.addAction(action)
 
-        setting = QAction("Dictionary Settings", mw)
-        setting.triggered.connect(openDictionarySettings)
-        mw.MigakuMenuSettings.append(setting)
+        menu.addSeparator()
+        action = QAction("Open Dictionary (Ctrl+W)")
+        action.triggered.connect(dictionaryInit)
+        menu.addAction(action)
 
-        mw.openMiDict = QAction("Open Dictionary (Ctrl+W)", mw)
-        mw.openMiDict.triggered.connect(dictionaryInit)
-        mw.MigakuMenuActions.append(mw.openMiDict)
-
-        mw.MigakuMainMenu.clear()
-        for act in mw.MigakuMenuSettings:
-            mw.MigakuMainMenu.addAction(act)
-        mw.MigakuMainMenu.addSeparator()
-        for act in mw.MigakuMenuActions:
-            mw.MigakuMainMenu.addAction(act)
-
-        if addMenu:
-            mw.form.menubar.insertMenu(mw.form.menuHelp.menuAction(), mw.MigakuMainMenu)
-
-    setupGuiMenu()
+    mw.form.menubar(mw.form.menuHelp.menuAction(), initialize_menu())
 
     migaku_dictionary.clear()
 
@@ -783,7 +771,7 @@ def window_loaded() -> None:
 
     def dictOnStart() -> None:
         if mw.addonManager.getConfig(__name__)['dictOnStart']:
-            mw.dictionaryInit()
+            dictionaryInit()
 
     def setupMenu(browser: browser_.Browser):
         a = QAction("Export Definitions", browser)
