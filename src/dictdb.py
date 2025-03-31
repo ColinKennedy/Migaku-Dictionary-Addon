@@ -19,6 +19,11 @@ _INSTANCE: typing.Optional[DictDB] = None
 AddType = typing.Union[typing.Literal["add"], typing.Literal["no"]]
 
 
+class _DictionaryLanguagePair(typing.TypedDict):
+    dict: str
+    lang: str  # TODO: @ColinKennedy this type may not be right
+
+
 @typing.final
 class DictDB:
     def __init__(self) -> None:
@@ -168,7 +173,7 @@ class DictDB:
         except:
             return []
 
-    def getAllDictsWithLang(self):
+    def getAllDictsWithLang(self) -> list[_DictionaryLanguagePair]:
         self.c.execute("SELECT dictname, lid, langname FROM dictnames INNER JOIN langnames ON langnames.id = dictnames.lid;")
         try:
             dicts = []

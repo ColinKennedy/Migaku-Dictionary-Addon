@@ -31,7 +31,7 @@ def normalize_url(url: str) -> str:
     return url
 
 
-def download_index(server_url: str=DEFAULT_SERVER) -> _DictionaryLanguage:
+def download_index(server_url: str=DEFAULT_SERVER) -> typing.Optional[_DictionaryLanguage]:
     server_url = normalize_url(server_url)
     
     index_url = server_url + '/index.json'
@@ -44,4 +44,5 @@ def download_index(server_url: str=DEFAULT_SERVER) -> _DictionaryLanguage:
 
     data = client.stream_content(resp)
 
-    return json.loads(data)
+    # TODO: @ColinKennedy - should check that the output works with _DictionaryLanguage
+    return typing.cast(_DictionaryLanguage, json.loads(data))

@@ -177,7 +177,8 @@ class SettingsGui(QTabWidget):
         self.disableCondensedMessages.setToolTip('Disable messages shown when condensed audio files are successfully created.')
 
     def getConfig(self) -> typer.Configuration:
-        return self.mw.addonManager.getConfig(__name__)
+        # TODO: @ColinKennedy Add validation here
+        return typing.cast(typer.Configuration, self.mw.addonManager.getConfig(__name__))
 
     def loadConfig(self) -> None:
         config = self.getConfig()
@@ -413,10 +414,13 @@ class SettingsGui(QTabWidget):
     def getDictionaryNames(self) -> list[str]:
         dictList = dictdb.get().getAllDictsWithLang()
         dictionaryList = []
+
         for dictionary in dictList:
             dictName = self.cleanDictName(dictionary['dict'])
+
             if dictName not in dictionaryList:
                 dictionaryList.append(dictName)
+
         dictionaryList= sorted(dictionaryList, key=str.casefold)
         return dictionaryList
 

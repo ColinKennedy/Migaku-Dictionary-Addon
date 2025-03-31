@@ -22,7 +22,7 @@ if typing.TYPE_CHECKING:
     # TODO: @ColinKennedy - fix cyclic import
     from . import midict
 
-from . import dictdb
+from . import dictdb, global_state
 
 
 class _DefinitionSetting(typing.TypedDict):
@@ -1083,7 +1083,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         return fields, tagsField
 
     def bulkMediaExport(self, card: typer.Card) -> None:
-        if self.mw.MigakuBulkMediaExportWasCancelled:
+        if global_state.IS_BULK_MEDIA_EXPORT_CANCELLED:
             return
         if not self.bulkMediaExportProgressWindow:
             total = card["total"]
@@ -1098,7 +1098,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
 
         # TODO: @ColinKennedy remove this try/except later
         try:
-            if self.mw.MigakuBulkMediaExportWasCancelled or not self.bulkMediaExportProgressWindow:
+            if global_state.IS_BULK_MEDIA_EXPORT_CANCELLED or not self.bulkMediaExportProgressWindow:
                 if self.bulkMediaExportProgressWindow:
                     self.closeProgressBar(self.bulkMediaExportProgressWindow)
                 return
@@ -1125,7 +1125,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         miInfo("Importing cards from the extension has been cancelled from within the browser.\n\n {} cards were imported.".format(currentValue))
         self.closeProgressBar(self.bulkMediaExportProgressWindow)
         self.bulkMediaExportProgressWindow = False
-        self.mw.MigakuBulkMediaExportWasCancelled = False
+        global_state.IS_BULK_MEDIA_EXPORT_CANCELLED = False
 
     def getProgressBar(
         self,
@@ -1143,7 +1143,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
                 currentValue = self.bulkMediaExportProgressWindow.currentValue
                 self.bulkMediaExportProgressWindow = False
                 if not progressWidget.closedBecauseFinishedImporting:
-                    self.mw.MigakuBulkMediaExportWasCancelled = True
+                    global_state.IS_BULK_MEDIA_EXPORT_CANCELLED = True
                     miInfo("Importing cancelled.\n\n{} cards were imported.".format(currentValue))
 
         progressWidget.exporter = self

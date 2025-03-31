@@ -862,19 +862,23 @@ class ClipThread(QObject):
 
     def darwinIntercept(self, event_type, event):
         keycode = self.CGEventGetIntegerValueField(event, self.kCGKeyboardEventKeycode)
-        if ('Key.cmd' in self.mw.currentlyPressed or 'Key.cmd_r' in self.mw.currentlyPressed)  and "'c'" in self.mw.currentlyPressed and keycode == 1:
+        pressed = keypress_tracker.get()
+
+        if ('Key.cmd' in pressed or 'Key.cmd_r' in pressed) and "'c'" in pressed and keycode == 1:
             self.handleSystemSearch()
-            self.mw.currentlyPressed = []
+            keypress_tracker.clear()
+
             return None
+
         return event
 
     def run(self) -> None:
         if is_win:
             self.listener = self.keyboard.Listener(
-                on_press =self.on_press, on_release= self.on_release, migaku = self.mw, suppress= True)
+                on_press =self.on_press, on_release= self.on_release, suppress= True)
         elif is_mac:
             self.listener = self.keyboard.Listener(
-                on_press =self.on_press, on_release= self.on_release, migaku = self.mw, darwin_intercept= self.darwinIntercept)
+                on_press =self.on_press, on_release= self.on_release, darwin_intercept= self.darwinIntercept)
         else:
             self.listener = self.keyboard.Listener(
                 on_press =self.on_press, on_release= self.on_release)

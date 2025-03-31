@@ -23,7 +23,7 @@ from anki.collection import Collection
 from threading import Timer
 from anki.utils import is_win
 
-from . import threader
+from . import global_state, threader
 
 
 class _Field(typing.TypedDict):
@@ -135,7 +135,7 @@ class ImportHandler(MigakuHTTPHandler):
             bulkExportWasCancelled = self.parseBoolean(self.get_body_argument("bulkExportWasCancelled", default=False))
             timestamp = self.get_body_argument("timestamp", default=0)
             if bulkExportWasCancelled:
-                if self.mw.MigakuBulkMediaExportWasCancelled and previousBulkTimeStamp == timestamp:
+                if global_state.IS_BULK_MEDIA_EXPORT_CANCELLED and previousBulkTimeStamp == timestamp:
                     self.finish("yes")
                 else:
                     self.finish("no")
@@ -154,14 +154,14 @@ class ImportHandler(MigakuHTTPHandler):
                     return
 
             else:
-                if self.mw.MigakuBulkMediaExportWasCancelled and previousBulkTimeStamp == timestamp:
+                if global_state.IS_BULK_MEDIA_EXPORT_CANCELLED and previousBulkTimeStamp == timestamp:
                     self.removeCondensedAudioInProgressMessage()
                     self.finish("Exporting was cancelled.")
                     return
                 if previousBulkTimeStamp != timestamp or not bulk:
                     self.application.settings["previousBulkTimeStamp"] = timestamp
                     self.removeCondensedAudioInProgressMessage()
-                    self.mw.MigakuBulkMediaExportWasCancelled = False
+                    global_state.IS_BULK_MEDIA_EXPORT_CANCELLED = False
                 condensedAudio = self.parseBoolean(self.get_body_argument("condensedAudio", default=False))  
                 total = int(self.get_body_argument("totalToRecord", default=1))     
                 print("TOTAL")
@@ -170,7 +170,7 @@ class ImportHandler(MigakuHTTPHandler):
                     mp3dir = config.get('condensedAudioDirectory', False)
                     if not mp3dir:
                         self.alert("You must specify a Condensed Audio Save Location.\n\nYou can do this by:\n1. Navigating to Migaku->Dictionary Settings in Anki's menu bar.\n2. Clicking \"Choose Directory\" for the \"Condensed Audio Save Location\"  in the bottom right of the settings window.")
-                        self.mw.MigakuBulkMediaExportWasCancelled = True
+                        global_state.IS_BULK_MEDIA_EXPORT_CANCELLED = True
                         self.removeCondensedAudioInProgressMessage()
                         self.finish("Save location not set.")
                     elif self.ffmpegExists():
@@ -180,7 +180,7 @@ class ImportHandler(MigakuHTTPHandler):
                         self.finish("Exporting Condensed Audio")
                     else:
                         self.alert("The FFMPEG media encoder must be installed in order to export condensedAudio.\n\nIn order to install FFMPEG please enable MP3 Conversion in the Dictionary Settings window and click \"Apply\".\nFFMPEG will then be downloaded and installed automatically.")
-                        self.mw.MigakuBulkMediaExportWasCancelled = True
+                        global_state.IS_BULK_MEDIA_EXPORT_CANCELLED = True
                         self.removeCondensedAudioInProgressMessage()
                         self.finish("FFMPEG not installed.")
                     return

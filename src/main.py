@@ -38,7 +38,10 @@ import os
 from aqt.qt import debug;
 from PyQt6.QtCore import Qt
 
-from . import google_imager, migaku_dictionary, migaku_configuration, threader, typer
+from . import global_state, google_imager, migaku_dictionary, migaku_configuration, threader, typer, keypress_tracker
+
+
+_IS_EXPORTING_DEFINITIONS = False
 
 
 class _DictionaryConfiguration(typing.TypedDict):
@@ -50,7 +53,7 @@ class _DictionaryConfiguration(typing.TypedDict):
 
 def window_loaded() -> None:
     migaku_configuration.initialize_by_namespace()
-    mw.MigakuExportingDefinitions = False
+    _IS_EXPORTING_DEFINITIONS = False
     mw.dictSettings = False
     dictdb.set(dictdb.DictDB())
     progressBar = False
@@ -61,7 +64,7 @@ def window_loaded() -> None:
     wrapperDict = False
     tmpdir = join(addon_path, 'temp')
     mw.migakuEditorLoadedAfterDictionary = False
-    mw.MigakuBulkMediaExportWasCancelled = False
+    global_state.IS_BULK_MEDIA_EXPORT_CANCELLED = False
 
     def removeTempFiles() -> None:
         filelist = [ f for f in os.listdir(tmpdir)]
@@ -116,69 +119,6 @@ def window_loaded() -> None:
                     browser.show()
                     browser.setWindowFlags(browser.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint)
                     browser.show()
-
-
-    mw.currentlyPressed = []
-
-    def captureKey(keyList):
-        key = keyList[0]
-        char = str(key)
-        if char not in mw.currentlyPressed:
-                mw.currentlyPressed.append(char)
-        if is_win:
-            thread = threader.get()
-
-            if 'Key.ctrl_l' in mw.currentlyPressed and "'c'" in mw.currentlyPressed and'Key.space'  in mw.currentlyPressed:
-                thread.handleSystemSearch()
-                mw.currentlyPressed = []
-            elif 'Key.ctrl_l' in mw.currentlyPressed and "'c'" in mw.currentlyPressed and "'b'"  in mw.currentlyPressed:
-                thread.handleColSearch()
-                mw.currentlyPressed = []
-            elif 'Key.ctrl_l' in mw.currentlyPressed and "'c'" in mw.currentlyPressed and 'Key.alt_l' in mw.currentlyPressed:
-                thread.handleSentenceExport()
-                mw.currentlyPressed = []
-            elif 'Key.ctrl_l' in mw.currentlyPressed and 'Key.enter' in mw.currentlyPressed:
-                thread.attemptAddCard()
-                mw.currentlyPressed = []
-            elif 'Key.ctrl_l' in mw.currentlyPressed and 'Key.shift' in mw.currentlyPressed and "'v'" in mw.currentlyPressed:
-                thread.handleImageExport()
-                mw.currentlyPressed = []
-        elif is_lin:
-            if 'Key.ctrl' in mw.currentlyPressed and "'c'" in mw.currentlyPressed and'Key.space'  in mw.currentlyPressed:
-                thread.handleSystemSearch()
-                mw.currentlyPressed = []
-            elif 'Key.ctrl' in mw.currentlyPressed and "'c'" in mw.currentlyPressed and 'Key.alt' in mw.currentlyPressed:
-                thread.handleSentenceExport()
-                mw.currentlyPressed = []
-            elif 'Key.ctrl' in mw.currentlyPressed and 'Key.enter' in mw.currentlyPressed:
-                thread.attemptAddCard()
-                mw.currentlyPressed = []
-            elif 'Key.ctrl' in mw.currentlyPressed and 'Key.shift' in mw.currentlyPressed and "'v'" in mw.currentlyPressed:
-                thread.handleImageExport()
-                mw.currentlyPressed = []
-        else:
-            if ('Key.cmd' in mw.currentlyPressed or 'Key.cmd_r' in mw.currentlyPressed)  and "'c'" in mw.currentlyPressed and "'b'"  in mw.currentlyPressed:
-                thread.handleColSearch()
-                mw.currentlyPressed = []
-            elif ('Key.cmd' in mw.currentlyPressed or 'Key.cmd_r' in mw.currentlyPressed) and "'c'" in mw.currentlyPressed and 'Key.ctrl' in mw.currentlyPressed:
-                thread.handleSentenceExport()
-                mw.currentlyPressed = []
-            elif ('Key.cmd' in mw.currentlyPressed or 'Key.cmd_r' in mw.currentlyPressed) and 'Key.enter' in mw.currentlyPressed:
-                thread.attemptAddCard()
-                mw.currentlyPressed = []
-            elif ('Key.cmd' in mw.currentlyPressed or 'Key.cmd_r' in mw.currentlyPressed) and 'Key.shift' in mw.currentlyPressed and "'v'" in mw.currentlyPressed:
-                thread.handleImageExport()
-                mw.currentlyPressed = []
-
-
-    def releaseKey(keyList: list[str]) -> None:
-        key = keyList[0]
-        try:
-            mw.currentlyPressed.remove(str(key))
-        except:
-            # TODO: @ColinKennedy - docstring / logging
-            return
-
 
     def exportSentence(sentence: str) -> None:
         if dictionary := migaku_dictionary.get_visible_dictionary():
@@ -285,20 +225,13 @@ def window_loaded() -> None:
 
 
     def openDictionarySettings():
-        widget = migaku_dict_settings_widget.get_unsafe()
-
-        if not widget:
-            widget = SettingsGui(mw, addon_path, openDictionarySettings)
-            migaku_dict_settings_widget.set(widget)
-
-        widget.show()
-
-        if widget.windowState() == Qt.WindowState.WindowMinimized:
-           widget.setWindowState(Qt.WindowState.WindowNoState)
-
-        widget.setFocus()
-        widget.activateWindow()
-
+        if not mw.dictSettings:
+            mw.dictSettings = SettingsGui(mw, addon_path, openDictionarySettings)
+        mw.dictSettings.show()
+        if mw.dictSettings.windowState() == Qt.WindowState.WindowMinimized:
+            mw.dictSettings.setWindowState(Qt.WindowState.WindowNoState)
+        mw.dictSettings.setFocus()
+        mw.dictSettings.activateWindow()
 
     def getWelcomeScreen() -> str:
         htmlPath = join(addon_path, 'welcome.html')
@@ -380,8 +313,8 @@ def window_loaded() -> None:
         thread.image.connect(exportImage)
         thread.bulkTextExport.connect(extensionBulkTextExport)
         thread.add.connect(attemptAddCard)
-        thread.test.connect(captureKey)
-        thread.release.connect(releaseKey)
+        thread.test.connect(keypress_tracker.capture_key)
+        thread.release.connect(keypress_tracker.release_key)
         thread.pageRefreshDuringBulkMediaImport.connect(cancelBulkMediaExport)
         thread.bulkMediaExport.connect(extensionBulkMediaExport)
         thread.extensionCardExport.connect(extensionCardExport)
@@ -438,9 +371,15 @@ def window_loaded() -> None:
 
 
     def addToContextMenu(self, m: QMenu) -> None:
-        a = m.addAction("Search (Ctrl+S)")
+        def _add_action(menu: QMenu, text: str):
+            if action := menu.addAction(text):
+                return action
+
+            raise RuntimeError(f'Action "{text}" could not be added.')
+
+        a = _add_action("Search (Ctrl+S)")
         a.triggered.connect(self.searchTerm)
-        b = m.addAction("Search Collection (Ctrl/⌘+Shift+B)")
+        b = _add_action("Search Collection (Ctrl/⌘+Shift+B)")
         b.triggered.connect(self.searchCol)
 
     # TODO: @ColinKennedy dedent
@@ -656,7 +595,7 @@ def window_loaded() -> None:
         return tags
 
     def closeBar(event: QCloseEvent) -> None:
-        mw.MigakuExportingDefinitions = False
+        _IS_EXPORTING_DEFINITIONS = False
         event.accept()
 
     def addDefinitionsToCardExporterNote(
@@ -702,7 +641,16 @@ def window_loaded() -> None:
 
     mw.addDefinitionsToCardExporterNote = addDefinitionsToCardExporterNote
 
-    def exportDefinitions(og: str, dest: str, addType: str, dictNs: list[str], howMany: int, notes: typing.Sequence[int], generateWidget: QWidget, rawNames) -> None:
+    def exportDefinitions(
+        og: str,
+        dest: str,
+        addType: str,
+        dictNs: list[str],
+        howMany: int,
+        notes: typing.Sequence[int],
+        generateWidget: QWidget,
+        rawNames: list[str],
+    ) -> None:
         config = mw.addonManager.getConfig(__name__)
         config["massGenerationPreferences"] = {
             "dict1" : rawNames[0],
@@ -725,12 +673,13 @@ def window_loaded() -> None:
         fb = config['frontBracket']
         bb = config['backBracket']
         lang = config['ForvoLanguage']
-        mw.MigakuExportingDefinitions = True
+        _IS_EXPORTING_DEFINITIONS = True
         database = dictdb.get()
 
         for nid in notes:
-            if not mw.MigakuExportingDefinitions:
+            if not _IS_EXPORTING_DEFINITIONS:
                 break
+
             note = mw.col.getNote(nid)
             fields = mw.col.models.fieldNames(note.model())
             if og in fields and dest in fields:

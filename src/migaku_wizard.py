@@ -53,9 +53,9 @@ class MiWizard(QDialog):
     def __init__(self, parent: typing.Optional[QWidget]=None) -> None:
         super(MiWizard, self).__init__(parent)
 
-        self._current_page = None
-        self._page_back = {}
-        self._page_next = {}
+        self._current_page: typing.Optional[MiWizardPage] = None
+        self._page_back: dict[MiWizardPage, typing.Optional[MiWizardPage]] = {}
+        self._page_next: dict[MiWizardPage, typing.Optional[MiWizardPage]] = {}
 
         lyt = QVBoxLayout()
         lyt.setContentsMargins(0, 0, 0, 0)
@@ -90,6 +90,10 @@ class MiWizard(QDialog):
         btn_lyt = QHBoxLayout()
         lyt.addLayout(btn_lyt)
         style = self.style()
+
+        if not style:
+            raise RuntimeError("MiWizard has no style.")
+
         margins = (
             style.pixelMetric(QStyle.PixelMetric.PM_LayoutLeftMargin),
             style.pixelMetric(QStyle.PixelMetric.PM_LayoutTopMargin),
