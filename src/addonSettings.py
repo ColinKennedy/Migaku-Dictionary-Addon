@@ -24,7 +24,7 @@ from .miutils import miInfo, miAsk
 from . dictionaryManager import DictionaryManagerWidget
 from .ffmpegInstaller import FFMPEGInstaller
 
-from . import dictdb, migaku_configuration, migaku_dictionary, typer
+from . import dictdb, migaku_configuration, typer
 
 verNumber = "1.3.8"
 
@@ -208,6 +208,9 @@ class SettingsGui(QTabWidget):
             self.chooseAudioDirectory.setText("Choose Directory")
 
     def saveConfig(self) -> None:
+        # TODO: @ColinKennedy fix the cyclic import later
+        from . import migaku_dictionary
+
         nc = self.getConfig()
         nc['dictOnStart'] = self.openOnStart.isChecked()
         nc['highlightSentences'] = self.highlightSentence.isChecked()

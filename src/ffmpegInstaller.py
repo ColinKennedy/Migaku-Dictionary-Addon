@@ -2,6 +2,7 @@ import os
 import requests
 import stat
 import typing
+import aqt
 from anki.utils import is_mac, is_win, is_lin
 from anki.hooks import addHook
 from os.path import join, exists, dirname
@@ -18,7 +19,7 @@ class _Configuration(typing.TypedDict):
 
 class FFMPEGInstaller:
 
-    def __init__(self, mw: mw_) -> None:
+    def __init__(self, mw: aqt.AnkiQt) -> None:
         super().__init__()
 
         self.mw = mw

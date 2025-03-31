@@ -14,6 +14,9 @@ from . import webConfig
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QTextCursor
 
+from . import dictdb
+
+
 addon_path = os.path.dirname(__file__)
 
 _LOGGER = logging.getLogger(__name__)
@@ -402,7 +405,7 @@ class DictionaryInstallPage(MiWizardPage):
                 
                 # Create Language
                 try:
-                    aqt.mw.miDictDB.addLanguages([lname])
+                    dictdb.get().addLanguages([lname])
                 except Exception as e:
                     # Lanugage already exists
                     pass

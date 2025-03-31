@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 # 
+
+import typing
 import argparse
 import json
 import os
@@ -298,7 +300,7 @@ class Google(QRunnable):
 
         return self.image_search(query, maximum, region)
 
-    def query_gen(self, keyword: str) -> typing.Generator[str]:
+    def query_gen(self, keyword: str) -> typing.Generator[str, None, None]:
         page = 0
         while True:
             queryDict = {"q": keyword, "tbm": "isch"}

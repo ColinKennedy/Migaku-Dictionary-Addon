@@ -9,6 +9,7 @@ from .miutils import miInfo
 from os.path import join, exists, dirname
 sys.path.insert(0, join(dirname(__file__)))
 
+import aqt
 from aqt.qt import QThread, pyqtSignal
 import asyncio
 import tornado.ioloop
@@ -337,7 +338,7 @@ class LearningStatusHandler(MigakuHTTPHandler):
         return json.dumps(modelData)
 
 
-    def getCards(self, start, incrementor):
+    def getCards(self, start, incrementor) -> str:
         cards = self.mw.col.getNextBatchOfCards(start, incrementor)
         bracketPattern = "\[[^]\n]*?\]"
         for card in cards:
@@ -348,7 +349,7 @@ class SearchHandler(MigakuHTTPHandler):
 
     def get(self):
         self.finish("SearchHandler")
-   
+
     def post(self) -> None:
         if self.checkVersion():
             terms = self.get_body_argument("terms", default=False)
@@ -364,7 +365,7 @@ class MigakuHTTPServer(tornado.web.Application):
 
     PROTOCOL_VERSION = 2
 
-    def __init__(self, thread, mw: mw_) -> None:
+    def __init__(self, thread, mw: aqt.AnkiQt) -> None:
         self.mw = mw
         self.previousBulkTimeStamp = 0
         self.thread = thread
@@ -403,7 +404,7 @@ class MigakuServerThread(QThread):
     exportingCondensed = pyqtSignal()
     notExportingCondensed = pyqtSignal()
 
-    def __init__(self, mw: mw_) -> None:
+    def __init__(self, mw: aqt.AnkiQt) -> None:
         self.mw = mw
         QThread.__init__(self)
         self.server = MigakuHTTPServer(self, mw)
@@ -427,16 +428,16 @@ class MigakuServerThread(QThread):
 
 
 def addCondensedAudioInProgressMessage() -> None:
-    title = mw.windowTitle()
+    title = mw_.windowTitle()
     msg = " (Condensed Audio Exporting in Progress)"
     if msg not in title:
-        mw.setWindowTitle(title + msg)
+        mw_.setWindowTitle(title + msg)
 
 def removeCondensedAudioInProgressMessage() -> None:
-    title = mw.windowTitle()
+    title = mw_.windowTitle()
     msg = " (Condensed Audio Exporting in Progress)"
     if msg in title:
-        mw.setWindowTitle(title.replace(msg, ""))
+        mw_.setWindowTitle(title.replace(msg, ""))
 
 
 

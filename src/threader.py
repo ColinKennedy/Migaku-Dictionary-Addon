@@ -3,7 +3,7 @@ import typing
 from . import midict
 
 
-_THREAD: typing.Optional[ClipThread] = None
+_THREAD: typing.Optional[midict.ClipThread] = None
 
 
 def initialize(thread: midict.ClipThread):

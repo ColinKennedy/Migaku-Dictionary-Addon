@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 #
 
+from __future__ import annotations
+
 import collections
 import typing
 
@@ -15,6 +17,12 @@ import json
 from anki.notes import Note
 from anki import sound
 import re
+
+if typing.TYPE_CHECKING:
+    # TODO: @ColinKennedy - fix cyclic import
+    from . import midict
+
+from . import dictdb
 
 
 class _DefinitionSetting(typing.TypedDict):
@@ -42,7 +50,7 @@ class MITextEdit(QTextEdit):
     def __init__(
         self,
         parent: typing.Optional[QWidget]= None,
-        dictInt: typing.Optional[midict.DictInterface] = None,
+        dictInt: typing.Optional["midict.DictInterface"] = None,
     ) -> None:
         super().__init__(parent)
 
@@ -772,9 +780,12 @@ Please review your template and notetype combination."""), level='wrn', day = se
         dictToTable['None'] = 'None'
         dictToTable['Forvo'] = 'Forvo'
         dictToTable['Google Images'] = 'Google Images'
-        for dictTableName in sorted(self.mw.miDictDB.getAllDicts()):
-            dictName = self.mw.miDictDB.cleanDictName(dictTableName)
+        database = dictdb.get()
+
+        for dictTableName in sorted(database.getAllDicts()):
+            dictName = database.cleanDictName(dictTableName)
             dictToTable[dictName] = dictTableName;
+
         return dictToTable
 
 

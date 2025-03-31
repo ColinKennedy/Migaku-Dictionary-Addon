@@ -78,3 +78,12 @@ class HeaderTerm(typing.TypedDict):
     altterm: str
     pronunciation: str
     term: str
+
+
+# class DictionaryResult(typing.TypedDict):
+#     term: str
+#     altterm: str
+#     pronunciation: str
+#     definition: str
+#     examples:
+#     return {'term' : r[0], 'altterm' : r[1], 'pronunciation' : r[2], 'pos' : r[3], 'definition' : r[4], 'examples' : r[5], 'audio' : r[6], 'starCount' : r[7]}

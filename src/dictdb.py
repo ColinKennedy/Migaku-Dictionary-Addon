@@ -329,9 +329,12 @@ class DictDB:
     def resultToDict(self, r):
         return {'term' : r[0], 'altterm' : r[1], 'pronunciation' : r[2], 'pos' : r[3], 'definition' : r[4], 'examples' : r[5], 'audio' : r[6], 'starCount' : r[7]}
 
-    def executeSearch(self, dictName, toQuery, dictLimit, termTuple):
+    def executeSearch(self, dictName: str, toQuery: str, dictLimit: str, termTuple):
         try:
-            self.c.execute("SELECT term, altterm, pronunciation, pos, definition, examples, audio, starCount FROM " + dictName +" WHERE " + toQuery + " ORDER BY LENGTH(term) ASC, frequency ASC LIMIT "+dictLimit +" ;", termTuple)
+            self.c.execute(
+                "SELECT term, altterm, pronunciation, pos, definition, examples, audio, starCount FROM " + dictName +" WHERE " + toQuery + " ORDER BY LENGTH(term) ASC, frequency ASC LIMIT "+dictLimit +" ;",
+                termTuple,
+            )
             return self.c.fetchall()
         except:
             return []
@@ -346,7 +349,14 @@ class DictDB:
                 toQuery += ' OR ' + col + ' '+ op +' ? '
         return toQuery
 
-    def getDefForMassExp(self, term, dN, limit, rN):
+    def getDefForMassExp(
+        self,
+        term: str,
+        dN: str,
+        limit: str,
+        rN: str,
+    # TODO: Fix this type-hint later
+    ) -> tuple[list, int, typer.HeaderTerm]:
         duplicateHeader, termHeader = self.getDuplicateSetting(rN)
         results = []
         columns = ['term','altterm', 'pronunciation']
@@ -469,6 +479,12 @@ def get() -> DictDB:
         return _INSTANCE
 
     raise RuntimeError("No database has been initialized yet.")
+
+
+def clear():
+    global _INSTANCE
+
+    _INSTANCE = None
 
 
 def set(database: DictDB) -> None:

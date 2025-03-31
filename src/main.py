@@ -4,6 +4,7 @@ import typing
 
 from os.path import dirname, join, basename, exists, join
 import sys, os, platform, re, subprocess, aqt.utils
+from anki import notes as notes_
 from anki.utils import stripHTML, is_win, is_mac, is_lin
 from . import midict
 import re
@@ -12,7 +13,7 @@ import urllib.parse
 from shutil import copyfile
 from anki.hooks import addHook, wrap, runHook, runFilter
 from aqt.utils import shortcut, saveGeom, saveSplitter, showInfo, askUser
-import aqt.editor
+from aqt import editor as editor_
 import json
 from aqt import mw, gui_hooks
 from aqt.qt import *
@@ -24,7 +25,7 @@ import codecs
 from operator import itemgetter
 from aqt.addcards import AddCards
 from aqt.editcurrent import EditCurrent
-from aqt.browser import Browser
+from aqt import browser as browser_
 from aqt.tagedit import TagEdit
 from aqt.reviewer import Reviewer
 from . import googleimages
@@ -37,7 +38,7 @@ import os
 from aqt.qt import debug;
 from PyQt6.QtCore import Qt
 
-from . import google_imager, migaku_dictionary, migaku_configuration, threader
+from . import google_imager, migaku_dictionary, migaku_configuration, threader, typer
 
 
 class _DictionaryConfiguration(typing.TypedDict):
@@ -51,8 +52,7 @@ def window_loaded() -> None:
     migaku_configuration.initialize_by_namespace()
     mw.MigakuExportingDefinitions = False
     mw.dictSettings = False
-    dictdb.initialize()
-    mw.miDictDB = dictdb.DictDB()
+    dictdb.set(dictdb.DictDB())
     progressBar = False
     addon_path = dirname(__file__)
     currentNote = False
@@ -284,7 +284,7 @@ def window_loaded() -> None:
                 dictionary.dict.addWindow.addCard()
 
 
-    def openDictionarySettings() -> str:
+    def openDictionarySettings():
         if not mw.dictSettings:
             mw.dictSettings = SettingsGui(mw, addon_path, openDictionarySettings)
         mw.dictSettings.show()
@@ -431,7 +431,7 @@ def window_loaded() -> None:
                     dictionary.dict.setReviewer(mw.reviewer)
             elif self.title == 'editor':
                 target = getTarget(type(self.parentEditor.parentWindow).__name__)
-                dictionary.dict.setCurrentEditor(self.parentEditor, target)
+                dictionary.dict.setCurrentEditor(self.parentEditor, target=target or "")
             showAfterGlobalSearch()
 
 
@@ -456,7 +456,7 @@ def window_loaded() -> None:
         b.triggered.connect(self.searchCol)
 
     # TODO: @ColinKennedy dedent
-    def exportDefinitionsWidget(browser: Browser) -> None:
+    def exportDefinitionsWidget(browser: browser_.Browser) -> None:
         import anki.find
         notes = browser.selectedNotes()
         if notes:
@@ -672,10 +672,10 @@ def window_loaded() -> None:
         event.accept()
 
     def addDefinitionsToCardExporterNote(
-        note: Note,
+        note: notes_.Note,
         term: str,
         dictionaryConfigurations: _DictionaryConfiguration,
-    ) -> Note:
+    ) -> notes_.Note:
         config = mw.addonManager.getConfig(__name__)
         fb = config['frontBracket']
         bb = config['backBracket']
@@ -785,7 +785,7 @@ def window_loaded() -> None:
         if mw.addonManager.getConfig(__name__)['dictOnStart']:
             mw.dictionaryInit()
 
-    def setupMenu(browser: aqt.Browser):
+    def setupMenu(browser: browser_.Browser):
         a = QAction("Export Definitions", browser)
         a.triggered.connect(lambda: exportDefinitionsWidget(browser))
         browser.form.menuEdit.addSeparator()
@@ -808,44 +808,44 @@ def window_loaded() -> None:
 
     def bridgeReroute(self, cmd: str) -> None:
         if cmd == "bodyClick":
-            if mw.migakuDictionary and mw.migakuDictionary.isVisible() and self.note:
-                widget = type(self.widget.parentWidget()).__name__
-                if widget == 'QWidget':
-                    widget = 'Browser'
-                target = getTarget(widget)
-                mw.migakuDictionary.dict.setCurrentEditor(self, target)
+            if dictionary := migaku_dictionary.get_visible_dictionary():
+                if self.note:
+                    widget = type(self.widget.parentWidget()).__name__
+
+                    if widget == 'QWidget':
+                        widget = 'Browser'
+
+                    target = getTarget(widget)
+                    dictionary.dict.setCurrentEditor(self, target)
             if hasattr(mw, "migakuEditorLoaded"):
                     ogReroute(self, cmd)
         else:
             if cmd.startswith("focus"):
+                if dictionary := migaku_dictionary.get_visible_dictionary():
+                    if self.note:
+                        widget = type(self.widget.parentWidget()).__name__
 
-                if mw.migakuDictionary and mw.migakuDictionary.isVisible() and self.note:
-                    widget = type(self.widget.parentWidget()).__name__
-                    if widget == 'QWidget':
-                        widget = 'Browser'
-                    target = getTarget(widget)
-                    mw.migakuDictionary.dict.setCurrentEditor(self, target)
+                        if widget == 'QWidget':
+                            widget = 'Browser'
+
+                        target = getTarget(widget)
+                        dictionary.dict.setCurrentEditor(self, target)
             ogReroute(self, cmd)
 
-    ogReroute = aqt.editor.Editor.onBridgeCmd
-    aqt.editor.Editor.onBridgeCmd = bridgeReroute
+    ogReroute = editor_.Editor.onBridgeCmd
+    editor_.Editor.onBridgeCmd = bridgeReroute
 
-    def setBrowserEditor(self: aqt.Browser) -> None:
+    def setBrowserEditor(self: browser_.Browser) -> None:
         if dictionary := migaku_dictionary.get_visible_dictionary():
             if self.editor.note:
                 dictionary.dict.setCurrentEditor(self.editor, "Browser")
             else:
                 dictionary.dict.closeEditor()
 
-    def checkCurrentEditor(self) -> None:
-        if dictionary := migaku_dictionary.get_visible_dictionary():
-            dictionary.dict.checkEditorClose(self.editor)
-
-    Browser.on_all_or_selected_rows_changed = wrap(Browser.on_all_or_selected_rows_changed, setBrowserEditor)
-
-    #AddCards._reject = wrap(AddCards._reject, checkCurrentEditor)
-    #EditCurrent._saveAndClose = wrap(EditCurrent._saveAndClose, checkCurrentEditor)
-    #Browser._closeWindow = wrap(Browser._closeWindow, checkCurrentEditor)
+    browser_.Browser.on_all_or_selected_rows_changed = wrap(
+        browser_.Browser.on_all_or_selected_rows_changed,
+        setBrowserEditor,
+    )
 
     def addEditActivated(self, event: bool = False) -> None:
         if dictionary := migaku_dictionary.get_visible_dictionary():
@@ -882,7 +882,7 @@ def window_loaded() -> None:
     Previewer.open = wrap(Previewer.open, addHotkeysToPreview)
 
 
-    def addEditorFunctionality(self) -> None:
+    def addEditorFunctionality(self: editor_.Editor) -> None:
         self.web.parentEditor = self
         addBodyClick(self)
         addHotkeys(self)
@@ -898,6 +898,8 @@ def window_loaded() -> None:
         elif name == 'Browser':
             return name
 
+        return None
+
     def announceParent(self, event: bool = False) -> None:
         if dictionary := migaku_dictionary.get_visible_dictionary():
             parent = self.parentWidget().parentWidget().parentWidget()
@@ -910,10 +912,10 @@ def window_loaded() -> None:
                 if not parent:
                     return
 
-            dictionary.dict.setCurrentEditor(parent.editor, getTarget(pName))
+            dictionary.dict.setCurrentEditor(parent.editor, target=getTarget(pName) or "")
 
     TagEdit.focusInEvent = wrap(TagEdit.focusInEvent, announceParent)
-    aqt.editor.Editor.setupWeb = wrap(aqt.editor.Editor.setupWeb, addEditorFunctionality)
+    editor_.Editor.setupWeb = wrap(editor_.Editor.setupWeb, addEditorFunctionality)
     AddCards.mousePressEvent = addEditActivated
     EditCurrent.mousePressEvent = addEditActivated
 

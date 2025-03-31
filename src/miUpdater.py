@@ -6,6 +6,9 @@ from .miutils import miInfo
 import time
 from anki.httpclient import HttpClient
 
+from . import dictdb, migaku_dictionary
+
+
 addonId = 1655992655
 dledIds = []
 
@@ -13,22 +16,20 @@ dledIds = []
 def shutdownDB( parent, mgr, ids, on_done, client, force_enable=True):
     global dledIds 
     dledIds = ids
-    if addonId in ids and hasattr(mw, 'miDictDB'):
+    if addonId in ids:
         miInfo('The Migaku Dictionary database will be diconnected so that the update may proceed. The add-on will not function properly until Anki is restarted after the update.')
-        mw.miDictDB.closeConnection()
-        mw.miDictDB = False
-        if hasattr(mw.migakuDictionary, 'db'):
-            mw.migakuDictionary.db.closeConnection()
-            mw.migakuDictionary.db = False
+        dictdb.get().closeConnection()
+        dictdb.clear()
+        migaku_dictionary.get().db.closeConnection()
+        migaku_dictionary.get().db = None
         time.sleep(2)
         
         
 
 def restartDB(*args):
-    if addonId in dledIds and hasattr(mw, 'miDictDB'):
-        mw.miDictDB =  dictdb.DictDB()
-        if hasattr(mw.migakuDictionary, 'db'):
-            mw.migakuDictionary.db = dictdb.DictDB()
+    if addonId in dledIds:
+        dictdb.set(dictdb.DictDB())
+        migaku_dictionary.get().db = dictdb.DictDB()
         miInfo('The Migaku Dictionary has been updated, please restart Anki to start using the new version now!')
 
 def wrapOnDone(self, log):

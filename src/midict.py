@@ -884,6 +884,8 @@ class ClipThread(QObject):
         self.add.emit('add')
 
     def checkDict(self) -> bool:
+        from . import migaku_dictionary
+
         return not migaku_dictionary.get_visible_dictionary()
 
     def handleExtensionSearch(self, terms: list[str]) -> None:

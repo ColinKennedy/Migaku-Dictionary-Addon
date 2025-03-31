@@ -14,6 +14,8 @@ from .dictionaryWebInstallWizard import DictionaryWebInstallWizard
 from .freqConjWebWindow import FreqConjWebWindow
 from PyQt6.QtWidgets import QMessageBox
 
+from . import dictdb
+
 # TODO: @ColinKennedy Make this type real, later
 _FrequencyList = str
 
@@ -165,7 +167,7 @@ class DictionaryManagerWidget(QWidget):
 
 
     def reload_tree_widget(self) -> None:
-        db = aqt.mw.miDictDB
+        db = dictdb.get()
 
         langs = db.getCurrentDbLangs()
         dicts_by_langs = {}
@@ -249,7 +251,7 @@ class DictionaryManagerWidget(QWidget):
 
 
     def add_lang(self) -> None:
-        db = aqt.mw.miDictDB
+        db = dictdb.get()
 
         text, ok = self.get_string('Select name of new language')
         if not ok:
@@ -275,7 +277,7 @@ class DictionaryManagerWidget(QWidget):
 
 
     def remove_lang(self) -> None:
-        db = aqt.mw.miDictDB
+        db = dictdb.get()
 
         lang_item = self.get_current_lang_item()
         if lang_item is None:
@@ -410,7 +412,7 @@ class DictionaryManagerWidget(QWidget):
 
 
     def remove_dict(self) -> None:
-        db = aqt.mw.miDictDB
+        db = dictdb.get()
         
         dict_item = self.get_current_dict_item()
         if dict_item is None:
@@ -434,7 +436,7 @@ class DictionaryManagerWidget(QWidget):
         db.deleteDict(dict_name)
 
     def set_term_header(self) -> None:
-        db = aqt.mw.miDictDB
+        db = dictdb.get()
 
         dict_name = self.get_current_lang_dict()[1]
         if dict_name is None:
@@ -468,7 +470,7 @@ class DictionaryManagerWidget(QWidget):
 addon_path = os.path.dirname(__file__)
 
 def importDict(lang_name: str, path: str, dict_name: str) -> None:
-    db = aqt.mw.miDictDB
+    db = dictdb.get()
 
     # Load ZIP file
     try:
@@ -524,7 +526,7 @@ def loadDict(
     frequencyDict,
     miDict: bool = False,
 ) -> None:
-    tableName = 'l' + str(mw.miDictDB.getLangId(lang)) + 'name' + dictName
+    tableName = 'l' + str(dictdb.get().getLangId(lang)) + 'name' + dictName
     jsonDict = []
     for filename in filenames:
         with zfile.open(filename, 'r') as jsonDictFile:
@@ -542,8 +544,9 @@ def loadDict(
         else: 
             handleYomiDictEntry(jsonDict, count, entry, freq)
 
-    mw.miDictDB.importToDict(tableName, jsonDict)
-    mw.miDictDB.commitChanges()
+    database = dictdb.get()
+    database.importToDict(tableName, jsonDict)
+    database.commitChanges()
 
 
 def getAdjustedTerm(term: str) -> str:
