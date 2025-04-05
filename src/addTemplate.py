@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
 
-import typing
-import json
-import sys
-import math
-import re
-import os
-from os.path import dirname, join
+from __future__ import annotations
 
-from anki.hooks import addHook
+import typing
+
 from aqt.qt import *
-from aqt.utils import openLink, tooltip, showInfo, askUser
-from anki.utils import is_mac, isWin, is_lin
+from aqt import main
 from anki.lang import _
 import aqt
 
 from .miutils import miInfo, miAsk
+
+if typing.TYPE_CHECKING:
+    # TODO: @ColinKennedy - This line prevents a cyclic import. Fix later.
+    from . import addonSettings
+
 from . import typer
 
 
@@ -33,8 +32,8 @@ class _Template(typing.TypedDict):
 class TemplateEditor(QDialog):
     def __init__(
         self,
-        mw: aqt.AnkiQt,
-        parent: typing.Optional[QWidget]= None,
+        mw: main.AnkiQt,
+        parent: addonSettings.SettingsGui,
         dictionaries: typing.Optional[typing.Iterable[str]] = None,
         toEdit: _Template = False,
         tName: str = "",
@@ -63,7 +62,7 @@ class TemplateEditor(QDialog):
         self.dictionaryNames = dictionaries
         self.cancelButton = QPushButton('Cancel')
         self.saveButton = QPushButton('Save')
-        self.layout = QVBoxLayout()
+        self._main_layout = QVBoxLayout()
         self.notesFields = self.getNotesFields()
         self.setupLayout()
         self.loadTemplateEditor(toEdit, tName, True)
@@ -135,17 +134,20 @@ class TemplateEditor(QDialog):
                 self.addDictFieldRow(dictName, field)
 
     def getConfig(self) -> typer.Configuration:
-        return self.mw.addonManager.getConfig(__name__)
+        return typing.cast(typer.Configuration, self.mw.addonManager.getConfig(__name__))
 
     def getSpecificDictFields(self) -> dict[str, list[str]]:
-        dictFields = {}
+        dictFields: dict[str, list[str]] = {}
+
         for i in range(self.dictFieldsTable.rowCount()):
-            dictn = self.dictFieldsTable.item(i, 0).text()
-            fieldn = self.dictFieldsTable.item(i, 1).text()
+            dictn = typer.check_t(self.dictFieldsTable.item(i, 0)).text()
+            fieldn = typer.check_t(self.dictFieldsTable.item(i, 1)).text()
+
             if fieldn not in dictFields:
                 dictFields[fieldn] = [dictn]
             else:
                 dictFields[fieldn].append(dictn)
+
         return dictFields
 
     def saveExportTemplate(self) -> None:
@@ -179,19 +181,16 @@ class TemplateEditor(QDialog):
         self.entrySeparator.setText('<br><br>')
 
     def getDictFieldsTable(self) -> QTableWidget:
-        macLin = False
-        if is_mac  or is_lin:
-            macLin = True
         dictFields = QTableWidget()
         dictFields.setColumnCount(3)
         tableHeader = dictFields.horizontalHeader()
-        tableHeader.setSectionResizeMode(0, QHeaderView.Stretch)
-        tableHeader.setSectionResizeMode(1, QHeaderView.Stretch)
-        tableHeader.setSectionResizeMode(2, QHeaderView.Fixed)
+        tableHeader.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        tableHeader.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        tableHeader.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
         dictFields.setRowCount(0)
         dictFields.setSortingEnabled(False)
-        dictFields.setEditTriggers(QTableWidget.NoEditTriggers)
-        dictFields.setSelectionBehavior(QAbstractItemView.SelectRows)
+        dictFields.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        dictFields.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         dictFields.setColumnWidth(2, 40)
         tableHeader.hide()
         return dictFields
@@ -208,11 +207,12 @@ class TemplateEditor(QDialog):
                 return False
         return True
 
-    def addDictFieldRow(self, dictName: bool = False, fieldName: bool = False) -> None:
+    def addDictFieldRow(self, dictName: str = "", fieldName: str = "") -> None:
         if not dictName:
             dictName = self.dictionaries.currentText()
         if not fieldName:
             fieldName = self.fields.currentText()
+
         if self.notInTable(dictName):
             rc = self.dictFieldsTable.rowCount()
             self.dictFieldsTable.setRowCount(rc + 1)
@@ -224,7 +224,12 @@ class TemplateEditor(QDialog):
             self.dictFieldsTable.setCellWidget(rc, 2, deleteButton)
 
     def removeDictField(self) -> None:
-        self.dictFieldsTable.removeRow(self.dictFieldsTable.selectionModel().currentIndex().row())
+        model = self.dictFieldsTable.selectionModel()
+
+        if not model:
+            raise RuntimeError("Expected a selection model. Cannot continue.")
+
+        self.dictFieldsTable.removeRow(model.currentIndex().row())
 
     def loadNoteFields(self) -> None:
         curNote = self.noteType.currentText()
@@ -236,7 +241,7 @@ class TemplateEditor(QDialog):
             self.dictFieldsTable.setRowCount(0)
 
     def getNotesFields(self) -> dict[str, list[str]]:
-        notesFields = {}
+        notesFields: dict[str, list[str]] = {}
         models = self.mw.col.models.all()
         for model in models:
             notesFields[model['name']] = []
@@ -245,7 +250,7 @@ class TemplateEditor(QDialog):
         return notesFields
 
     def loadDictionaries(self) -> None:
-        self.dictionaries.addItems(self.dictionaryNames)
+        self.dictionaries.addItems(self.dictionaryNames or [])
         self.dictionaries.addItem('Google Images')
         self.dictionaries.addItem('Forvo')
 
@@ -287,68 +292,67 @@ class TemplateEditor(QDialog):
         tempNameLay = QHBoxLayout()
         tempNameLay.addWidget(QLabel('Name: '))
         tempNameLay.addWidget(self.templateName)
-        self.layout.addLayout(tempNameLay)
+        self._main_layout.addLayout(tempNameLay)
 
         noteTypeLay = QHBoxLayout()
         noteTypeLay.addWidget(QLabel('Notetype: '))
         noteTypeLay.addWidget(self.noteType)
-        self.layout.addLayout(noteTypeLay)
+        self._main_layout.addLayout(noteTypeLay)
 
         sentenceLay = QHBoxLayout()
         sentenceLay.addWidget(QLabel('Sentence Field:'))
         sentenceLay.addWidget(self.sentenceField)
-        self.layout.addLayout(sentenceLay)
+        self._main_layout.addLayout(sentenceLay)
 
         secondaryLay = QHBoxLayout()
         secondaryLay.addWidget(QLabel('Secondary Field:'))
         secondaryLay.addWidget(self.secondaryField)
-        self.layout.addLayout(secondaryLay)
+        self._main_layout.addLayout(secondaryLay)
 
         wordLay = QHBoxLayout()
         wordLay.addWidget(QLabel('Word Field:'))
         wordLay.addWidget(self.wordField)
-        self.layout.addLayout(wordLay)
+        self._main_layout.addLayout(wordLay)
 
         notesLay = QHBoxLayout()
         notesLay.addWidget(QLabel('User Notes:'))
         notesLay.addWidget(self.notesField)
-        self.layout.addLayout(notesLay)
+        self._main_layout.addLayout(notesLay)
 
         imageLay = QHBoxLayout()
         imageLay.addWidget(QLabel('Image Field:'))
         imageLay.addWidget(self.imageField)
-        self.layout.addLayout(imageLay)
+        self._main_layout.addLayout(imageLay)
 
         audioLay = QHBoxLayout()
         audioLay.addWidget(QLabel('Audio Field:'))
         audioLay.addWidget(self.audioField)
-        self.layout.addLayout(audioLay)
+        self._main_layout.addLayout(audioLay)
 
         otherDictsLay = QHBoxLayout()
         otherDictsLay.addWidget(QLabel('Unspecified Dictionaries Field:'))
         otherDictsLay.addWidget(self.otherDictsField)
-        self.layout.addLayout(otherDictsLay)
+        self._main_layout.addLayout(otherDictsLay)
 
         dictFieldLay = QHBoxLayout()
         dictFieldLay.addWidget(self.dictionaries)
         dictFieldLay.addWidget(self.fields)
         dictFieldLay.addWidget(self.addDictField)
-        self.layout.addLayout(dictFieldLay)
+        self._main_layout.addLayout(dictFieldLay)
 
-        self.layout.addWidget(self.dictFieldsTable)
+        self._main_layout.addWidget(self.dictFieldsTable)
 
         separatorLay = QHBoxLayout()
         separatorLay.addWidget(QLabel('Entry Separator: '))
         separatorLay.addWidget(self.entrySeparator)
         separatorLay.addStretch()
-        self.layout.addLayout(separatorLay)
+        self._main_layout.addLayout(separatorLay)
 
         cancelSaveButtons = QHBoxLayout()
         cancelSaveButtons.addStretch()
         cancelSaveButtons.addWidget(self.cancelButton)
         cancelSaveButtons.addWidget(self.saveButton)
-        self.layout.addLayout(cancelSaveButtons)
+        self._main_layout.addLayout(cancelSaveButtons)
 
-        self.setLayout(self.layout)
-
-
+        # TODO: @ColinKennedy - why would this line be needed?
+        self.setLayout(self._main_layout)

@@ -19,9 +19,22 @@ _INSTANCE: typing.Optional[DictDB] = None
 AddType = typing.Union[typing.Literal["add"], typing.Literal["no"]]
 
 
-class _DictionaryLanguagePair(typing.TypedDict):
+class _Conjugation(typing.TypedDict):
     dict: str
-    lang: str  # TODO: @ColinKennedy this type may not be right
+    inflected: str
+    prefix: str
+
+
+class _DictionaryResultTuple(typing.NamedTuple):
+    # See Also: typing.DictionaryResult
+    term: str
+    altterm: str
+    pronunciation: str
+    pos: int
+    definition: str
+    examples: list
+    audio: str
+    starCount: str
 
 
 @typing.final
@@ -67,30 +80,19 @@ class DictDB:
         # TODO: Remove try/except
         try:
             (lid,) = self.c.fetchone()
+            # TODO: @ColinKennedy - I think ``lid`` is an int or str but don't know
+            lid = typing.cast(int, lid)
 
             return lid
         except:
             return None
-    
-    def deleteDict(self, d) -> None:
+
+    def deleteDict(self, d: str) -> None:
         self.dropTables(d)
         d_clean = self.cleanDictName(d)
         self.c.execute('DELETE FROM dictnames WHERE dictname = ?;', (d_clean,))
         self.commitChanges()
         self.c.execute("VACUUM;")
-       
-    def getDictsByLanguage(self, lang: str) -> list:
-        lid = self.getLangId(lang)
-        self.c.execute('SELECT dictname FROM dictnames WHERE lid = ?;',  (lid,))
-        try:
-            langs = []
-            allLs = self.c.fetchall()
-            if len(allLs) > 0:
-                for l in allLs:
-                    langs.append(l[0])
-            return langs
-        except:
-            return []
 
     def addDict(self, dictname: str, lang: str, termHeader: str) -> None:
         lid = self.getLangId(lang)
@@ -101,32 +103,38 @@ class DictDB:
     def formatDictName(self, lid: typing.Any, name: str) -> str:
         return 'l' + str(lid) + 'name' + name
 
-    def deleteLanguage(self, langname):
+    def deleteLanguage(self, langname: str) -> None:
         self.dropTables('l' + str(self.getLangId(langname)) + 'name%')
         self.c.execute('DELETE FROM langnames WHERE langname = ?;', (langname,))
         self.commitChanges()
         self.c.execute("VACUUM;")
 
-    def addLanguages(self, list):
+    def addLanguages(self, list: typing.Iterable[str]) -> None:
         for l in list:
             self.c.execute('INSERT INTO langnames (langname) VALUES (?);', (l,))
+
         self.commitChanges()
 
-    def getCurrentDbLangs(self):
+    def getCurrentDbLangs(self) -> list[str]:
         self.c.execute("SELECT langname FROM langnames;")
+
+        langs: list[str] = []
+
+        # TODO: @ColinKennedy add a better try / except or remove it
         try:
-            langs = []
             allLs = self.c.fetchall()
-            if len(allLs) > 0:
-                for l in allLs:
-                    langs.append(l[0])
-            return langs
         except:
             return []
 
-    def getUserGroups(self, dicts):
+        for l in allLs:
+            langs.append(l[0])
+
+        return langs
+
+    def getUserGroups(self, dicts: list[str]) -> list[typer.DictionaryLanguagePair]:
         currentDicts = self.getDictToTable()
-        foundDicts = []
+        foundDicts: list[typer.DictionaryLanguagePair] = []
+
         for d in dicts:
             if d in currentDicts or d in ['Google Images', 'Forvo']:
                 if d == 'Google Images':
@@ -135,79 +143,86 @@ class DictDB:
                     foundDicts.append({'dict' : 'Forvo', 'lang' : ''})
                 else:
                     foundDicts.append(currentDicts[d])
+
         return foundDicts
 
-    def getDictToTable(self):
+    def getDictToTable(self) -> dict[str, typer.DictionaryLanguagePair]:
         self.c.execute("SELECT dictname, lid, langname FROM dictnames INNER JOIN langnames ON langnames.id = dictnames.lid;")
+        dicts: dict[str, typer.DictionaryLanguagePair] = {}
+
         try:
-            dicts = {}
             allDs = self.c.fetchall()
-            if len(allDs) > 0:
-                for d in allDs:
-                    dicts[d[0]] = {'dict' : self.formatDictName(d[1], d[0]), 'lang' : d[2]}
-            return dicts
         except:
-            return []
+            return {}
+
+        for d in allDs:
+            dicts[d[0]] = {'dict' : self.formatDictName(d[1], d[0]), 'lang' : d[2]}
+
+        return dicts
 
     def fetchDefs(self):
         self.c.execute("SELECT definition FROM l64name大辞林 LIMIT 10;")
+        langs = []
+
         try:
-            langs = []
             allLs = self.c.fetchall()
-            if len(allLs) > 0:
-                for l in allLs:
-                    langs.append(l[0])
-            return langs
         except:
             return []
 
-    def getAllDicts(self):
+        for l in allLs:
+            langs.append(l[0])
+
+        return langs
+
+    def getAllDicts(self) -> list[str]:
         self.c.execute("SELECT dictname, lid FROM dictnames;")
+        dicts: list[str] = []
+
         try:
-            dicts = []
             allDs = self.c.fetchall()
-            if len(allDs) > 0:
-                for d in allDs:
-                    dicts.append(self.formatDictName(d[1], d[0]))
-            return dicts
         except:
             return []
 
-    def getAllDictsWithLang(self) -> list[_DictionaryLanguagePair]:
+        for d in allDs:
+            dicts.append(self.formatDictName(d[1], d[0]))
+
+        return dicts
+
+    def getAllDictsWithLang(self) -> list[typer.DictionaryLanguagePair]:
         self.c.execute("SELECT dictname, lid, langname FROM dictnames INNER JOIN langnames ON langnames.id = dictnames.lid;")
+        dicts: list[typer.DictionaryLanguagePair] = []
+
         try:
-            dicts = []
             allDs = self.c.fetchall()
-            if len(allDs) > 0:
-                for d in allDs:
-                    dicts.append({'dict' : self.formatDictName(d[1], d[0]), 'lang' : d[2]})
-            return dicts
         except:
             return []
 
-    def getDefaultGroups(self) -> dict[str, typer.DictionaryGroup]:
+        for d in allDs:
+            dicts.append({'dict' : self.formatDictName(d[1], d[0]), 'lang' : d[2]})
+
+        return dicts
+
+    def getDefaultGroups(self) -> dict[str, typer.DictionaryLanguagePair]:
         langs = self.getCurrentDbLangs()
-        dictsByLang = {}
+        dictsByLang: dict[str, typer.DictionaryLanguagePair] = {}
+
         for lang in langs:
-            self.c.execute("SELECT dictname, lid FROM dictnames INNER JOIN langnames ON langnames.id = dictnames.lid WHERE langname = ?;", (lang,)) 
+            self.c.execute("SELECT dictname, lid FROM dictnames INNER JOIN langnames ON langnames.id = dictnames.lid WHERE langname = ?;", (lang,))
             allDs = self.c.fetchall()
-            dicts: typer.DictionaryGroup = {
-                'customFont': False,
-                'dictionaries': [],
-                'font': False,
-            }
-            if len(allDs) > 0:
-                for d in allDs:
-                    dicts['dictionaries'].append({'dict' : self.formatDictName(d[1], d[0]), 'lang' : lang})
-            if len(dicts['dictionaries']) > 0:
-                dictsByLang[lang] = dicts
+            dictionaries: list[typer.DictionaryLanguagePair] = []
+
+            for d in allDs:
+                dictionaries.append({'dict' : self.formatDictName(d[1], d[0]), 'lang' : lang})
+
+            if dictionaries:
+                dictsByLang[lang] = dictionaries
+
         return dictsByLang
 
-    def cleanDictName(self, name: str) -> None:
+    def cleanDictName(self, name: str) -> str:
         return re.sub(r'l\d+name', '', name)
 
-
-    def getDuplicateSetting(self, name: str):
+    def getDuplicateSetting(self, name: str) -> typing.Optional[tuple[str, str]]:
         self.c.execute('SELECT duplicateHeader, termHeader  FROM dictnames WHERE dictname=?', (name, ))
         try:
             (duplicateHeader,termHeader) = self.c.fetchone()
@@ -218,8 +233,8 @@ class DictDB:
     def getDefEx(self, sT: str) -> bool:
         return sT in ['Definition', 'Example']
 
-    def applySearchType(self,terms, sT):
-        for idx, term in enumerate(terms):
+    def applySearchType(self,terms: list[str], sT: str) -> None:
+        for idx, _ in enumerate(terms):
             if sT in  ['Forward','Pronunciation']:
                terms[idx] = terms[idx] + '%';
             elif sT ==  'Backward':
@@ -234,11 +249,16 @@ class DictDB:
                 terms[idx] = '%「%' + terms[idx] + '%」%'
         return terms;
 
-    def deconjugate(self, terms, conjugations):
-        deconjugations = []
+    def deconjugate(
+        self,
+        terms: list[str],
+        conjugations: typing.Sequence[_Conjugation],
+    ) -> list[str]:
+        deconjugations: list[str] = []
+
         for term in terms:
             for c in conjugations:
-                if term.endswith(c['inflected']): 
+                if term.endswith(c['inflected']):
                     for x in c['dict']:
                         deinflected = self.rreplace(term, c['inflected'], x, 1)
                         if 'prefix' in c:
@@ -250,16 +270,25 @@ class DictDB:
                         if deinflected not in deconjugations:
                             deconjugations.append(deinflected)
         deconjugations = list(filter(lambda x: len(x) > 1, deconjugations))
-        deconjugations = list(set(deconjugations))  
+        deconjugations = list(set(deconjugations))
         return terms + deconjugations
 
-    def rreplace(self, s, old, new, occurrence):
+    def rreplace(self, s: str, old: str, new: str, occurrence: int) -> str:
         li = s.rsplit(old, occurrence)
         return new.join(li)
 
-    def searchTerm(self, term, selectedGroup, conjugations, sT, deinflect, dictLimit, maxDefs):
-        alreadyConjTyped = {}
-        results = {}
+    def searchTerm(
+        self,
+        term: str,
+        selectedGroup,
+        conjugations: typing.Sequence[_Conjugation],
+        sT: str,
+        deinflect: bool,
+        dictLimit: str,
+        maxDefs: int,
+    ) -> dict[str, list[typer.DictionaryResult]]:
+        alreadyConjTyped: dict[str, list[str]] = {}
+        results: dict[str, list[typer.DictionaryResult]] = {}
         group = selectedGroup['dictionaries']
         totalDefs = 0
         defEx = self.getDefEx(sT)
@@ -289,23 +318,24 @@ class DictDB:
                     terms = alreadyConjTyped[dic['lang']]
                 elif dic['lang'] in conjugations:
                     terms = self.deconjugate(terms, conjugations[dic['lang']])
-                    terms = self.applySearchType(terms, sT)
+                    self.applySearchType(terms, sT)
                     alreadyConjTyped[dic['lang']] = terms
                 else:
-                    terms = self.applySearchType(terms, sT)
+                    self.applySearchType(terms, sT)
                     alreadyConjTyped[dic['lang']] = terms
             else:
                 if term in alreadyConjTyped:
                     terms = alreadyConjTyped[term]
                 else:
-                    terms = self.applySearchType(terms, sT)
+                    self.applySearchType(terms, sT)
                     alreadyConjTyped[term] = terms
 
-            toQuery = self.getQueryCriteria(column, terms, op)  
-            termTuple = tuple(terms)  
+            toQuery = self.getQueryCriteria(column, terms, op)
+            termTuple = tuple(terms)
             allRs = self.executeSearch(dic['dict'], toQuery, dictLimit, termTuple)
+            dictRes: list[typer.DictionaryResult] = []
+
             if len(allRs) > 0:
-                dictRes = []
                 for r in allRs:
                     totalDefs += 1
                     dictRes.append(self.resultToDict(r))
@@ -316,11 +346,10 @@ class DictDB:
             elif not defEx and not sT == 'Pronunciation':
                 columns = ['altterm', 'pronunciation']
                 for col in columns:
-                    toQuery = self.getQueryCriteria(col, terms, op)  
-                    termTuple = tuple(terms)  
+                    toQuery = self.getQueryCriteria(col, terms, op)
+                    termTuple = tuple(terms)
                     allRs = self.executeSearch(dic['dict'], toQuery, dictLimit, termTuple)
                     if len(allRs) > 0:
-                        dictRes = []
                         for r in allRs:
                             totalDefs += 1
                             dictRes.append(self.resultToDict(r))
@@ -331,10 +360,25 @@ class DictDB:
                         break
         return results
 
-    def resultToDict(self, r):
-        return {'term' : r[0], 'altterm' : r[1], 'pronunciation' : r[2], 'pos' : r[3], 'definition' : r[4], 'examples' : r[5], 'audio' : r[6], 'starCount' : r[7]}
+    def resultToDict(self, r: _DictionaryResultTuple) -> typer.DictionaryResult:
+        return {
+            'term' : r[0],
+            'altterm' : r[1],
+            'pronunciation' : r[2],
+            'pos' : r[3],
+            'definition' : r[4],
+            'examples' : r[5],
+            'audio' : r[6],
+            'starCount' : r[7],
+        }
 
-    def executeSearch(self, dictName: str, toQuery: str, dictLimit: str, termTuple):
+    def executeSearch(
+        self,
+        dictName: str,
+        toQuery: str,
+        dictLimit: str,
+        termTuple: tuple[str, ...],
+    ) -> list[_DictionaryResultTuple]:
         try:
             self.c.execute(
                 "SELECT term, altterm, pronunciation, pos, definition, examples, audio, starCount FROM " + dictName +" WHERE " + toQuery + " ORDER BY LENGTH(term) ASC, frequency ASC LIMIT "+dictLimit +" ;",
@@ -344,10 +388,10 @@ class DictDB:
         except:
             return []
 
-    def getQueryCriteria(self, col, terms, op = 'LIKE'):
+    def getQueryCriteria(self, col: str, terms: typing.Sequence[str], op: str = 'LIKE') -> str:
 
         toQuery = ''
-        for idx, item in enumerate(terms):
+        for idx, _ in enumerate(terms):
             if idx == 0:
                 toQuery += ' ' + col + ' '+ op +' ? '
             else:
@@ -368,7 +412,7 @@ class DictDB:
         for col in columns:
             terms = [term]
             toQuery =  ' ' + col + ' = ? '
-            termTuple = tuple(terms)  
+            termTuple = tuple(terms)
             allRs = self.executeSearch(dN, toQuery, limit, termTuple)
             if len(allRs) > 0:
                 for r in allRs:
@@ -387,7 +431,7 @@ class DictDB:
         self.c.execute("CREATE INDEX IF NOT EXISTS iap" + text +" ON " + text +" ( altterm, pronunciation );")
         self.c.execute("CREATE INDEX IF NOT EXISTS ia" + text +" ON " + text +" (pronunciation);")
 
-    def importToDict(self, dictName: str, dictionaryData) -> None:
+    def importToDict(self, dictName: str, dictionaryData: list[str]) -> None:
         self.c.executemany('INSERT INTO ' + dictName + ' (term, altterm, pronunciation, pos, definition, examples, audio, frequency, starCount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);', dictionaryData)
 
     def dropTables(self, text: str) -> None:
@@ -396,7 +440,7 @@ class DictDB:
         for name in dicts:
             self.c.execute("DROP TABLE " + name[0] + " ;")
 
-    def setFieldsSetting(self, name: str, fields) -> None:
+    def setFieldsSetting(self, name: str, fields: str) -> None:
         self.c.execute('UPDATE dictnames SET fields = ? WHERE dictname=?', (fields, name))
         self.commitChanges()
 
@@ -426,12 +470,13 @@ class DictDB:
         except:
             return None
 
-    def getDupHeaders(self) -> typing.Optional[dict]:
+    def getDupHeaders(self) -> typing.Optional[dict[str, int]]:
+        # TODO: @ColinKennedy - the dict value might be int or bool. Not sure.
         self.c.execute('SELECT dictname, duplicateHeader FROM dictnames')
         # TODO: Remove try/except
         try:
             dictHeaders = self.c.fetchall()
-            results = {}
+            results: dict[str, int] = {}
             if len(dictHeaders) > 0:
                 for r in dictHeaders:
                     results[r[0]] = r[1]
@@ -486,13 +531,13 @@ def get() -> DictDB:
     raise RuntimeError("No database has been initialized yet.")
 
 
-def clear():
+def clear() -> None:
     global _INSTANCE
 
     _INSTANCE = None
 
 
-def set(database: DictDB) -> None:
+def initialize(database: DictDB) -> None:
     global _INSTANCE
 
     _INSTANCE = database

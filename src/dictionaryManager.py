@@ -649,7 +649,7 @@ def organizeDictionaryByFrequency(
     jsonDict: dict[str, _FrequencyEntry],
     frequencyDict,
     miDict: bool = False,
-):
+) -> list[str]:
     readingHyouki = False
     if frequencyDict['readingDictionaryType']:
         readingHyouki = True

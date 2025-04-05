@@ -1,6 +1,9 @@
 import typing
 
 
+T = typing.TypeVar("T")
+
+
 class Card(typing.TypedDict):
     # unknowns: list[str]
     audio: str
@@ -68,9 +71,14 @@ class Dictionary(typing.NamedTuple):
     text: str
 
 
+class DictionaryLanguagePair(typing.TypedDict):
+    dict: str
+    lang: str  # TODO: @ColinKennedy this type may not be right
+
+
 class DictionaryGroup(typing.TypedDict):
     customFont: bool
-    dictionaries: typing.List[str]
+    dictionaries: typing.List[DictionaryLanguagePair]
     font: str
 
 
@@ -80,10 +88,20 @@ class HeaderTerm(typing.TypedDict):
     term: str
 
 
-# class DictionaryResult(typing.TypedDict):
-#     term: str
-#     altterm: str
-#     pronunciation: str
-#     definition: str
-#     examples:
-#     return {'term' : r[0], 'altterm' : r[1], 'pronunciation' : r[2], 'pos' : r[3], 'definition' : r[4], 'examples' : r[5], 'audio' : r[6], 'starCount' : r[7]}
+class DictionaryResult(typing.TypedDict):
+    # TODO: @ColinKennedy - Check the types here, later
+    term: str
+    altterm: str
+    pronunciation: str
+    pos: int
+    definition: str
+    examples: list
+    audio: str
+    starCount: str
+
+
+def check_t(item: typing.Optional[T]) -> T:
+    if item is None:
+        raise RuntimeError('Item was not defined as expected.')
+
+    return item

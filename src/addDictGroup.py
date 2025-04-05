@@ -20,7 +20,6 @@ if typing.TYPE_CHECKING:
     # TODO: @ColinKennedy - fix cyclic dependency "addonSettings.SettingsGui" later
     from . import addonSettings
 
-from . import migaku_dictionary
 from . import typer
 
 
@@ -141,6 +140,9 @@ class DictGroupEditor(QDialog):
                 count += 1
 
     def getConfig(self) -> typer.Configuration:
+        # TODO: @ColinKennedy - fix cyclic dependency later
+        from . import migaku_dictionary
+
         if configuration := migaku_dictionary.get().getConfig():
             return configuration
 
@@ -201,6 +203,9 @@ class DictGroupEditor(QDialog):
             self.fontToMove = fileName
 
     def saveDictGroup(self) -> None:
+        # TODO: @ColinKennedy - fix cyclic dependency later
+        from . import migaku_dictionary
+
         newConfig = self.getConfig()
         gn = self.groupName.text()
         if gn  == '':

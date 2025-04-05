@@ -40,7 +40,10 @@ import ntpath
 from .miutils import miInfo
 from PyQt6.QtSvgWidgets import QSvgWidget
 
-from . import typer
+from . import keypress_tracker, typer, welcomer
+
+
+_CURRENT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 
 
 class _DictionaryGroupEntry(typing.TypedDict):
@@ -52,7 +55,7 @@ class MIDict(AnkiWebView):
 
     def __init__(
         self,
-        dictInt: midict.DictInterface,
+        dictInt: DictInterface,
         db: dictdb_.DictDB,
         path: str,
         day: str,
@@ -75,7 +78,7 @@ class MIDict(AnkiWebView):
         self.homeDir = path
         self.conjugations = self.loadConjugations()
         self.deinflect = True
-        self.addWindow = False
+        self.addWindow: typing.Optional[CardExporter] = None
         self.currentEditor = False
         self.reviewer = False
         self.threadpool = QThreadPool()
@@ -470,7 +473,7 @@ class MIDict(AnkiWebView):
                 imgs.append('<img src="' + filename + '">')
             except:
                 continue
-        if len(imgs) > 0:
+        if len(imgs) > 0 and self.addWindow:
             self.addWindow.addImgs(word, imgSeparator.join(imgs), self.getThumbs(rawPaths))
 
     def saveQImage(self, url: str, filename: str) -> None:
@@ -1039,7 +1042,7 @@ class DictInterface(QWidget):
         path: str,
         welcome: str,
         parent: typing.Optional[QWidget]=None,
-        terms: typing.Union[list[str], typing.Literal[False]] = False,
+        terms: typing.Optional[list[str]] = False,
     ):
         super().__init__(parent)
         self.db = dictdb
@@ -1063,7 +1066,7 @@ class DictInterface(QWidget):
         self.hotkeyEsc = QShortcut(QKeySequence("Esc"), self)
         self.hotkeyEsc.activated.connect(self.hide)
         self.hotkeyW = QShortcut(QKeySequence("Ctrl+W"), self)
-        self.hotkeyW.activated.connect(self.mw.dictionaryInit)
+        self.hotkeyW.activated.connect(dictionaryInit)
         self.hotkeyS = QShortcut(QKeySequence("Ctrl+S"), self)
         self.hotkeyS.activated.connect(lambda: self.mw.searchTerm(self.dict._page))
         self.hotkeyS = QShortcut(QKeySequence("Ctrl+Shift+B"), self)
@@ -1225,7 +1228,7 @@ class DictInterface(QWidget):
         with open(insertHTML, "r", encoding="utf-8") as insertHTMLFile:
             return insertHTMLFile.read()
 
-    def focusWindow() -> None:
+    def focusWindow(self) -> None:
         self.show()
         if self.windowState() == Qt.WindowMinimized:
             self.setWindowState(Qt.WindowNoState)
@@ -1239,10 +1242,6 @@ class DictInterface(QWidget):
     # TODO: @ColinKennedy - return bool?
     def hideEvent(self, event: QHideEvent) -> None:
         self.saveSizeAndPos()
-        shortcut = '(Ctrl+W)'
-        if is_mac:
-            shortcut = '⌘W'
-        self.mw.openMiDict.setText("Open Dictionary " + shortcut)
         event.accept()
 
     def resetConfiguration(self, terms: list[str]) -> None:
@@ -1536,10 +1535,11 @@ class DictInterface(QWidget):
             self.writeConfig('day', False)
             self.loadNight()
 
-    def setSvg(self, widget: SVGPushButton, name: str) -> bool:
+    def setSvg(self, widget: SVGPushButton, name: str) -> None:
         if self.nightModeToggler.day:
-            return widget.setSvg(join(self.iconpath, 'dictsvgs', name + '.svg'))
-        return widget.setSvg(join(self.iconpath, 'dictsvgs', name + 'night.svg'))
+            widget.setSvg(join(self.iconpath, 'dictsvgs', name + '.svg'))
+
+        widget.setSvg(join(self.iconpath, 'dictsvgs', name + 'night.svg'))
 
     def setAllIcons(self) -> None:
         self.setSvg( self.setB, 'settings')
@@ -1606,7 +1606,7 @@ class DictInterface(QWidget):
     def incFont(self) -> None:
         self.dict.eval("scaleFont(true)")
 
-    def setupDictGroups(self, dictGroups: typing.Optional[QComboBox]=None) -> None:
+    def setupDictGroups(self, dictGroups: typing.Optional[QComboBox]=None) -> QComboBox:
 
         def _get_item(model: qt.QAbstractItemModel, index: int) -> QComboBoxItem:
             item = model.item(index)
@@ -1697,7 +1697,7 @@ class DictInterface(QWidget):
     def cleanTermBrackets(self, term: str) -> str:
         return re.sub(r'(?:\[.*\])|(?:\(.*\))|(?:《.*》)|(?:（.*）)|\(|\)|\[|\]|《|》|（|）', '', term)[:30]
 
-    def initSearch(self, term: typing.Optional[str]) -> None:
+    def initSearch(self, term: typing.Optional[str]=None) -> None:
         self.ensureVisible()
         selectedGroup = self.getSelectedDictGroup()
 
@@ -2070,6 +2070,10 @@ class SVGPushButton(QPushButton):
     ) -> None:
         super().__init__(parent)
 
+        self.singleTab = False
+        self.day: typing.Optional[str] = None
+        self.opened = False
+
         self.setFixedHeight(40)
         self.setFixedWidth(43)
         self.svgWidth = width
@@ -2098,3 +2102,52 @@ class SVGPushButton(QPushButton):
         svg = QSvgWidget(svgPath)
         svg.setFixedSize(self.svgWidth, self.svgHeight)
         self._main_layout.addWidget(svg)
+
+
+def dictionaryInit(terms: typing.Union[list[str], str, None]=None):
+    # TODO: @ColinKennedy - Remove the cyclic dependency later
+    from . import migaku_dictionary
+
+    if terms and isinstance(terms, str):
+        terms = [terms]
+
+    if not migaku_dictionary.get_unsafe():
+        migaku_dictionary.set(
+            DictInterface(
+                dictdb_.get(),
+                aqt.mw,
+                _CURRENT_DIRECTORY,
+                welcomer.welcomeScreen,
+                terms = terms,
+            )
+        )
+        showAfterGlobalSearch()
+    elif not migaku_dictionary.get_visible_dictionary():
+        dictionary = migaku_dictionary.get()
+        dictionary.show()
+        dictionary.resetConfiguration(terms or [])
+        showAfterGlobalSearch()
+    else:
+        dictionary = migaku_dictionary.get()
+        dictionary.hide()
+
+
+def showAfterGlobalSearch() -> None:
+    # TODO: @ColinKennedy - Remove the cyclic dependency later
+    from . import migaku_dictionary
+
+    dictionary = migaku_dictionary.get()
+    dictionary.activateWindow()
+
+    if not is_win:
+        dictionary.setWindowState(dictionary.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
+        dictionary.raise_()
+
+        return
+
+    dictionary.setWindowFlags(dictionary.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
+    dictionary.show()
+
+    if not dictionary.alwaysOnTop:
+        dictionary.setWindowFlags(dictionary.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint)
+        dictionary.show()

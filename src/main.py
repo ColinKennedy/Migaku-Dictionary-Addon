@@ -42,6 +42,7 @@ from . import global_state, google_imager, migaku_dictionary, migaku_configurati
 
 
 _IS_EXPORTING_DEFINITIONS = False
+_MENU = None
 
 
 class _DictionaryConfiguration(typing.TypedDict):
@@ -55,7 +56,7 @@ def window_loaded() -> None:
     migaku_configuration.initialize_by_namespace()
     _IS_EXPORTING_DEFINITIONS = False
     mw.dictSettings = False
-    dictdb.set(dictdb.DictDB())
+    dictdb.initialize(dictdb.DictDB())
     progressBar = False
     addon_path = dirname(__file__)
     currentNote = False
@@ -135,7 +136,7 @@ def window_loaded() -> None:
 
     def _initialize_dictionary_if_needed() -> midict.DictInterface:
         if not migaku_dictionary.get_visible_dictionary():
-            dictionaryInit()
+            midict.dictionaryInit()
 
         return migaku_dictionary.get()
 
@@ -196,26 +197,9 @@ def window_loaded() -> None:
     def trySearch(term: str) -> None:
         if dictionary := migaku_dictionary.get_visible_dictionary():
             dictionary.initSearch(term)
-            showAfterGlobalSearch()
+            midict.showAfterGlobalSearch()
         elif mw.MigakuDictConfig['openOnGlobal'] and not migaku_dictionary.get_visible_dictionary():
-            dictionaryInit([term])
-
-    def showAfterGlobalSearch() -> None:
-        dictionary = migaku_dictionary.get()
-        dictionary.activateWindow()
-
-        if not is_win:
-            dictionary.setWindowState(dictionary.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
-            dictionary.raise_()
-
-            return
-
-        dictionary.setWindowFlags(dictionary.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
-        dictionary.show()
-
-        if not dictionary.alwaysOnTop:
-            dictionary.setWindowFlags(dictionary.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint)
-            dictionary.show()
+            midict.dictionaryInit([term])
 
     def attemptAddCard(*_, **__) -> None:
         if dictionary := migaku_dictionary.get_visible_dictionary():
@@ -233,58 +217,26 @@ def window_loaded() -> None:
         mw.dictSettings.setFocus()
         mw.dictSettings.activateWindow()
 
-    def getWelcomeScreen() -> str:
-        htmlPath = join(addon_path, 'welcome.html')
-        with open(htmlPath,'r', encoding="utf-8") as fh:
-            file =  fh.read()
-        return file
+    def initialize_menu():
+        menu = QMenu('Migaku',  mw)
 
-    def getMacWelcomeScreen() -> str:
-        htmlPath = join(addon_path, 'macwelcome.html')
-        with open(htmlPath,'r', encoding="utf-8") as fh:
-            file =  fh.read()
-        return file
+        settings_action = QAction("Dictionary Settings", mw)
+        settings_action.triggered.connect(openDictionarySettings)
+        menu.addAction(settings_action)
 
-    if is_mac:
-        welcomeScreen = getMacWelcomeScreen()
-    else:
-        welcomeScreen = getWelcomeScreen()
 
-    def dictionaryInit(terms: typing.Union[list[str], typing.Literal[False]]=False):
-        if terms and isinstance(terms, str):
-            terms = [terms]
         shortcut = '(Ctrl+W)'
+
         if is_mac:
             shortcut = '⌘W'
-        if not migaku_dictionary.get_unsafe():
-            migaku_dictionary.set(
-                midict.DictInterface(dictdb.get(), mw, addon_path, welcomeScreen, terms = terms)
-            )
-            mw.openMiDict.setText("Close Dictionary " + shortcut)
-            showAfterGlobalSearch()
-        elif not migaku_dictionary.get_visible_dictionary():
-            dictionary = migaku_dictionary.get()
-            dictionary.show()
-            dictionary.resetConfiguration(terms)
-            mw.openMiDict.setText("Close Dictionary " + shortcut)
-            showAfterGlobalSearch()
-        else:
-            dictionary = migaku_dictionary.get()
-            dictionary.hide()
 
-    def initialize_menu() -> None:
-        menu = QMenu('Migaku')
+        open_dictionary_action = QAction(f"Open Dictionary {shortcut}", mw)
+        open_dictionary_action.triggered.connect(midict.dictionaryInit)
+        menu.addAction(open_dictionary_action)
 
-        action = QAction("Dictionary Settings")
-        action.triggered.connect(openDictionarySettings)
-        menu.addAction(action)
+        mw.form.menubar.insertMenu(mw.form.menuHelp.menuAction(), menu)
 
-        menu.addSeparator()
-        action = QAction("Open Dictionary (Ctrl+W)")
-        action.triggered.connect(dictionaryInit)
-        menu.addAction(action)
-
-    mw.form.menubar.insertAction(mw.form.menuHelp.menuAction(), initialize_menu())
+    initialize_menu()
 
     migaku_dictionary.clear()
 
@@ -293,14 +245,14 @@ def window_loaded() -> None:
         terms = terms[:limit]
 
         if not (dictionary := migaku_dictionary.get_visible_dictionary()):
-            dictionaryInit(terms)
+            midict.dictionaryInit(terms)
 
             return
 
         for term in terms:
             dictionary.initSearch(term)
 
-        showAfterGlobalSearch()
+        midict.showAfterGlobalSearch()
 
     def extensionFileNotFound() -> None:
         miInfo("The media files were not found in your \"Download Directory\", please make sure you have selected the correct directory.")
@@ -326,7 +278,7 @@ def window_loaded() -> None:
         initGlobalHotkeys()
 
     mw.hotkeyW = QShortcut(QKeySequence("Ctrl+W"), mw)
-    mw.hotkeyW.activated.connect(dictionaryInit)
+    mw.hotkeyW.activated.connect(midict.dictionaryInit)
 
     # TODO: @ColinKennedy - Replace False
     def selectedText(page) -> typing.Union[str, typing.Literal[False]]:
@@ -342,7 +294,7 @@ def window_loaded() -> None:
             text = re.sub(r'\[[^\]]+?\]', '', text)
             text = text.strip()
             if not migaku_dictionary.get_visible_dictionary():
-                dictionaryInit([text])
+                midict.dictionaryInit([text])
 
             dictionary = migaku_dictionary.get()
             dictionary.ensureVisible()
@@ -353,15 +305,11 @@ def window_loaded() -> None:
             elif self.title == 'editor':
                 target = getTarget(type(self.parentEditor.parentWindow).__name__)
                 dictionary.dict.setCurrentEditor(self.parentEditor, target=target or "")
-            showAfterGlobalSearch()
-
-
-
+            midict.showAfterGlobalSearch()
 
 
     mw.searchTerm = searchTerm
     mw.searchCol = searchCol
-
 
 
     mw.hotkeyS = QShortcut(QKeySequence("Ctrl+S"), mw)
@@ -528,7 +476,7 @@ def window_loaded() -> None:
         termHeader += entry['starCount']
         return termHeader
 
-    def formatDefinitions(results, th,dh, fb, bb):
+    def formatDefinitions(results, th: str, dh: int, fb: str, bb: str):
         definitions = []
         for idx, r in enumerate(results):
             text = ''
@@ -720,7 +668,7 @@ def window_loaded() -> None:
 
     def dictOnStart() -> None:
         if mw.addonManager.getConfig(__name__)['dictOnStart']:
-            dictionaryInit()
+            midict.dictionaryInit()
 
     def setupMenu(browser: browser_.Browser):
         a = QAction("Export Definitions", browser)
@@ -732,7 +680,6 @@ def window_loaded() -> None:
         if dictionary := migaku_dictionary.get_visible_dictionary():
             dictionary.saveSizeAndPos()
             dictionary.hide()
-            mw.openMiDict.setText("Open Dictionary (Ctrl+W)")
 
 
     addHook("unloadProfile", closeDictionary)
@@ -805,7 +752,7 @@ def window_loaded() -> None:
         self.parentWindow.hotkeyS = QShortcut(QKeySequence("Ctrl+Shift+B"), self.parentWindow)
         self.parentWindow.hotkeyS.activated.connect(lambda: searchCol(self.web))
         self.parentWindow.hotkeyW = QShortcut(QKeySequence("Ctrl+W"), self.parentWindow)
-        self.parentWindow.hotkeyW.activated.connect(dictionaryInit)
+        self.parentWindow.hotkeyW.activated.connect(midict.dictionaryInit)
 
 
     def addHotkeysToPreview(self) -> None:
@@ -814,7 +761,7 @@ def window_loaded() -> None:
         self._web.hotkeyS = QShortcut(QKeySequence("Ctrl+Shift+B"), self._web)
         self._web.hotkeyS.activated.connect(lambda: searchCol(self._web))
         self._web.hotkeyW = QShortcut(QKeySequence("Ctrl+W"), self._web)
-        self._web.hotkeyW.activated.connect(dictionaryInit)
+        self._web.hotkeyW.activated.connect(midict.dictionaryInit)
 
     Previewer.open = wrap(Previewer.open, addHotkeysToPreview)
 

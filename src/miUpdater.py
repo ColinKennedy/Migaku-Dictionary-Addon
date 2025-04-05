@@ -1,3 +1,5 @@
+import typing
+
 from aqt import mw
 from aqt import addons
 from . import dictdb
@@ -28,7 +30,7 @@ def shutdownDB(parent, mgr, ids, on_done, client, force_enable=True):
 
 def restartDB(*args: typing.Any) -> None:
     if addonId in dledIds:
-        dictdb.set(dictdb.DictDB())
+        dictdb.initialize(dictdb.DictDB())
         migaku_dictionary.get().db = dictdb.DictDB()
         miInfo('The Migaku Dictionary has been updated, please restart Anki to start using the new version now!')
 
