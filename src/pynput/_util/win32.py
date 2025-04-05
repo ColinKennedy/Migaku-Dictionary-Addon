@@ -35,7 +35,6 @@ from ctypes import (
 import six
 
 from . import AbstractListener
-from ... import keypress_tracker
 
 
 # LPDWORD is not in ctypes.wintypes on Python 2
@@ -380,9 +379,11 @@ class ListenerMixin(object):
         except NotImplementedError:
             self._handle(code, msg, lpdata)
 
-        pressed = keypress_tracker.get()
-        if self.suppress and converted[1] == 32 and 'Key.ctrl_l' in pressed and "'c'" in pressed:
-            self.suppress_event()
+        # TODO: @ColinKennedy - not sure what this code is doing. Come back to it later. Maybe.
+        # from ... import keypress_tracker
+        # pressed = keypress_tracker.get()
+        # if self.suppress and converted[1] == 32 and 'Key.ctrl_l' in pressed and "'c'" in pressed:
+        #     self.suppress_event()
 
     def _convert(self, code, msg, lpdata):
         """The device specific callback handler.

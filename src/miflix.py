@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import re
 import sys
@@ -9,6 +11,7 @@ from .miutils import miInfo
 from os.path import join, exists, dirname
 sys.path.insert(0, join(dirname(__file__)))
 
+from aqt import main
 import aqt
 from aqt.qt import QThread, pyqtSignal
 import asyncio
@@ -35,10 +38,8 @@ class _File(typing.TypedDict):
     body: str
 
 
-def getNextBatchOfCards(self, start, incrementor):
-    return self.db.all("SELECT c.ivl, n.flds, c.ord, n.mid FROM cards AS c INNER JOIN notes AS n ON c.nid = n.id WHERE c.type != 0 ORDER BY c.ivl LIMIT %s, %s;"%(start, incrementor))
-
-Collection.getNextBatchOfCards = getNextBatchOfCards
+def getNextBatchOfCards(collection: Collection, start: int, incrementor: int):
+    return collection.db.all("SELECT c.ivl, n.flds, c.ord, n.mid FROM cards AS c INNER JOIN notes AS n ON c.nid = n.id WHERE c.type != 0 ORDER BY c.ivl LIMIT %s, %s;"%(start, incrementor))
 
 
 
@@ -50,7 +51,7 @@ class MigakuHTTPHandler(tornado.web.RequestHandler):
         self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
 
     def initialize(self) -> None:
-        self.mw = self.application.settings.get('mw')
+        self.mw = typing.cast(main.AnkiQt, self.application.settings.get('mw'))
         self.addonDirectory = dirname(__file__)
         self.tempDirectory = join(self.addonDirectory, "temp")
         self.alert = self.application.alert
@@ -338,8 +339,8 @@ class LearningStatusHandler(MigakuHTTPHandler):
         return json.dumps(modelData)
 
 
-    def getCards(self, start, incrementor) -> str:
-        cards = self.mw.col.getNextBatchOfCards(start, incrementor)
+    def getCards(self, start: int, incrementor: int) -> str:
+        cards = getNextBatchOfCards(self.mw.col, start, incrementor)
         bracketPattern = "\[[^]\n]*?\]"
         for card in cards:
             card[1] = re.sub(bracketPattern, "", card[1])
@@ -347,7 +348,7 @@ class LearningStatusHandler(MigakuHTTPHandler):
 
 class SearchHandler(MigakuHTTPHandler):
 
-    def get(self):
+    def get(self) -> None:
         self.finish("SearchHandler")
 
     def post(self) -> None:
@@ -365,7 +366,7 @@ class MigakuHTTPServer(tornado.web.Application):
 
     PROTOCOL_VERSION = 2
 
-    def __init__(self, thread, mw: aqt.AnkiQt) -> None:
+    def __init__(self, thread: MigakuServerThread, mw: main.AnkiQt) -> None:
         self.mw = mw
         self.previousBulkTimeStamp = 0
         self.thread = thread
@@ -404,7 +405,7 @@ class MigakuServerThread(QThread):
     exportingCondensed = pyqtSignal()
     notExportingCondensed = pyqtSignal()
 
-    def __init__(self, mw: aqt.AnkiQt) -> None:
+    def __init__(self, mw: main.AnkiQt) -> None:
         self.mw = mw
         QThread.__init__(self)
         self.server = MigakuHTTPServer(self, mw)

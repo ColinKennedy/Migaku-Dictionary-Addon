@@ -8,6 +8,7 @@ from aqt.qt import *
 from anki.utils import is_mac, is_lin
 from anki.lang import _
 from os.path import join, exists
+from aqt import main
 import aqt
 from PyQt6 import QtCore
 from .miutils import miInfo, miAsk
@@ -19,18 +20,19 @@ if typing.TYPE_CHECKING:
     # TODO: @ColinKennedy - fix cyclic dependency "addonSettings.SettingsGui" later
     from . import addonSettings
 
+from . import migaku_dictionary
 from . import typer
 
 
 class DictGroupEditor(QDialog):
     def __init__(
         self,
-        mw: aqt.AnkiQt,
+        mw: main.AnkiQt,
         # TODO: @ColinKennedy - fix cyclic dependency "addonSettings.SettingsGui" later
         parent: "addonSettings.SettingsGui",
         dictionaries: typing.Optional[typing.Iterable[str]]= None,
         group: typing.Optional[typer.DictionaryGroup]= None,
-        groupName: str = False,
+        groupName: str = "",
     ):
         super().__init__(parent, Qt.WindowType.Window)
 
@@ -51,7 +53,7 @@ class DictGroupEditor(QDialog):
         self.saveButton = QPushButton('Save')
         self._main_layout = QVBoxLayout()
         self.setupLayout()
-        self.fontToMove = False
+        self.fontToMove: typing.Optional[str] = None
         self.dictList = dictionaries
         self.loadDictionaries(dictionaries)
         self.new = True
@@ -82,7 +84,7 @@ class DictGroupEditor(QDialog):
         self.fontFromDropdown.setChecked(True)
         self.toggleFontType(False)
         self.fontFileName.setText('None Selected')
-        self.fontToMove = False
+        self.fontToMove = None
         self.fontDropDown.setCurrentIndex(0)
         self.reloadDictTable()
         if new:
@@ -110,6 +112,7 @@ class DictGroupEditor(QDialog):
 
     def loadSelectedDictionaries(self, dicts: typing.Iterable[str]) -> None:
         count = 1
+
         for d in dicts:
             for i in range(self.dictionaries.rowCount()):
                 item = self.dictionaries.item(i, 0)
@@ -138,7 +141,10 @@ class DictGroupEditor(QDialog):
                 count += 1
 
     def getConfig(self) -> typer.Configuration:
-        return self.mw.addonManager.getConfig(__name__)
+        if configuration := migaku_dictionary.get().getConfig():
+            return configuration
+
+        raise RuntimeError('No configuration could be found.')
 
     def initHandlers(self) -> None:
         self.browseFontFile.clicked.connect(self.grabFontFromFile)
@@ -185,8 +191,7 @@ class DictGroupEditor(QDialog):
             self.fontFileName.setEnabled(False)
 
     def grabFontFromFile(self) -> None:
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog
+        options = QFileDialog.Option.DontUseNativeDialog
         fileName, _ = QFileDialog.getOpenFileName(self,"Select a Custom Font", "",'Font Files (*.ttf *.woff *.woff2 *.eot)', options=options)
         if fileName:
             if not fileName.endswith('.ttf') and not fileName.endswith('.woff') and not fileName.endswith('.woff2') and not fileName.endswith('.eot') :
@@ -216,9 +221,15 @@ class DictGroupEditor(QDialog):
                 return
             customFont = True
             if not exists(join(self.settings.addonPath,'user_files', 'fonts', fontName)):
+                if not self.fontToMove:
+                    miInfo('Not font to move was found.', level='err')
+
+                    return
+
                 if not self.moveFontToFolder(self.fontToMove):
                     miInfo('The font file was unable to be loaded, please ensure your file exists in the target folder and try again.', level='err')
                     return
+
         selectedDicts = self.getSelectedDictionaryNames()
 
         if len(selectedDicts) < 1:
@@ -232,7 +243,7 @@ class DictGroupEditor(QDialog):
             'font' : fontName,
         }
         curGroups[gn] = dictGroup
-        self.mw.addonManager.writeConfig(__name__, newConfig)
+        migaku_dictionary.get().writeConfig(__name__, newConfig)
         self.settings.loadTemplateTable()
         self.settings.loadGroupTable()
         self.hide()
@@ -259,7 +270,7 @@ class DictGroupEditor(QDialog):
             if not item:
                 raise RuntimeError(f'Index "{i}" column==0 has no table item.')
 
-            dicts.append((i, int(order), item.text()))
+            dicts.append(typer.Dictionary(i, int(order), item.text()))
 
         return sorted(dicts, key=itemgetter(1))
 

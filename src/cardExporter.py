@@ -132,6 +132,7 @@ class CardExporter():
         word = False,
         definition = False,
     ):
+        self._progress_bar_closed_and_finished_importing: dict[QProgressBar, bool] = {}
         self.window = QWidget()
         self.scrollArea = QScrollArea()
         self.scrollArea.setWidget(self.window)
@@ -199,7 +200,7 @@ class CardExporter():
         self.scrollArea.show()
         self.alwaysOnTop = self.config['dictAlwaysOnTop']
         self.maybeSetToAlwaysOnTop()
-        self.bulkMediaExportProgressWindow = False
+        self.bulkMediaExportProgressWindow: typing.Optional[QWidget] = None
 
     def maybeSetToAlwaysOnTop(self) -> None:
         if self.alwaysOnTop:
@@ -1133,7 +1134,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         initialText: str,
     ) -> tuple[QWidget, QProgressBar, QLabel]:
         progressWidget = QWidget()
-        progressWidget.closedBecauseFinishedImporting = False
+        self._progress_bar_closed_and_finished_importing[progressWidget] = False
         def closedProgressBar(event):
             if self.bulkTextImporting:
                 self.bulkTextImporting = False
@@ -1142,7 +1143,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
             if self.bulkMediaExportProgressWindow:
                 currentValue = self.bulkMediaExportProgressWindow.currentValue
                 self.bulkMediaExportProgressWindow = False
-                if not progressWidget.closedBecauseFinishedImporting:
+                if not self._progress_bar_closed_and_finished_importing[progressWidget]:
                     global_state.IS_BULK_MEDIA_EXPORT_CANCELLED = True
                     miInfo("Importing cancelled.\n\n{} cards were imported.".format(currentValue))
 
@@ -1176,6 +1177,6 @@ Please review your template and notetype combination."""), level='wrn', day = se
 
     def closeProgressBar(self, progressBar: typing.Optional[QProgressBar]) -> None:
         if progressBar:
-            progressBar.closedBecauseFinishedImporting = True
+            self._progress_bar_closed_and_finished_importing[progressWidget] = True
             progressBar.close()
             progressBar.deleteLater()

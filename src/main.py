@@ -284,7 +284,7 @@ def window_loaded() -> None:
         action.triggered.connect(dictionaryInit)
         menu.addAction(action)
 
-    mw.form.menubar(mw.form.menuHelp.menuAction(), initialize_menu())
+    mw.form.menubar.insertAction(mw.form.menuHelp.menuAction(), initialize_menu())
 
     migaku_dictionary.clear()
 

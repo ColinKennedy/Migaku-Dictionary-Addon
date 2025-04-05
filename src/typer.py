@@ -70,7 +70,7 @@ class Dictionary(typing.NamedTuple):
 
 class DictionaryGroup(typing.TypedDict):
     customFont: bool
-    dictionaries: typing.List[Dictionary]
+    dictionaries: typing.List[str]
     font: str
 
 

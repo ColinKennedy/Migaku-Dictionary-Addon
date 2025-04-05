@@ -888,6 +888,7 @@ class ClipThread(QObject):
         self.add.emit('add')
 
     def checkDict(self) -> bool:
+        # TODO: @ColinKennedy - Remove the cyclic dependency later
         from . import migaku_dictionary
 
         return not migaku_dictionary.get_visible_dictionary()
@@ -1663,6 +1664,7 @@ class DictInterface(QWidget):
     def writeConfig(self, attribute: str, value: typing.Any) -> None:
         newConfig = self.getConfig()
         newConfig[attribute] = value
+        # TODO: @ColinKennedy - type-ignore this if needed
         self.mw.addonManager.writeConfig(__name__, newConfig)
         self.reloadConfig(newConfig)
 
