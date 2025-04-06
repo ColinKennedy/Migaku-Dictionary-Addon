@@ -325,16 +325,16 @@ def window_loaded() -> None:
     mw.hotkeyS.activated.connect(lambda: searchCol(mw.web))
 
 
-    def addToContextMenu(self, m: QMenu) -> None:
+    def addToContextMenu(self, menu: QMenu) -> None:
         def _add_action(menu: QMenu, text: str):
             if action := menu.addAction(text):
                 return action
 
             raise RuntimeError(f'Action "{text}" could not be added.')
 
-        a = _add_action("Search (Ctrl+S)")
+        a = _add_action(menu, "Search (Ctrl+S)")
         a.triggered.connect(self.searchTerm)
-        b = _add_action("Search Collection (Ctrl/⌘+Shift+B)")
+        b = _add_action(menu, "Search Collection (Ctrl/⌘+Shift+B)")
         b.triggered.connect(self.searchCol)
 
     # TODO: @ColinKennedy dedent
