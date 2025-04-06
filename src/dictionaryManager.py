@@ -14,17 +14,10 @@ from .dictionaryWebInstallWizard import DictionaryWebInstallWizard
 from .freqConjWebWindow import FreqConjWebWindow
 from PyQt6.QtWidgets import QMessageBox
 
-from . import dictdb
+from . import dictdb, typer
 
-# TODO: @ColinKennedy Make this type real, later
-_FrequencyList = str
 
 _LOGGER = logging.getLogger(__name__)
-
-
-class _FrequencyEntry(typing.TypedDict):
-    frequency: int
-    starCount: int
 
 
 class _YomiDictEntry(typing.TypedDict):
@@ -34,7 +27,7 @@ class _YomiDictEntry(typing.TypedDict):
 
 
 class DictionaryManagerWidget(QWidget):
-    
+
     def __init__(self, parent: typing.Optional[QWidget]=None) -> None:
         super().__init__(parent)
 
@@ -137,7 +130,7 @@ class DictionaryManagerWidget(QWidget):
 
         dict_lyt.addStretch()
 
-    
+
         right_lyt.addStretch()
 
 
@@ -185,7 +178,7 @@ class DictionaryManagerWidget(QWidget):
             lang_item = QTreeWidgetItem([lang])
             lang_item.setData(0, Qt.ItemDataRole.UserRole+0, lang)
             lang_item.setData(0, Qt.ItemDataRole.UserRole+1, None)
-            
+
             self.dict_tree.addTopLevelItem(lang_item)
 
             for d in dicts_by_langs.get(lang, []):
@@ -228,7 +221,7 @@ class DictionaryManagerWidget(QWidget):
             curr_item_parent = curr_item.parent()
             if curr_item_parent:
                 return curr_item_parent
-        
+
         return curr_item
 
 
@@ -240,7 +233,7 @@ class DictionaryManagerWidget(QWidget):
             curr_item_parent = curr_item.parent()
             if curr_item_parent is None:
                 return None
-        
+
         return curr_item
 
 
@@ -383,7 +376,7 @@ class DictionaryManagerWidget(QWidget):
                                            os.path.expanduser('~'), 'ZIP Files (*.zip);;All Files (*.*)')[0]
         if not path:
             return
-        
+
         dict_name = os.path.splitext(os.path.basename(path))[0]
         dict_name, ok = self.get_string('Set name of dictionary', dict_name)
 
@@ -413,7 +406,7 @@ class DictionaryManagerWidget(QWidget):
 
     def remove_dict(self) -> None:
         db = dictdb.get()
-        
+
         dict_item = self.get_current_dict_item()
         if dict_item is None:
             return
@@ -511,9 +504,9 @@ def importDict(lang_name: str, path: str, dict_name: str) -> None:
     loadDict(zfile, dict_files, lang_name, dict_name, frequency_dict, not is_yomichan)
 
 
-def natural_sort(l):
-    convert = lambda text: int(text) if text.isdigit() else text.lower() 
-    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)] 
+def natural_sort(l: typing.Iterable[str]) -> list[str]:
+    convert = lambda text: int(text) if text.isdigit() else text.lower()
+    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
 
     return sorted(l, key=alphanum_key)
 
@@ -523,11 +516,12 @@ def loadDict(
     filenames: typing.Iterable[str],
     lang: str,
     dictName: str,
-    frequencyDict,
+    frequencyDict: dict[str, int],
     miDict: bool = False,
 ) -> None:
     tableName = 'l' + str(dictdb.get().getLangId(lang)) + 'name' + dictName
-    jsonDict = []
+    jsonDict: list[typer.DictionaryFrequencyResult] = []
+
     for filename in filenames:
         with zfile.open(filename, 'r') as jsonDictFile:
             jsonDict += json.loads(jsonDictFile.read())
@@ -536,13 +530,17 @@ def loadDict(
 
     if frequencyDict:
         freq = True
-        jsonDict = organizeDictionaryByFrequency(jsonDict, frequencyDict, miDict=miDict)
 
-    for count, entry in enumerate(jsonDict):
         if miDict:
-            handleMiDictEntry(jsonDict, count, entry, freq)
-        else: 
-            handleYomiDictEntry(jsonDict, count, entry, freq)
+            jsonDict = organizeMigakuDictionaryByFrequency(jsonDict, frequencyDict, miDict=miDict)
+
+            for count, entry in enumerate(jsonDict):
+                handleMiDictEntry(jsonDict, count, entry, freq)
+        else:
+            jsonDict = organizeYomiDictionaryByFrequency(jsonDict, frequencyDict, miDict=miDict)
+
+            for count, entry in enumerate(jsonDict):
+                handleYomiDictEntry(jsonDict, count, entry, freq)
 
     database = dictdb.get()
     database.importToDict(tableName, jsonDict)
@@ -572,7 +570,7 @@ def getAdjustedDefinition(definition: str) -> str:
 def handleMiDictEntry(
     jsonDict,
     count: int,
-    entry: _FrequencyEntry,
+    entry: typer.DictionaryFrequencyResult,
     freq: bool = False,
 ) -> None:
     starCount = ''
@@ -603,7 +601,7 @@ def handleMiDictEntry(
 def handleYomiDictEntry(
     jsonDict: dict[int, _YomiDictEntry],
     count: int,
-    entry,
+    entry: typing.Union[int, str],
     freq: bool = False,
 ) -> None:
     starCount = ''
@@ -630,13 +628,11 @@ def kaner(to_translate: str, hiraganer: bool = False) -> str:
                u"ワヲンァィゥェォャュョッヰヱ"
 
     if hiraganer:
-        katakana = [ord(char) for char in katakana]
-        translate_table = dict(zip(katakana, hiragana))
-
-        return to_translate.translate(translate_table)
-
-    hiragana = [ord(char) for char in hiragana]
-    translate_table = dict(zip(hiragana, katakana))
+        katakana_as_int = [ord(char) for char in katakana]
+        translate_table = dict(zip(katakana_as_int, hiragana))
+    else:
+        hiragana_as_int = [ord(char) for char in katakana]
+        translate_table = dict(zip(hiragana_as_int, katakana))
 
     return to_translate.translate(translate_table)
 
@@ -645,62 +641,80 @@ def adjustReading(reading: str) -> str:
     return kaner(reading)
 
 
-def organizeDictionaryByFrequency(
-    jsonDict: dict[str, _FrequencyEntry],
-    frequencyDict,
-    miDict: bool = False,
-) -> list[str]:
+def organizeMigakuDictionaryByFrequency(
+    jsonDict: typing.Sequence[typer.DictionaryFrequencyResult],
+    frequencyDict: dict[str, int],
+) -> list[typer.DictionaryFrequencyResult]:
     readingHyouki = False
+
     if frequencyDict['readingDictionaryType']:
         readingHyouki = True
-    for idx, entry in enumerate(jsonDict):
-        if miDict:
-            if readingHyouki:
-                reading = entry['pronunciation']
-                if reading == '':
-                    reading = entry['term']
-                adjusted = adjustReading(reading)
-            if not readingHyouki and entry['term'] in frequencyDict:
-                jsonDict[idx]['frequency'] = frequencyDict[entry['term']]
-                jsonDict[idx]['starCount'] = getStarCount(jsonDict[idx]['frequency'])
-            elif readingHyouki and entry['term'] in frequencyDict and adjusted in frequencyDict[entry['term']]:
-                jsonDict[idx]['frequency'] = frequencyDict[entry['term']][adjusted]
-                jsonDict[idx]['starCount'] = getStarCount(jsonDict[idx]['frequency'])
-            else:
-                jsonDict[idx]['frequency'] = 999999
-                jsonDict[idx]['starCount'] = getStarCount(jsonDict[idx]['frequency'])
-        else:
-            if readingHyouki:
-                reading = entry[1]
-                if reading == '':
-                    reading = entry[0]
-                adjusted = adjustReading(reading)
-            if not readingHyouki and entry[0] in frequencyDict:
-                if len(entry) > 8:
-                    jsonDict[idx][8] = frequencyDict[entry[0]]
-                    jsonDict[idx][9] = getStarCount(jsonDict[idx][8])
-                else: 
-                    jsonDict[idx].append(frequencyDict[entry[0]])
-                    jsonDict[idx].append(getStarCount(jsonDict[idx][8]))
-            elif readingHyouki and entry[0] in frequencyDict and adjusted in frequencyDict[entry[0]]:
-                if len(entry) > 8:
-                    jsonDict[idx][8] = frequencyDict[entry[0]][adjusted]
-                    jsonDict[idx][9] = getStarCount(jsonDict[idx][8])
-                else: 
-                    jsonDict[idx].append(frequencyDict[entry[0]][adjusted])
-                    jsonDict[idx].append(getStarCount(jsonDict[idx][8]))
-            else:
-                if len(entry) > 8:
-                    jsonDict[idx][8] = 999999
-                    jsonDict[idx][9] = ''
-                else: 
-                    jsonDict[idx].append(999999)
-                    jsonDict[idx].append('')
 
-    if miDict:
-        return sorted(jsonDict, key = lambda i: i['frequency'])
+    for idx, entry in enumerate(jsonDict):
+        if readingHyouki:
+            reading = entry['pronunciation']
+
+            if not reading:
+                reading = entry['term']
+
+            adjusted = adjustReading(reading)
+
+        if not readingHyouki and entry['term'] in frequencyDict:
+            jsonDict[idx]['frequency'] = frequencyDict[entry['term']]
+            jsonDict[idx]['starCount'] = getStarCount(jsonDict[idx]['frequency'])
+        elif readingHyouki and entry['term'] in frequencyDict and adjusted in frequencyDict[entry['term']]:
+            jsonDict[idx]['frequency'] = frequencyDict[entry['term']][adjusted]
+            jsonDict[idx]['starCount'] = getStarCount(jsonDict[idx]['frequency'])
+        else:
+            jsonDict[idx]['frequency'] = 999999
+            jsonDict[idx]['starCount'] = getStarCount(jsonDict[idx]['frequency'])
+
+    return sorted(jsonDict, key=operator.itemgetter("frequency"))
+
+
+def organizeYomiDictionaryByFrequency(
+    jsonDict: typing.Sequence[list[str]],
+    frequencyDict: dict[str, int],
+    # TODO: @ColinKennedy - The returned type is kind of "migaku-extended" to consider
+) -> list[typing.Union[int, str]]:
+    readingHyouki = False
+
+    if frequencyDict['readingDictionaryType']:
+        readingHyouki = True
+
+    for idx, entry in enumerate(jsonDict):
+        if readingHyouki:
+            reading = entry[1]
+
+            if not reading:
+                reading = entry[0]
+
+            adjusted = adjustReading(reading)
+
+        if not readingHyouki and entry[0] in frequencyDict:
+            if len(entry) > 8:
+                jsonDict[idx][8] = frequencyDict[entry[0]]
+                jsonDict[idx][9] = getStarCount(jsonDict[idx][8])
+            else:
+                jsonDict[idx].append(frequencyDict[entry[0]])
+                jsonDict[idx].append(getStarCount(jsonDict[idx][8]))
+        elif readingHyouki and entry[0] in frequencyDict and adjusted in frequencyDict[entry[0]]:
+            if len(entry) > 8:
+                jsonDict[idx][8] = frequencyDict[entry[0]][adjusted]
+                jsonDict[idx][9] = getStarCount(jsonDict[idx][8])
+            else:
+                jsonDict[idx].append(frequencyDict[entry[0]][adjusted])
+                jsonDict[idx].append(getStarCount(jsonDict[idx][8]))
+        else:
+            if len(entry) > 8:
+                jsonDict[idx][8] = 999999
+                jsonDict[idx][9] = ''
+            else:
+                jsonDict[idx].append(999999)
+                jsonDict[idx].append('')
 
     return sorted(jsonDict, key=operator.itemgetter(8))
+
 
 def getStarCount(freq: int) -> str:
     if freq < 1501:
@@ -719,9 +733,9 @@ def getStarCount(freq: int) -> str:
 
 # TODO: @ColinKennedy check if ``False`` return is actually necessary
 
-def getFrequencyList(lang: str) -> typing.Optional[_FrequencyList]:
+def getFrequencyList(lang: str) -> dict:
     filePath = os.path.join(addon_path, 'user_files', 'db', 'frequency', '%s.json' % lang)
-    frequencyDict = {}
+    frequencyDict: dict = {}
 
     if not os.path.exists(filePath):
         _LOGGER.warning('Path "%s" does not exist.', filePath)

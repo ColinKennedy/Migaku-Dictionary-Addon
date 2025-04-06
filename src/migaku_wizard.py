@@ -251,6 +251,8 @@ class MiWizard(QDialog):
             self._btn_cancel.setVisible(self._current_page.cancel_visible)
 
 
-    def closeEvent(self, e: QCloseEvent) -> None:
+    def closeEvent(self, event: typing.Optional[QCloseEvent]) -> None:
         self.cancel()
-        e.ignore()
+
+        if event:
+            event.ignore()

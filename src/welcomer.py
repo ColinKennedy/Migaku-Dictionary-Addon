@@ -20,9 +20,7 @@ def getMacWelcomeScreen() -> str:
     with open(htmlPath,'r', encoding="utf-8") as fh:
         return fh.read()
 
-welcomeScreen: typing.Callable[[], str]
-
 if is_mac:
-    welcomeScreen = getMacWelcomeScreen()
+    welcomeScreen = getMacWelcomeScreen
 else:
-    welcomeScreen = getWelcomeScreen()
+    welcomeScreen = getWelcomeScreen

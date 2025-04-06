@@ -390,8 +390,8 @@ class MigakuHTTPServer(tornado.web.Application):
     def removeCondensedAudioInProgressMessage(self) -> None:
         self.thread.removeCondensedAudioInProgressMessage()
 
-    def checkVersion(self, version: typing.Union[int, typing.Literal[False]]) -> bool:
-        if version is False or version < self.PROTOCOL_VERSION:
+    def checkVersion(self, version: typing.Optional[int]) -> bool:
+        if version is None or version < self.PROTOCOL_VERSION:
             self.alert("Your Migaku Dictionary Version is newer than and incompatible with your Immerse with Migaku Browser Extension installation. Please ensure you are using the latest version of the add-on and extension to resolve this issue.")
             return False
         elif version > self.PROTOCOL_VERSION:

@@ -3,6 +3,9 @@ import typing
 
 T = typing.TypeVar("T")
 
+GroupName = typing.Union[typing.Literal["All"], typing.Literal["Google Images"], typing.Literal["Forvo"]]
+SearchMode = typing.Union[typing.Literal["Forward"], typing.Literal["Backward"], typing.Literal["Exact"], typing.Literal["Anywhere"], typing.Literal["Definition"], typing.Literal["Example"], typing.Literal["Pronunciation"]]
+
 
 class Card(typing.TypedDict):
     # unknowns: list[str]
@@ -23,7 +26,7 @@ class Configuration(typing.TypedDict):
     backBracket: str
     condensedAudioDirectory: typing.Optional[str]
     currentDeck: typing.Union[str, typing.Literal[False]]
-    currentGroup: typing.Union[typing.Literal["All"], typing.Literal["Google Images"], typing.Literal["Forvo"]]
+    currentGroup: GroupName
     currentTemplate: typing.Union[str, typing.Literal[False]]
     day: bool
     deinflect: bool
@@ -48,18 +51,18 @@ class Configuration(typing.TypedDict):
     maxSearch: int
     maxWidth: int
     mp3Convert: bool
-    ontab: bool
+    onetab: bool
     openOnGlobal: bool
     safeSearch: bool
-    searchMode: typing.Union[typing.Literal["Forward"], typing.Literal["Backward"], typing.Literal["Exact"], typing.Literal["Anywhere"], typing.Literal["Definition"], typing.Literal["Example"], typing.Literal["Pronunciation"]]
+    searchMode: SearchMode
     showTarget: bool
     tooltips: bool
     unknownsToSearch: int
 
     DictionaryGroups: dict
     ExportTemplates: dict
-    GoogleImageFields: list
-    ForvoFields: list
+    GoogleImageFields: list[str]
+    ForvoFields: list[str]
     ForvoAddType: typing.Literal["add"]
     ForvoLanguage: str  # typing.Literal["Japanese"]  # TODO: @ColinKennedy add more languages later
     GoogleImageAddType: typing.Literal["add"]
@@ -77,15 +80,10 @@ class DictionaryLanguagePair(typing.TypedDict):
 
 
 class DictionaryGroup(typing.TypedDict):
+    # TODO: @ColinKennedy - I think bool is actually str. Test that later.
     customFont: bool
     dictionaries: typing.List[DictionaryLanguagePair]
     font: str
-
-
-class HeaderTerm(typing.TypedDict):
-    altterm: str
-    pronunciation: str
-    term: str
 
 
 class DictionaryResult(typing.TypedDict):
@@ -98,6 +96,19 @@ class DictionaryResult(typing.TypedDict):
     examples: list
     audio: str
     starCount: str
+
+
+# TODO: @ColinKennedy - DictionaryFrequencyResult might actually be DictionaryResult
+class DictionaryFrequencyResult(typing.TypedDict):
+    term: str
+    altterm: str
+    pronunciation: str
+    pos: int
+    definition: str
+    examples: list
+    audio: str
+    starCount: str
+    frequency: int
 
 
 def check_t(item: typing.Optional[T]) -> T:

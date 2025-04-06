@@ -404,8 +404,7 @@ class DictDB:
         dN: str,
         limit: str,
         rN: str,
-    # TODO: Fix this type-hint later
-    ) -> tuple[list, int, typer.HeaderTerm]:
+    ) -> tuple[list, int, typer.DictionaryResult]:
         duplicateHeader, termHeader = self.getDuplicateSetting(rN)
         results = []
         columns = ['term','altterm', 'pronunciation']
@@ -459,7 +458,7 @@ class DictDB:
         except:
             return None
 
-    def getAddTypeAndFields(self, dictName: str) -> None:
+    def getAddTypeAndFields(self, dictName: str) -> typing.Optional[tuple[list[str], str]]:
         self.c.execute('SELECT fields, addtype FROM dictnames WHERE dictname=?', (dictName, ))
 
         # TODO: Remove try/except

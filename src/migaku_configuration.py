@@ -17,6 +17,13 @@ def initialize_by_namespace() -> None:
     return _INSTANCE
 
 
+def get() -> typer.Configuration:
+    if not _INSTANCE:
+        raise RuntimeError("No Migaku dictionary configuration was found.")
+
+    return _INSTANCE
+
+
 def override_configuration(configuration: typer.Configuration) -> None:
     global _INSTANCE
 

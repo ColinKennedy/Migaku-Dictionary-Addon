@@ -39,7 +39,7 @@ from aqt.qt import debug;
 from PyQt6.QtCore import Qt
 
 from . import global_state, google_imager, migaku_dictionary, migaku_configuration, threader, typer, keypress_tracker
-
+from . import migaku_settings
 
 _IS_EXPORTING_DEFINITIONS = False
 _MENU = None
@@ -55,7 +55,7 @@ class _DictionaryConfiguration(typing.TypedDict):
 def window_loaded() -> None:
     migaku_configuration.initialize_by_namespace()
     _IS_EXPORTING_DEFINITIONS = False
-    mw.dictSettings = False
+    migaku_settings.clear()
     dictdb.initialize(dictdb.DictDB())
     progressBar = False
     addon_path = dirname(__file__)
@@ -126,7 +126,7 @@ def window_loaded() -> None:
             dictionary.dict.exportSentence(sentence)
             showCardExporterWindow()
 
-    def exportImage(img: str) -> None:
+    def exportImage(img: typing.Sequence[str]) -> None:
         if dictionary := migaku_dictionary.get_visible_dictionary():
             if img[1].startswith('[sound:'):
                 dictionary.dict.exportAudio(img)
@@ -158,8 +158,9 @@ def window_loaded() -> None:
         secondary = card["secondary"]
         image = card["image"]
         audio = card["audio"]
-        unknownsToSearch = mw.MigakuDictConfig.get("unknownsToSearch", 3)
-        autoExportCards = mw.MigakuDictConfig.get("autoAddCards", False)
+        configuration = migaku_configuration.get()
+        unknownsToSearch = configuration.get("unknownsToSearch", 3)
+        autoExportCards = configuration.get("autoAddCards", False)
         unknownWords = card["unknownWords"][:unknownsToSearch]
         if len(unknownWords) > 0:
             if not autoExportCards:
@@ -198,24 +199,29 @@ def window_loaded() -> None:
         if dictionary := migaku_dictionary.get_visible_dictionary():
             dictionary.initSearch(term)
             midict.showAfterGlobalSearch()
-        elif mw.MigakuDictConfig['openOnGlobal'] and not migaku_dictionary.get_visible_dictionary():
+        elif migaku_configuration.get()['openOnGlobal'] and not migaku_dictionary.get_visible_dictionary():
             midict.dictionaryInit([term])
 
     def attemptAddCard(*_, **__) -> None:
         if dictionary := migaku_dictionary.get_visible_dictionary():
-            if dictionary.dict.addWindow.scrollArea.isVisible():
+            window = dictionary.dict.addWindow
+
+            if window and window.scrollArea.isVisible():
                 time.sleep(0.3)
-                dictionary.dict.addWindow.addCard()
+                window.addCard()
 
+    def openDictionarySettings() -> None:
+        if not migaku_settings.get_unsafe():
+            migaku_settings.initialize(SettingsGui(mw, addon_path, openDictionarySettings))
 
-    def openDictionarySettings():
-        if not mw.dictSettings:
-            mw.dictSettings = SettingsGui(mw, addon_path, openDictionarySettings)
-        mw.dictSettings.show()
-        if mw.dictSettings.windowState() == Qt.WindowState.WindowMinimized:
-            mw.dictSettings.setWindowState(Qt.WindowState.WindowNoState)
-        mw.dictSettings.setFocus()
-        mw.dictSettings.activateWindow()
+        settings = migaku_settings.get()
+        settings.show()
+
+        if settings.windowState() == Qt.WindowState.WindowMinimized:
+            settings.setWindowState(Qt.WindowState.WindowNoState)
+
+        settings.setFocus()
+        settings.activateWindow()
 
     def initialize_menu():
         menu = QMenu('Migaku',  mw)
@@ -241,7 +247,8 @@ def window_loaded() -> None:
     migaku_dictionary.clear()
 
     def searchTermList(terms: list[str]) -> None:
-        limit = mw.MigakuDictConfig.get("unknownsToSearch", 3)
+        configuration = migaku_configuration.get()
+        limit = configuration.get("unknownsToSearch", 3)
         terms = terms[:limit]
 
         if not (dictionary := migaku_dictionary.get_visible_dictionary()):
@@ -452,7 +459,7 @@ def window_loaded() -> None:
         progressWidget.show()
         return progressWidget, bar;
 
-    def getTermHeaderText(th: str, entry: typer.HeaderTerm, fb: str, bb: str) -> str:
+    def getTermHeaderText(th: str, entry: typer.DictionaryResult, fb: str, bb: str) -> str:
         term = entry['term']
         altterm = entry['altterm']
         if altterm == term:
@@ -476,7 +483,7 @@ def window_loaded() -> None:
         termHeader += entry['starCount']
         return termHeader
 
-    def formatDefinitions(results, th: str, dh: int, fb: str, bb: str):
+    def formatDefinitions(results: typing.Iterable[typer.DictionaryResult], th: str, dh: int, fb: str, bb: str):
         definitions = []
         for idx, r in enumerate(results):
             text = ''
