@@ -133,18 +133,22 @@ class SettingsGui(QTabWidget):
 
         return item.text()
 
-    # TODO: @ColinKennedy Check if this returns bool
     def hideEvent(self, event: typing.Optional[QHideEvent]) -> None:
-        self.mw.dictSettings = None
+        # TODO: @ColinKennedy - Fix this cyclic import
+        from . import migaku_settings
+
+        migaku_settings.clear()
         self.userGuideTab.close()
         self.userGuideTab.deleteLater()
 
         if event:
             event.accept()
 
-    # TODO: @ColinKennedy Check if this returns bool
     def closeEvent(self, event: typing.Optional[QCloseEvent]) -> None:
-        self.mw.dictSettings = None
+        # TODO: @ColinKennedy - Fix this cyclic import
+        from . import migaku_settings
+
+        migaku_settings.clear()
         self.userGuideTab.close()
         self.userGuideTab.deleteLater()
 

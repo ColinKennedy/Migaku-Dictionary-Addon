@@ -677,7 +677,7 @@ def window_loaded() -> None:
         if mw.addonManager.getConfig(__name__)['dictOnStart']:
             midict.dictionaryInit()
 
-    def setupMenu(browser: browser_.Browser):
+    def setupMenu(browser: browser_.Browser) -> None:
         a = QAction("Export Definitions", browser)
         a.triggered.connect(lambda: exportDefinitionsWidget(browser))
         browser.form.menuEdit.addSeparator()
@@ -738,7 +738,10 @@ def window_loaded() -> None:
         setBrowserEditor,
     )
 
-    def addEditActivated(self, event: bool = False) -> None:
+    def addEditActivated(
+        self: typing.Union[AddCards, EditCurrent],
+        event: typing.Optional[QMouseEvent] = None,
+    ) -> None:
         if dictionary := migaku_dictionary.get_visible_dictionary():
             dictionary.dict.setCurrentEditor(self.editor, getTarget(type(self).__name__))
 
@@ -746,14 +749,13 @@ def window_loaded() -> None:
             pycmd("bodyClick")
         }, false);'''
 
-    def addBodyClick(self) -> None:
+    def addBodyClick(self: editor_.Editor) -> None:
         self.web.eval(bodyClick)
 
     AddCards.addCards = wrap(AddCards.addCards, addEditActivated)
     AddCards.onHistory = wrap(AddCards.onHistory, addEditActivated)
 
-
-    def addHotkeys(self) -> None:
+    def addHotkeys(self: editor_.Editor) -> None:
         self.parentWindow.hotkeyS = QShortcut(QKeySequence("Ctrl+S"), self.parentWindow)
         self.parentWindow.hotkeyS.activated.connect(lambda: searchTerm(self.web))
         self.parentWindow.hotkeyS = QShortcut(QKeySequence("Ctrl+Shift+B"), self.parentWindow)
@@ -762,7 +764,7 @@ def window_loaded() -> None:
         self.parentWindow.hotkeyW.activated.connect(midict.dictionaryInit)
 
 
-    def addHotkeysToPreview(self) -> None:
+    def addHotkeysToPreview(self: Previewer) -> None:
         self._web.hotkeyS = QShortcut(QKeySequence("Ctrl+S"), self._web)
         self._web.hotkeyS.activated.connect(lambda: searchTerm(self._web))
         self._web.hotkeyS = QShortcut(QKeySequence("Ctrl+Shift+B"), self._web)
@@ -791,7 +793,7 @@ def window_loaded() -> None:
 
         return None
 
-    def announceParent(self, event: bool = False) -> None:
+    def announceParent(self: TagEdit, event: typing.Optional[QFocusEvent] = None) -> None:
         if dictionary := migaku_dictionary.get_visible_dictionary():
             parent = self.parentWidget().parentWidget().parentWidget()
             pName = gt(parent)
@@ -810,8 +812,8 @@ def window_loaded() -> None:
     AddCards.mousePressEvent = addEditActivated
     EditCurrent.mousePressEvent = addEditActivated
 
-    # TODO: @ColinKennedy - replace with funtools.partial
-    def miLinks(self, cmd: str) -> None:
+    # TODO: @ColinKennedy - replace with functools.partial
+    def miLinks(self: Reviewer, cmd: str) -> None:
         if dictionary := migaku_dictionary.get_visible_dictionary():
             dictionary.dict.setReviewer(self)
 

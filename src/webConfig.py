@@ -14,10 +14,11 @@ class _Dictionary(typing.TypedDict):
     description: str
 
 
-class _DictionaryLanguage(typing.TypedDict):
+class DictionaryLanguage(typing.TypedDict):
+    # TODO: @ColinKennedy - Check if these key / values work
     name_en: str
     name_native: str
-    to_languages: typing.Optional[typing.Sequence[_DictionaryLanguage]]
+    to_languages: typing.Optional[typing.Sequence[DictionaryLanguage]]
     dictionaries: typing.Sequence[_Dictionary]
 
 
@@ -31,9 +32,9 @@ def normalize_url(url: str) -> str:
     return url
 
 
-def download_index(server_url: str=DEFAULT_SERVER) -> typing.Optional[_DictionaryLanguage]:
+def download_index(server_url: str=DEFAULT_SERVER) -> typing.Optional[DictionaryLanguage]:
     server_url = normalize_url(server_url)
-    
+
     index_url = server_url + '/index.json'
 
     client = HttpClient()
@@ -44,5 +45,5 @@ def download_index(server_url: str=DEFAULT_SERVER) -> typing.Optional[_Dictionar
 
     data = client.stream_content(resp)
 
-    # TODO: @ColinKennedy - should check that the output works with _DictionaryLanguage
-    return typing.cast(_DictionaryLanguage, json.loads(data))
+    # TODO: @ColinKennedy - should check that the output works with DictionaryLanguage
+    return typing.cast(DictionaryLanguage, json.loads(data))

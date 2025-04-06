@@ -1,3 +1,5 @@
+import typing
+
 import os
 from enum import Enum
 from aqt.qt import *
@@ -17,8 +19,14 @@ class FreqConjWebWindow(QDialog):
 
     MIN_SIZE = (400, 400)
 
-    def __init__(self, dst_lang, index_data, mode):
-        super(FreqConjWebWindow, self).__init__()
+    def __init__(
+        self,
+        dst_lang: str,
+        index_data: webConfig.DictionaryLanguage,
+        mode: Mode,
+        parent: typing.Optional[QWidget]=None,
+    ) -> None:
+        super().__init__()
         self.dst_lang = dst_lang
         self.mode = mode
         self.mode_str = 'frequency' if self.mode == self.Mode.Freq else 'conjugation'
@@ -46,7 +54,7 @@ class FreqConjWebWindow(QDialog):
             if 'name_native' in lang:
                 lang_str += ' (' + lang['name_native'] + ')'
             itm = QListWidgetItem(lang_str)
-            itm.setData(Qt.UserRole, url)
+            itm.setData(Qt.ItemDataRole.UserRole, url)
             self.lst.addItem(itm)
 
         btn = QPushButton('Download')
@@ -55,25 +63,30 @@ class FreqConjWebWindow(QDialog):
 
         self.setMinimumSize(*self.MIN_SIZE)
 
-
-    def download(self):
+    def download(self) -> None:
         idx = self.lst.currentIndex()
+
         if not idx.isValid():
-            QMessageBox.show(self, self.windowTitle(), 'Please select a language.')
+            QMessageBox.information(self, self.windowTitle(), 'Please select a language.')
+
             return
-        url = idx.data(Qt.UserRole)
+
+        url = idx.data(Qt.ItemDataRole.UserRole)
 
         client = HttpClient()
         resp = client.get(url)
 
         if resp.status_code != 200:
-            QMessageBox.information(self,
-                                    self.windowTitle(),
-                                    'Downloading %s data failed.' % self.mode_str)
+            QMessageBox.information(
+                self,
+                self.windowTitle(),
+                'Downloading %s data failed.' % self.mode_str,
+            )
+
             return
 
-        data = client.streamContent(resp)
-        
+        data = client.stream_content(resp)
+
         dir_path = os.path.join(addon_path, 'user_files', 'db', self.mode_str)
         os.makedirs(dir_path, exist_ok=True)
 
@@ -87,20 +100,28 @@ class FreqConjWebWindow(QDialog):
         else:
             msg = 'Imported conjugation data for "%s".' % self.dst_lang
         QMessageBox.information(self, self.windowTitle(), msg)
-        
+
 
         self.accept()
 
-
-
     @classmethod
-    def execute_modal(cls, dst_lang, mode):
+    def execute_modal(
+        cls,
+        dst_lang: str,
+        mode: Mode,
+    ) -> typing.Union[QDialog.DialogCode, int]:
         index_data = webConfig.download_index()
+
         if index_data is None:
-            QMessageBox.information(None,
-                                    'Migaku Dictioanry',
-                                    'The dictionary server is not reachable at the moment.\n\n'\
-                                    'Please try again later.')
-            return QDialog.Rejected
+            QMessageBox.information(
+                None,
+                'Migaku Dictionary',
+                'The dictionary server is not reachable at the moment.\n\n'
+                'Please try again later.',
+            )
+
+            return QDialog.DialogCode.Rejected
+
         window = cls(dst_lang, index_data, mode)
-        return window.exec_()
+
+        return window.exec()

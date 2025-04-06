@@ -18,6 +18,7 @@ from . import dictdb, typer
 
 
 _LOGGER = logging.getLogger(__name__)
+_FrequencyDict = dict[str, dict[str, int]]
 
 
 class _YomiDictEntry(typing.TypedDict):
@@ -142,11 +143,8 @@ class DictionaryManagerWidget(QWidget):
 
         self.on_current_item_change(None, None)
 
-
     def info(self, text: str) -> int:
-        dlg = QMessageBox(QMessageBox.Information, 'Migaku Dictioanry', text, QMessageBox.StandardButton.Ok, self)
-
-        return dlg.exec()
+        return QMessageBox.information(self, 'Migaku Dictionary', text, QMessageBox.StandardButton.Ok)
 
     def get_string(self, text: str, default_text: str='') -> tuple[str, int]:
         dlg = QInputDialog(self)
@@ -163,7 +161,7 @@ class DictionaryManagerWidget(QWidget):
         db = dictdb.get()
 
         langs = db.getCurrentDbLangs()
-        dicts_by_langs = {}
+        dicts_by_langs: dict[str, list[str]] = {}
 
         for info in db.getAllDictsWithLang():
             lang = info['lang']
@@ -192,7 +190,7 @@ class DictionaryManagerWidget(QWidget):
             lang_item.setExpanded(True)
 
 
-    def on_current_item_change(self, new_sel, old_sel):
+    def on_current_item_change(self, *_: typing.Any) -> None:
 
         lang, dict_ = self.get_current_lang_dict()
 
@@ -277,12 +275,13 @@ class DictionaryManagerWidget(QWidget):
             return
         lang_name = lang_item.data(0, Qt.ItemDataRole.UserRole+0)
 
-        dlg = QMessageBox(QMessageBox.Icon.Question, 'Migaku Dictioanry',
-                          'Do you really want to remove the language "%s"?\n\nAll settings and dictionaries for it will be removed.' % lang_name,
-                          QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, self)
-        r = dlg.exec_()
+        r = QMessageBox.question(
+            self, 'Migaku Dictioanry',
+            f'Do you really want to remove the language "{lang_name}"?\n\n'
+            'All settings and dictionaries for it will be removed.',
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
 
-        if r != QMessageBox.Yes:
+        if r != QMessageBox.StandardButton.Yes:
             return
 
         # Remove language from db
@@ -476,7 +475,7 @@ def importDict(lang_name: str, path: str, dict_name: str) -> None:
     has_index = any(fn == 'index.json' for fn in zfile.namelist())
 
     # Load frequency table
-    frequency_dict = getFrequencyList(lang_name)
+    frequency_dict, is_reading_type = getFrequencyList(lang_name)
 
     # Create dictionary
     dict_name = dict_name.replace(' ', '_')
@@ -501,11 +500,24 @@ def importDict(lang_name: str, path: str, dict_name: str) -> None:
 
     dict_files = natural_sort(dict_files)
 
-    loadDict(zfile, dict_files, lang_name, dict_name, frequency_dict, not is_yomichan)
+    loadDict(
+        zfile,
+        dict_files,
+        lang_name,
+        dict_name,
+        frequency_dict,
+        is_reading_type=is_reading_type,
+        miDict=not is_yomichan,
+    )
 
 
 def natural_sort(l: typing.Iterable[str]) -> list[str]:
-    convert = lambda text: int(text) if text.isdigit() else text.lower()
+    def convert(text: str) -> typing.Union[int, str]:
+        if text.isdigit():
+            return int(text)
+
+        return text
+
     alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
 
     return sorted(l, key=alphanum_key)
@@ -516,7 +528,8 @@ def loadDict(
     filenames: typing.Iterable[str],
     lang: str,
     dictName: str,
-    frequencyDict: dict[str, int],
+    frequencyDict: _FrequencyDict,
+    is_reading_type: bool,
     miDict: bool = False,
 ) -> None:
     tableName = 'l' + str(dictdb.get().getLangId(lang)) + 'name' + dictName
@@ -532,12 +545,20 @@ def loadDict(
         freq = True
 
         if miDict:
-            jsonDict = organizeMigakuDictionaryByFrequency(jsonDict, frequencyDict, miDict=miDict)
+            jsonDict = organizeMigakuDictionaryByFrequency(
+                jsonDict,
+                frequencyDict,
+                readingHyouki=is_reading_type,
+            )
 
             for count, entry in enumerate(jsonDict):
                 handleMiDictEntry(jsonDict, count, entry, freq)
         else:
-            jsonDict = organizeYomiDictionaryByFrequency(jsonDict, frequencyDict, miDict=miDict)
+            jsonDict = organizeYomiDictionaryByFrequency(
+                jsonDict,
+                frequencyDict,
+                readingHyouki=is_reading_type,
+            )
 
             for count, entry in enumerate(jsonDict):
                 handleYomiDictEntry(jsonDict, count, entry, freq)
@@ -643,13 +664,9 @@ def adjustReading(reading: str) -> str:
 
 def organizeMigakuDictionaryByFrequency(
     jsonDict: typing.Sequence[typer.DictionaryFrequencyResult],
-    frequencyDict: dict[str, int],
+    frequencyDict: _FrequencyDict,
+    readingHyouki: bool,
 ) -> list[typer.DictionaryFrequencyResult]:
-    readingHyouki = False
-
-    if frequencyDict['readingDictionaryType']:
-        readingHyouki = True
-
     for idx, entry in enumerate(jsonDict):
         if readingHyouki:
             reading = entry['pronunciation']
@@ -674,14 +691,10 @@ def organizeMigakuDictionaryByFrequency(
 
 def organizeYomiDictionaryByFrequency(
     jsonDict: typing.Sequence[list[str]],
-    frequencyDict: dict[str, int],
+    frequencyDict: _FrequencyDict,
+    readingHyouki: bool,
     # TODO: @ColinKennedy - The returned type is kind of "migaku-extended" to consider
 ) -> list[typing.Union[int, str]]:
-    readingHyouki = False
-
-    if frequencyDict['readingDictionaryType']:
-        readingHyouki = True
-
     for idx, entry in enumerate(jsonDict):
         if readingHyouki:
             reading = entry[1]
@@ -719,38 +732,41 @@ def organizeYomiDictionaryByFrequency(
 def getStarCount(freq: int) -> str:
     if freq < 1501:
         return '★★★★★'
-    elif freq < 5001:
+    if freq < 5001:
         return '★★★★'
-    elif freq < 15001:
+    if freq < 15001:
         return '★★★'
-    elif freq < 30001:
+    if freq < 30001:
         return '★★'
-    elif freq < 60001:
+    if freq < 60001:
         return '★'
-    else:
-        return ''
+
+    return ''
 
 
-# TODO: @ColinKennedy check if ``False`` return is actually necessary
-
-def getFrequencyList(lang: str) -> dict:
+def getFrequencyList(lang: str) -> typing.Optional[tuple[_FrequencyDict, bool]]:
     filePath = os.path.join(addon_path, 'user_files', 'db', 'frequency', '%s.json' % lang)
-    frequencyDict: dict = {}
+    frequencyDict: _FrequencyDict = {}
 
     if not os.path.exists(filePath):
         _LOGGER.warning('Path "%s" does not exist.', filePath)
 
         return None
 
-    frequencyList = json.load(open(filePath, 'r', encoding='utf-8-sig'))
+    frequencyList = typing.cast(
+        list[typing.Union[list[str], str]],
+        json.load(open(filePath, 'r', encoding='utf-8-sig')),
+    )
+
     if isinstance(frequencyList[0], str):
         yomi = False
-        frequencyDict['readingDictionaryType'] = False
+        is_reading_type = False
     elif isinstance(frequencyList[0], list) and len(frequencyList[0]) == 2 and isinstance(frequencyList[0][0], str) and isinstance(frequencyList[0][1], str):
         yomi = True
-        frequencyDict['readingDictionaryType'] = True
+        is_reading_type = True
     else:
-        return False
+        return None
+
     for idx, f in enumerate(frequencyList):
         if yomi:
             if f[0] in frequencyDict:
@@ -761,4 +777,4 @@ def getFrequencyList(lang: str) -> dict:
         else:
             frequencyDict[f] = idx
 
-    return frequencyDict
+    return frequencyDict, is_reading_type
