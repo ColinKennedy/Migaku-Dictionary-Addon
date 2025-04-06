@@ -3,16 +3,15 @@
 import typing
 
 from os.path import dirname, join, basename, exists, join
-import sys, os, platform, re, subprocess, aqt.utils
+import sys, os, platform, subprocess, aqt.utils
 from anki import notes as notes_
-from anki.utils import stripHTML, is_win, is_mac, is_lin
+from anki.utils import is_win, is_mac
 from . import midict
 import re
 import unicodedata
 import urllib.parse
-from shutil import copyfile
-from anki.hooks import addHook, wrap, runHook, runFilter
-from aqt.utils import shortcut, saveGeom, saveSplitter, showInfo, askUser
+from anki.hooks import addHook, wrap
+from aqt.utils import showInfo
 from aqt import editor as editor_
 import json
 from aqt import mw, gui_hooks
@@ -96,7 +95,7 @@ def window_loaded() -> None:
     js = bytes(js.readAll()).decode('utf-8')
 
 
-    def searchCol(self) -> None:
+    def searchCol(self: QWebEngineView) -> None:
         text = selectedText(self)
         performColSearch(text)
 
@@ -287,15 +286,15 @@ def window_loaded() -> None:
     mw.hotkeyW = QShortcut(QKeySequence("Ctrl+W"), mw)
     mw.hotkeyW.activated.connect(midict.dictionaryInit)
 
-    # TODO: @ColinKennedy - Replace False
-    def selectedText(page) -> typing.Union[str, typing.Literal[False]]:
+    def selectedText(page: QWebEngineView) -> typing.Optional[str]:
         text = page.selectedText()
-        if not text:
-            return False
-        else:
-            return text
 
-    def searchTerm(self) -> None:
+        if not text:
+            return None
+
+        return text
+
+    def searchTerm(self: QWebEngineView) -> None:
         text = selectedText(self)
         if text:
             text = re.sub(r'\[[^\]]+?\]', '', text)
@@ -314,16 +313,13 @@ def window_loaded() -> None:
                 dictionary.dict.setCurrentEditor(self.parentEditor, target=target or "")
             midict.showAfterGlobalSearch()
 
-
     mw.searchTerm = searchTerm
     mw.searchCol = searchCol
 
-
-    mw.hotkeyS = QShortcut(QKeySequence("Ctrl+S"), mw)
-    mw.hotkeyS.activated.connect(lambda: searchTerm(mw.web))
-    mw.hotkeyS = QShortcut(QKeySequence("Ctrl+Shift+B"), mw)
-    mw.hotkeyS.activated.connect(lambda: searchCol(mw.web))
-
+    hotkey = QShortcut(QKeySequence("Ctrl+S"), mw)
+    hotkey.activated.connect(lambda: searchTerm(mw.web))
+    hotkey = QShortcut(QKeySequence("Ctrl+Shift+B"), mw)
+    hotkey.activated.connect(lambda: searchCol(mw.web))
 
     def addToContextMenu(self, menu: QMenu) -> None:
         def _add_action(menu: QMenu, text: str):
@@ -483,12 +479,19 @@ def window_loaded() -> None:
         termHeader += entry['starCount']
         return termHeader
 
-    def formatDefinitions(results: typing.Iterable[typer.DictionaryResult], th: str, dh: int, fb: str, bb: str):
-        definitions = []
+    def formatDefinitions(
+        results: typing.Iterable[typer.DictionaryResult],
+        th: str,
+        dh: int,
+        fb: str,
+        bb: str,
+    ) -> str:
+        definitions: list[str] = []
+
         for idx, r in enumerate(results):
             text = ''
-            if dh == 0:
 
+            if dh == 0:
                 text = getTermHeaderText(th, r, fb, bb) + '<br>' + r['definition']
             else:
                 stars = r['starCount']
@@ -635,14 +638,17 @@ def window_loaded() -> None:
             if not _IS_EXPORTING_DEFINITIONS:
                 break
 
-            note = mw.col.getNote(nid)
-            fields = mw.col.models.fieldNames(note.model())
+            note = mw.col.get_note(nid)
+            fields = mw.col.models.field_names(note.model())
+
             if og in fields and dest in fields:
                 term = re.sub(r'<[^>]+>', '', note[og])
                 term = re.sub(r'\[[^\]]+?\]', '', term)
-                if term == '':
+
+                if not term:
                     continue
-                tresults = []
+
+                tresults: list[str] = []
                 dCount = 0
                 for dictN in dictNs:
                     if dictN == 'Google Images':
@@ -720,6 +726,13 @@ def window_loaded() -> None:
                             widget = 'Browser'
 
                         target = getTarget(widget)
+
+                        if not target:
+                            raise RuntimeError(
+                                f'No target was found for "{widget}" widget. '
+                                'Cannot set the current editor to it.',
+                            )
+
                         dictionary.dict.setCurrentEditor(self, target)
             ogReroute(self, cmd)
 
@@ -742,8 +755,21 @@ def window_loaded() -> None:
         self: typing.Union[AddCards, EditCurrent],
         event: typing.Optional[QMouseEvent] = None,
     ) -> None:
-        if dictionary := migaku_dictionary.get_visible_dictionary():
-            dictionary.dict.setCurrentEditor(self.editor, getTarget(type(self).__name__))
+        dictionary = migaku_dictionary.get_visible_dictionary()
+
+        if not dictionary:
+            raise RuntimeError('No visible dictionary found. Cannot edit activated.')
+
+        widget = type(self).__name__
+        target = getTarget(widget)
+
+        if not target:
+            raise RuntimeError(
+                f'No target found for "{widget}". '
+                'Cannot set the current dictionary editor to it.',
+            )
+
+        dictionary.dict.setCurrentEditor(self.editor, target)
 
     bodyClick = '''document.addEventListener("click", function (ev) {
             pycmd("bodyClick")
@@ -756,21 +782,20 @@ def window_loaded() -> None:
     AddCards.onHistory = wrap(AddCards.onHistory, addEditActivated)
 
     def addHotkeys(self: editor_.Editor) -> None:
-        self.parentWindow.hotkeyS = QShortcut(QKeySequence("Ctrl+S"), self.parentWindow)
-        self.parentWindow.hotkeyS.activated.connect(lambda: searchTerm(self.web))
-        self.parentWindow.hotkeyS = QShortcut(QKeySequence("Ctrl+Shift+B"), self.parentWindow)
-        self.parentWindow.hotkeyS.activated.connect(lambda: searchCol(self.web))
-        self.parentWindow.hotkeyW = QShortcut(QKeySequence("Ctrl+W"), self.parentWindow)
-        self.parentWindow.hotkeyW.activated.connect(midict.dictionaryInit)
-
+        hotkey = QShortcut(QKeySequence("Ctrl+S"), self.parentWindow)
+        hotkey.activated.connect(lambda: searchTerm(self.web))
+        hotkey = QShortcut(QKeySequence("Ctrl+Shift+B"), self.parentWindow)
+        hotkey.activated.connect(lambda: searchCol(self.web))
+        hotkey = QShortcut(QKeySequence("Ctrl+W"), self.parentWindow)
+        hotkey.activated.connect(midict.dictionaryInit)
 
     def addHotkeysToPreview(self: Previewer) -> None:
-        self._web.hotkeyS = QShortcut(QKeySequence("Ctrl+S"), self._web)
-        self._web.hotkeyS.activated.connect(lambda: searchTerm(self._web))
-        self._web.hotkeyS = QShortcut(QKeySequence("Ctrl+Shift+B"), self._web)
-        self._web.hotkeyS.activated.connect(lambda: searchCol(self._web))
-        self._web.hotkeyW = QShortcut(QKeySequence("Ctrl+W"), self._web)
-        self._web.hotkeyW.activated.connect(midict.dictionaryInit)
+        hotkey = QShortcut(QKeySequence("Ctrl+S"), self._web)
+        hotkey.activated.connect(lambda: searchTerm(self._web))
+        hotkey = QShortcut(QKeySequence("Ctrl+Shift+B"), self._web)
+        hotkey.activated.connect(lambda: searchCol(self._web))
+        hotkey = QShortcut(QKeySequence("Ctrl+W"), self._web)
+        hotkey.activated.connect(midict.dictionaryInit)
 
     Previewer.open = wrap(Previewer.open, addHotkeysToPreview)
 

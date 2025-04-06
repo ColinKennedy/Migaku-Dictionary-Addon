@@ -1138,14 +1138,14 @@ class DictInterface(QWidget):
         ensureWidgetInScreenBoundaries(self)
 
     def setHotkeys(self) -> None:
-        self.hotkeyEsc = QShortcut(QKeySequence("Esc"), self)
-        self.hotkeyEsc.activated.connect(self.hide)
-        self.hotkeyW = QShortcut(QKeySequence("Ctrl+W"), self)
-        self.hotkeyW.activated.connect(dictionaryInit)
-        self.hotkeyS = QShortcut(QKeySequence("Ctrl+S"), self)
-        self.hotkeyS.activated.connect(lambda: self.mw.searchTerm(self.dict._page))
-        self.hotkeyS = QShortcut(QKeySequence("Ctrl+Shift+B"), self)
-        self.hotkeyS.activated.connect(lambda: self.mw.searchCol(self.dict._page))
+        hotkey = QShortcut(QKeySequence("Esc"), self)
+        hotkey.activated.connect(self.hide)
+        hotkey = QShortcut(QKeySequence("Ctrl+W"), self)
+        hotkey.activated.connect(dictionaryInit)
+        hotkey = QShortcut(QKeySequence("Ctrl+S"), self)
+        hotkey.activated.connect(lambda: self.mw.searchTerm(self.dict._page))
+        hotkey = QShortcut(QKeySequence("Ctrl+Shift+B"), self)
+        hotkey.activated.connect(lambda: self.mw.searchCol(self.dict._page))
 
     def getFontColor(self, color: QColor) -> QPalette:
         pal = QPalette()
