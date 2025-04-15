@@ -11,7 +11,7 @@ class MiWizardPage(QWidget):
     def __init__(self, parent: typing.Optional[QWidget]=None) -> None:
         super().__init__(parent)
 
-        self.wizard = None
+        self.wizard: typing.Optional[MiWizardPage] = None
         self.title = None
         self.subtitle = None
         self.pixmap = None
@@ -178,21 +178,27 @@ class MiWizard(QDialog):
 
 
     def back(self) -> None:
-        if self._current_page:
-            if not self._current_page.on_back():
-                return
+        if not self._current_page:
+            return
+
+        if not self._current_page.on_back():
+            return
 
         back_page = self._page_back.get(self._current_page)
+
         if back_page:
             self.set_current_page(back_page, is_back=True)
 
 
     def next(self) -> None:
-        if self._current_page:
-            if not self._current_page.on_next():
-                return
+        if not self._current_page:
+            return
+
+        if not self._current_page.on_next():
+            return
 
         next_page = self._page_next.get(self._current_page)
+
         if next_page:
             self.set_current_page(next_page, is_next=True)
         else:

@@ -29,8 +29,7 @@ from aqt.tagedit import TagEdit
 from aqt.reviewer import Reviewer
 from . import googleimages
 from .forvodl import Forvo
-from urllib.request import Request, urlopen
-from aqt.previewer import Previewer
+from aqt.browser.previewer import Previewer
 import requests
 import time
 import os
@@ -80,15 +79,6 @@ def window_loaded() -> None:
                 os.rmdir(path)
 
     removeTempFiles()
-
-    def migaku(text: str) -> None:
-        showInfo(text ,False,"", "info", "Migaku Dictionary Add-on")
-
-    def showA(ar: typing.Iterable[typing.Hashable]) -> None:
-        showInfo(json.dumps(ar, ensure_ascii=False))
-
-
-    dictWidget  = False
 
     js = QFile(':/qtwebchannel/qwebchannel.js')
     assert js.open(QIODevice.ReadOnly)
@@ -222,7 +212,7 @@ def window_loaded() -> None:
         settings.setFocus()
         settings.activateWindow()
 
-    def initialize_menu():
+    def initialize_menu() -> None:
         menu = QMenu('Migaku',  mw)
 
         settings_action = QAction("Dictionary Settings", mw)
@@ -505,53 +495,6 @@ def window_loaded() -> None:
             definitions.append(text)
         return '<br><br>'.join(definitions).replace('<br><br><br>', '<br><br>')
 
-    forvoDler = False;
-
-    def initForvo() -> None:
-        global forvoDler
-        forvoDler= Forvo(mw.addonManager.getConfig(__name__)['ForvoLanguage'])
-
-    def exportForvoAudio(term: str, howMany: int, lang: str) -> str:
-        if not forvoDler:
-            initForvo()
-        audioSeparator = ''
-        urls = forvoDler.search(term, lang)
-        if len(urls) < 1:
-            time.sleep(.1)
-            urls = forvoDler.search(term)
-        tags = downloadForvoAudio(urls, howMany)
-
-        return audioSeparator.join(tags)
-
-    def downloadForvoAudio(urls: typing.Iterable[str], howMany: int) -> list[str]:
-        tags: list[str] = []
-
-        for url in urls:
-            if len(tags) == howMany:
-                break
-
-            try:
-                req = Request(url[3] , headers={'User-Agent':  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'})
-                file = urlopen(req).read()
-                filename = str(time.time()) + '.mp3'
-                open(join(mw.col.media.dir(), filename), 'wb').write(file)
-                tags.append('[sound:' + filename + ']')
-                success = True
-            except:
-                success = True
-            if success:
-                continue
-            else:
-                try:
-                    req = Request(url[2] , headers={'User-Agent':  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'})
-                    file = urlopen(req).read()
-                    filename = str(time.time()) + '.mp3'
-                    open(join(mw.col.media.dir(), filename), 'wb').write(file)
-                    tags.append('[sound:' + filename + ']')
-                except:
-                    continue
-        return tags
-
     def closeBar(event: QCloseEvent) -> None:
         _IS_EXPORTING_DEFINITIONS = False
         event.accept()
@@ -565,7 +508,7 @@ def window_loaded() -> None:
         fb = config['frontBracket']
         bb = config['backBracket']
         lang = config['ForvoLanguage']
-        fields = mw.col.models.fieldNames(note.model())
+        fields = mw.col.models.field_names(note.model())
         database = dictdb.get()
 
         for dictionary in dictionaryConfigurations:
@@ -585,7 +528,7 @@ def window_loaded() -> None:
                 if tableName == 'Google Images':
                     tresults.append(google_imager.export_images(term, limit))
                 elif tableName == 'Forvo':
-                    tresults.append(exportForvoAudio(term, limit, lang))
+                    tresults.append(migaku_forvo.export_audio(term, limit, lang))
                 elif tableName != 'None':
                     dresults, dh, th = database.getDefForMassExp(term, tableName, str(limit), dictName)
                     tresults.append(formatDefinitions(dresults, th, dh, fb, bb))
@@ -821,6 +764,8 @@ def window_loaded() -> None:
     def announceParent(self: TagEdit, event: typing.Optional[QFocusEvent] = None) -> None:
         if dictionary := migaku_dictionary.get_visible_dictionary():
             parent = self.parentWidget().parentWidget().parentWidget()
+            # TODO: @ColinKennedy - Not sure about typing.cast
+            parent = typing.cast(browser_.Browser, parent)
             pName = gt(parent)
 
             if gt(parent) not in ['AddCards', 'EditCurrent']:
