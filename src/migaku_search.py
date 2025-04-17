@@ -1,11 +1,12 @@
 import re
 import typing
 
+from anki.utils import is_win
 from aqt.qt import *
 import aqt
+from aqt import mw
 
-from . import midict
-from . import migaku_dictionary
+from . import midict, migaku_dictionary
 
 
 def _selectedText(page: QWebEngineView) -> typing.Optional[str]:
@@ -15,6 +16,17 @@ def _selectedText(page: QWebEngineView) -> typing.Optional[str]:
         return None
 
     return text
+
+
+def getTarget(name: str) -> typing.Optional[str]:
+    if name == 'AddCards':
+        return 'Add'
+    elif name == "EditCurrent" or name == "MigakuEditCurrent":
+        return 'Edit'
+    elif name == 'Browser':
+        return name
+
+    return None
 
 
 def performColSearch(text: str) -> None:
@@ -36,7 +48,7 @@ def performColSearch(text: str) -> None:
     browser.activateWindow()
 
     if not is_win:
-        browser.setWindowState(browser.windowState() & ~Qt.WindowState.Minimized| Qt.WindowState.WindowActive)
+        browser.setWindowState(browser.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
         browser.raise_()
     else:
         browser.setWindowFlags(browser.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
@@ -47,11 +59,14 @@ def performColSearch(text: str) -> None:
 
 def searchCol(self: QWebEngineView) -> None:
     text = _selectedText(self)
-    performColSearch(text)
+
+    if text:
+        performColSearch(text)
 
 
 def searchTerm(self: QWebEngineView) -> None:
     text = _selectedText(self)
+
     if not text:
         return
 
@@ -65,10 +80,12 @@ def searchTerm(self: QWebEngineView) -> None:
     dictionary.ensureVisible()
     dictionary.initSearch(text)
 
-    if self.title == 'main webview':
+    title = self.title()
+
+    if title == 'main webview':
         if mw.state == 'review':
             dictionary.dict.setReviewer(mw.reviewer)
-    elif self.title == 'editor':
+    elif title == 'editor':
         target = getTarget(type(self.parentEditor.parentWindow).__name__)
         dictionary.dict.setCurrentEditor(self.parentEditor, target=target or "")
 

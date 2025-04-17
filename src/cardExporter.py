@@ -22,12 +22,16 @@ if typing.TYPE_CHECKING:
     # TODO: @ColinKennedy - fix cyclic import
     from . import midict
 
-from . import dictdb, global_state
+from . import dictdb, global_state, typer
 
 
 class _DefinitionSetting(typing.TypedDict):
     name: str
     limit: int
+
+
+class _Dictionary(typing.TypedDict):
+    tableName: str
 
 
 class _Template(typing.TypedDict):
@@ -37,13 +41,42 @@ class _Template(typing.TypedDict):
     word: str
 
 
-class _Card(typing.TypedDict):
-    audio: str
-    image: str
-    primary: str
-    secondary: str
-    total: int
-    unknowns: list[str]
+# TODO: @ColinKennedy - This progress window is probably (visually) messed up. Fix later
+class _ProgressWindow(QWidget):
+    request_stop_bulk_text_import = pyqtSignal()
+
+    def __init__(self, text: str, parent: typing.Optional[QWidget]=None) -> None:
+        super().__init__(parent=parent)
+
+        self.currentValue = 0
+
+        self._textDisplay = QLabel()
+        self._textDisplay.setText(text)
+
+        self._bar = QProgressBar()
+        layout = QVBoxLayout()
+        layout.addWidget(self._textDisplay)
+        layout.addWidget(self._bar)
+        self.setLayout(layout)
+
+    def getTotal(self) -> int:
+        return self._bar.maximum()
+
+    def setMaximum(self, value: int) -> None:
+        self._bar.setMaximum(value)
+
+    def setValue(self, value: int) -> None:
+        self._bar.setValue(value)
+
+    def setText(self, text: str) -> None:
+        self._textDisplay.setText(text)
+
+    def closeEvent(self, event: typing.Optional[QCloseEvent]) -> None:
+        self.request_stop_bulk_text_import.emit()
+
+        if event:
+            event.accept()
+
 
 
 class MITextEdit(QTextEdit):
@@ -57,12 +90,22 @@ class MITextEdit(QTextEdit):
         self.dictInt = dictInt
         self.setAcceptRichText(False)
 
-    def contextMenuEvent(self, event: QEvent) -> None:
+    def contextMenuEvent(self, event: typing.Optional[QContextMenuEvent]) -> None:
         menu = super().createStandardContextMenu()
+
+        if not menu:
+            raise RuntimeError(
+                f'No standard menu for "{self.__class__.__name__}" could be created.'
+            )
+
         search = QAction('Search')
         search.triggered.connect(self.searchSelected)
         menu.addAction(search)
-        menu.exec_(event.globalPos())
+
+        if event:
+            menu.exec(event.globalPos())
+        else:
+            menu.exec()
 
     def keyPressEvent(self, event: QEvent) -> None:
         if event.modifiers() & Qt.ControlModifier:
@@ -71,18 +114,23 @@ class MITextEdit(QTextEdit):
                 format = QTextCharFormat()
                 format.setFontWeight(QFont.Bold if not cursor.charFormat().font().bold() else QFont.Normal)
                 cursor.mergeCharFormat(format)
+
                 return
-            elif event.key() == Qt.Key_I:
+
+            if event.key() == Qt.Key_I:
                 cursor = self.textCursor()
                 format = QTextCharFormat()
                 format.setFontItalic(True if not cursor.charFormat().font().italic() else False)
                 cursor.mergeCharFormat(format)
+
                 return
-            elif event.key() == Qt.Key_U:
+
+            if event.key() == Qt.Key_U:
                 cursor = self.textCursor()
                 format = QTextCharFormat()
                 format.setUnderlineStyle(QTextCharFormat.SingleUnderline if not cursor.charFormat().font().underline() else QTextCharFormat.NoUnderline)
                 cursor.mergeCharFormat(format)
+
                 return
 
         super().keyPressEvent(event)
@@ -112,7 +160,7 @@ class MILineEdit(QLineEdit):
         search = QAction('Search')
         search.triggered.connect(self.searchSelected)
         menu.addAction(search)
-        menu.exec_(event.globalPos())
+        menu.exec(event.globalPos())
 
     def searchSelected(self, in_browser: bool) -> None:
         if in_browser:
@@ -121,6 +169,7 @@ class MILineEdit(QLineEdit):
             b.onSearchActivated()
         else:
             self.dictInt.initSearch(self.selectedText())
+
 
 class CardExporter():
     def __init__(
@@ -132,7 +181,7 @@ class CardExporter():
         word = False,
         definition = False,
     ):
-        self._progress_bar_closed_and_finished_importing: dict[QProgressBar, bool] = {}
+        self._progress_bar_closed_and_finished_importing: dict[QWidget, bool] = {}
         self.window = QWidget()
         self.scrollArea = QScrollArea()
         self.scrollArea.setWidget(self.window)
@@ -200,7 +249,15 @@ class CardExporter():
         self.scrollArea.show()
         self.alwaysOnTop = self.config['dictAlwaysOnTop']
         self.maybeSetToAlwaysOnTop()
-        self.bulkMediaExportProgressWindow: typing.Optional[QWidget] = None
+        self.bulkMediaExportProgressWindow: typing.Optional[_ProgressWindow] = None
+
+    def _closeProgressBar(self, progressBar: typing.Optional[QWidget]) -> None:
+        if not progressBar:
+            return
+
+        self._progress_bar_closed_and_finished_importing[progressBar] = True
+        progressBar.close()
+        progressBar.deleteLater()
 
     def maybeSetToAlwaysOnTop(self) -> None:
         if self.alwaysOnTop:
@@ -393,14 +450,15 @@ Please review your template and notetype combination."""), level='wrn', day = se
                 return
         miInfo('A card could not be added with this current configuration. Please ensure that your template is configured correctly for this collection.', level='err', day = self.dictInt.nightModeToggler.day)
 
-    def automaticallyAddDefinitions(self, note, word, template):
+    # TODO: @ColinKennedy - `word` might not be a str. Check later.
+    def automaticallyAddDefinitions(self, note: Note, word: str, template: _Template) -> Note:
         if not self.definitionSettings:
             return note
 
         dictToTable = self.getDictionaryNameToTableNameDictionary()
         unspecifiedDefinitionField = template["unspecified"]
         specificFields = template["specific"]
-        dictionaries = []
+        dictionaries: list[_Dictionary] = []
         for setting in self.definitionSettings:
             dictName = setting["name"]
             if dictName in dictToTable:
@@ -547,6 +605,10 @@ Please review your template and notetype combination."""), level='wrn', day = se
         definitions.setColumnCount(3)
         tableHeader = definitions.horizontalHeader()
         vHeader = definitions.verticalHeader()
+
+        if not vHeader:
+            raise RuntimeError(f'Expected a header for "{definitions}" widget.')
+
         vHeader.setDefaultSectionSize(50);
         vHeader.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         tableHeader.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
@@ -976,18 +1038,18 @@ Please review your template and notetype combination."""), level='wrn', day = se
         self.bulkTextImporting = True
         total = len(cards)
         importingMessage = "Importing {} of "+ str(total) + " cards."
-        progressWidget, bar, textDisplay = self.getProgressBar("Migaku Dictionary - Importing Text Cards", importingMessage.format(0))
-        bar.setMaximum(total)
+        progressWidget = self.getProgressBar("Migaku Dictionary - Importing Text Cards", importingMessage.format(0))
+        progressWidget.setMaximum(total)
         for idx, card in enumerate(cards):
             if not self.bulkTextImporting:
                 miInfo("Importing cards from the extension has been cancelled.\n\n{} of {} were added.".format(idx, total))
                 return
             self.addTextCard(card)
-            bar.setValue(idx + 1)
-            textDisplay.setText(importingMessage.format(idx + 1))
+            progressWidget.setValue(idx + 1)
+            progressWidget.setText(importingMessage.format(idx + 1))
             self.mw.app.processEvents()
         self.bulkTextImporting = False
-        self.closeProgressBar(progressWidget)
+        self._closeProgressBar(progressWidget)
 
     def addMediaCard(self, card: typer.Card) -> None:
         templateName = self.templateCB.currentText()
@@ -1089,31 +1151,33 @@ Please review your template and notetype combination."""), level='wrn', day = se
         if not self.bulkMediaExportProgressWindow:
             total = card["total"]
             importingMessage = "Importing {} of "+ str(total) + " cards."
-            self.bulkMediaExportProgressWindow, self.bulkMediaExportProgressWindow.bar, self.bulkMediaExportProgressWindow.textDisplay = self.getProgressBar("Migaku Dictionary - Importing Media Cards", importingMessage.format(0))
-            self.bulkMediaExportProgressWindow.bar.setMaximum(total)
+            self.bulkMediaExportProgressWindow = self.getProgressBar("Migaku Dictionary - Importing Media Cards", importingMessage.format(0))
+            self.bulkMediaExportProgressWindow.setMaximum(total)
             self.bulkMediaExportProgressWindow.currentValue = 0
-            self.bulkMediaExportProgressWindow.total = total
         else:
-            importingMessage = "Importing {} of "+ str(self.bulkMediaExportProgressWindow.total) + " cards."
+            importingMessage = "Importing {} of "+ str(self.bulkMediaExportProgressWindow.getTotal()) + " cards."
         self.addMediaCard(card)
 
         # TODO: @ColinKennedy remove this try/except later
         try:
             if global_state.IS_BULK_MEDIA_EXPORT_CANCELLED or not self.bulkMediaExportProgressWindow:
                 if self.bulkMediaExportProgressWindow:
-                    self.closeProgressBar(self.bulkMediaExportProgressWindow)
+                    self._closeProgressBar(self.bulkMediaExportProgressWindow)
                 return
             self.bulkMediaExportProgressWindow.currentValue += 1
-            self.bulkMediaExportProgressWindow.bar.setValue(self.bulkMediaExportProgressWindow.currentValue)
-            self.bulkMediaExportProgressWindow.textDisplay.setText(importingMessage.format(self.bulkMediaExportProgressWindow.currentValue))
+            self.bulkMediaExportProgressWindow.setValue(self.bulkMediaExportProgressWindow.currentValue)
+            self.bulkMediaExportProgressWindow.setText(importingMessage.format(self.bulkMediaExportProgressWindow.currentValue))
             self.mw.app.processEvents()
-            if self.bulkMediaExportProgressWindow.currentValue == self.bulkMediaExportProgressWindow.total:
-                total = self.bulkMediaExportProgressWindow.total
+
+            total = self.bulkMediaExportProgressWindow.getTotal()
+
+            if self.bulkMediaExportProgressWindow.currentValue == total:
                 if total == 1:
                     miInfo("{} card has been imported.".format(total))
                 else:
                     miInfo("{} cards have been imported.".format(total))
-                self.closeProgressBar(self.bulkMediaExportProgressWindow)
+
+                self._closeProgressBar(self.bulkMediaExportProgressWindow)
                 self.bulkMediaExportProgressWindow = False
         except:
             pass
@@ -1124,7 +1188,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
 
         currentValue = self.bulkMediaExportProgressWindow.currentValue
         miInfo("Importing cards from the extension has been cancelled from within the browser.\n\n {} cards were imported.".format(currentValue))
-        self.closeProgressBar(self.bulkMediaExportProgressWindow)
+        self._closeProgressBar(self.bulkMediaExportProgressWindow)
         self.bulkMediaExportProgressWindow = False
         global_state.IS_BULK_MEDIA_EXPORT_CANCELLED = False
 
@@ -1132,51 +1196,47 @@ Please review your template and notetype combination."""), level='wrn', day = se
         self,
         title: str,
         initialText: str,
-    ) -> tuple[QWidget, QProgressBar, QLabel]:
-        progressWidget = QWidget()
-        self._progress_bar_closed_and_finished_importing[progressWidget] = False
-        def closedProgressBar(event):
-            if self.bulkTextImporting:
-                self.bulkTextImporting = False
-            event.accept()
-            progressWidget.deleteLater()
+    ) -> _ProgressWindow:
+
+        def _cleanup_progress_window() -> None:
             if self.bulkMediaExportProgressWindow:
                 currentValue = self.bulkMediaExportProgressWindow.currentValue
-                self.bulkMediaExportProgressWindow = False
+                self.bulkMediaExportProgressWindow = None
+
                 if not self._progress_bar_closed_and_finished_importing[progressWidget]:
                     global_state.IS_BULK_MEDIA_EXPORT_CANCELLED = True
                     miInfo("Importing cancelled.\n\n{} cards were imported.".format(currentValue))
 
-        progressWidget.exporter = self
-        textDisplay = QLabel()
-        progressWidget.setWindowIcon(QIcon(join(self.dictInt.addonPath, 'icons', 'migaku.png')))
-        progressWidget.setWindowTitle(title)
-        textDisplay.setText(initialText)
+        def _disable_bulk_text() -> None:
+            if self.bulkTextImporting:
+                self.bulkTextImporting = False
 
-        bar = QProgressBar(progressWidget)
-        layout = QVBoxLayout()
-        layout.addWidget(textDisplay)
-        layout.addWidget(bar)
-        progressWidget.setLayout(layout)
-        bar.move(10,10)
-        per = QLabel(bar)
-        per.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        def _on_close() -> None:
+            _disable_bulk_text()
+            _cleanup_progress_window()
+
+        progressWidget = _ProgressWindow(initialText)
+        progressWidget.setWindowTitle(title)
+        self._progress_bar_closed_and_finished_importing[progressWidget] = False
+        progressWidget.setWindowIcon(QIcon(join(self.dictInt.addonPath, 'icons', 'migaku.png')))
+
+        _center(progressWidget)
         progressWidget.setFixedSize(500, 100)
         progressWidget.setWindowModality(Qt.WindowModality.ApplicationModal)
-        if self.alwaysOnTop:
-            progressWidget.setWindowFlags(progressWidget.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
-        screenGeometry = QApplication.desktop().screenGeometry();
-        x = (screenGeometry.width() - progressWidget.width()) / 2;
-        y = (screenGeometry.height() - progressWidget.height()) / 2;
-        progressWidget.move(x, y);
         progressWidget.show()
         progressWidget.setFocus()
-        progressWidget.closeEvent = closedProgressBar
-        self.mw.app.processEvents()
-        return progressWidget, bar, textDisplay
 
-    def closeProgressBar(self, progressBar: typing.Optional[QProgressBar]) -> None:
-        if progressBar:
-            self._progress_bar_closed_and_finished_importing[progressWidget] = True
-            progressBar.close()
-            progressBar.deleteLater()
+        if self.alwaysOnTop:
+            progressWidget.setWindowFlags(progressWidget.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
+
+        progressWidget.request_stop_bulk_text_import.connect(_on_close)
+        self.mw.app.processEvents()
+
+        return progressWidget
+
+
+def _center(widget: QWidget) -> None:
+    geometry = QApplication.desktop().screenGeometry()
+    x = (geometry.width() - widget.width()) / 2
+    y = (geometry.height() - widget.height()) / 2
+    widget.move(x, y)

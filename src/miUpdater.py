@@ -1,5 +1,6 @@
 import typing
 
+from aqt import qt
 from aqt import mw
 from aqt import addons
 from . import dictdb
@@ -15,7 +16,14 @@ addonId = 1655992655
 dledIds = []
 
 
-def shutdownDB(parent, mgr, ids, on_done, client, force_enable=True):
+def shutdownDB(
+    parent: qt.QWidget,
+    mgr: addons.AddonManager,
+    ids: typing.Sequence[int],
+    on_done: typing.Callable[[list[addons.DownloadLogEntry]], None],
+    client: typing.Optional[HttpClient] = None,
+    force_enable: bool=True,
+) -> None:
     global dledIds
 
     dledIds = ids
@@ -25,7 +33,7 @@ def shutdownDB(parent, mgr, ids, on_done, client, force_enable=True):
         dictdb.get().closeConnection()
         dictdb.clear()
         migaku_dictionary.get().db.closeConnection()
-        migaku_dictionary.get().db = None
+        migaku_dictionary.clear()
         time.sleep(2)
 
 

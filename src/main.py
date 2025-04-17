@@ -516,7 +516,7 @@ def window_loaded() -> None:
                     if widget == 'QWidget':
                         widget = 'Browser'
 
-                    target = getTarget(widget)
+                    target = migaku_search.getTarget(widget)
                     dictionary.dict.setCurrentEditor(self, target)
             if hasattr(mw, "migakuEditorLoaded"):
                     ogReroute(self, cmd)
@@ -529,7 +529,7 @@ def window_loaded() -> None:
                         if widget == 'QWidget':
                             widget = 'Browser'
 
-                        target = getTarget(widget)
+                        target = migaku_search.getTarget(widget)
 
                         if not target:
                             raise RuntimeError(
@@ -565,7 +565,7 @@ def window_loaded() -> None:
             raise RuntimeError('No visible dictionary found. Cannot edit activated.')
 
         widget = type(self).__name__
-        target = getTarget(widget)
+        target = migaku_search.getTarget(widget)
 
         if not target:
             raise RuntimeError(
@@ -612,16 +612,6 @@ def window_loaded() -> None:
     def gt(obj: typing.Any) -> str:
         return type(obj).__name__
 
-    def getTarget(name: str) -> typing.Optional[str]:
-        if name == 'AddCards':
-            return 'Add'
-        elif name == "EditCurrent" or name == "MigakuEditCurrent":
-            return 'Edit'
-        elif name == 'Browser':
-            return name
-
-        return None
-
     def announceParent(self: TagEdit, event: typing.Optional[QFocusEvent] = None) -> None:
         if dictionary := migaku_dictionary.get_visible_dictionary():
             parent = self.parentWidget().parentWidget().parentWidget()
@@ -636,7 +626,7 @@ def window_loaded() -> None:
                 if not parent:
                     return
 
-            dictionary.dict.setCurrentEditor(parent.editor, target=getTarget(pName) or "")
+            dictionary.dict.setCurrentEditor(parent.editor, target=migaku_search.getTarget(pName) or "")
 
     TagEdit.focusInEvent = wrap(TagEdit.focusInEvent, announceParent)  # type: ignore[method-assign]
     editor_.Editor.setupWeb = wrap(editor_.Editor.setupWeb, addEditorFunctionality)
