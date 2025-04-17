@@ -19,6 +19,7 @@ def shutdownDB(parent, mgr, ids, on_done, client, force_enable=True):
     global dledIds
 
     dledIds = ids
+
     if addonId in ids:
         miInfo('The Migaku Dictionary database will be diconnected so that the update may proceed. The add-on will not function properly until Anki is restarted after the update.')
         dictdb.get().closeConnection()
@@ -34,10 +35,11 @@ def restartDB(*args: typing.Any) -> None:
         migaku_dictionary.get().db = dictdb.DictDB()
         miInfo('The Migaku Dictionary has been updated, please restart Anki to start using the new version now!')
 
-def wrapOnDone(self, *_: typing.Any) -> None:
+def wrapOnDone(self: addons.DownloaderInstaller, *_: typing.Any) -> None:
     self.mgr.mw.progress.timer(50, lambda: restartDB(), False)
 
 addons.download_addons = wrap(addons.download_addons, shutdownDB, 'before')
-addons.DownloaderInstaller._download_done = wrap(addons.DownloaderInstaller._download_done, wrapOnDone)
-
-
+addons.DownloaderInstaller._download_done = wrap(  # type: ignore[method-assign]
+    addons.DownloaderInstaller._download_done,
+    wrapOnDone,
+)

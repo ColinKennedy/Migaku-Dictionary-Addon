@@ -15,8 +15,6 @@ def initialize(settings: addonSettings.SettingsGui) -> None:
 
     _INSTANCE = settings
 
-    return _INSTANCE
-
 
 def get() -> addonSettings.SettingsGui:
     if _INSTANCE:

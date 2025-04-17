@@ -4,6 +4,8 @@ import typing
 from aqt import mw, gui_hooks
 from urllib.request import Request, urlopen
 
+from .forvodl import Forvo
+
 
 _LOGGER = logging.getLogger(__name__)
 _INSTANCE: typing.Optional[Forvo] = None
@@ -67,4 +69,3 @@ def export_audio(term: str, count: int, lang: str) -> str:
     tags = _download_audio(urls, count)
 
     return audioSeparator.join(tags)
-
