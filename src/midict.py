@@ -550,7 +550,7 @@ class MIDict(AnkiWebView):
 
     def initCardExporterIfNeeded(self) -> None:
         if not self.addWindow:
-            self.addWindow = CardExporter(self.dictInt, self)
+            self.addWindow = CardExporter(self.dictInt)
 
     def bulkTextExport(self, cards: typing.Sequence[typer.Card]) -> None:
         self.initCardExporterIfNeeded()
@@ -1773,10 +1773,22 @@ class DictInterface(QWidget):
         ...
 
     @typing.overload
+    def writeConfig(self, attribute: typing.Literal["currentDeck"], value: str) -> None:
+        ...
+
+    @typing.overload
     def writeConfig(
         self,
         attribute: typing.Literal["currentGroup"],
         value: typer.GroupName,
+    ) -> None:
+        ...
+
+    @typing.overload
+    def writeConfig(
+        self,
+        attribute: typing.Literal["currentTemplate"],
+        value: str,
     ) -> None:
         ...
 

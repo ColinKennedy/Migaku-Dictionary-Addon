@@ -2,7 +2,7 @@ import typing
 
 from anki import notes as notes_
 
-from . import google_imager, migaku_forvo
+from . import google_imager, migaku_forvo, typer
 
 
 class _DictionaryConfiguration(typing.TypedDict):

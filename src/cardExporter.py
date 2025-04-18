@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import collections
+import logging
 import typing
 
 from aqt import dialogs
@@ -22,7 +23,18 @@ if typing.TYPE_CHECKING:
     # TODO: @ColinKennedy - fix cyclic import
     from . import midict
 
-from . import dictdb, global_state, typer
+from . import dictdb, global_state, migaku_exporter, typer
+
+
+T = typing.TypeVar("T")
+_LOGGER = logging.getLogger(__name__)
+
+
+class _Definition(typing.NamedTuple):
+    dictionary: str
+    short_definition: typing.Optional[str]
+    field: str
+    images: typing.Optional[str]
 
 
 class _DefinitionSetting(typing.TypedDict):
@@ -82,8 +94,8 @@ class _ProgressWindow(QWidget):
 class MITextEdit(QTextEdit):
     def __init__(
         self,
+        dictInt: midict.DictInterface,
         parent: typing.Optional[QWidget]= None,
-        dictInt: typing.Optional["midict.DictInterface"] = None,
     ) -> None:
         super().__init__(parent)
 
@@ -107,17 +119,22 @@ class MITextEdit(QTextEdit):
         else:
             menu.exec()
 
-    def keyPressEvent(self, event: QEvent) -> None:
-        if event.modifiers() & Qt.ControlModifier:
-            if event.key() == Qt.Key_B:
+    def keyPressEvent(self, event: typing.Optional[QKeyEvent]) -> None:
+        if not event:
+            super().keyPressEvent(event)
+
+            return
+
+        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            if event.key() == Qt.Key.Key_B:
                 cursor = self.textCursor()
                 format = QTextCharFormat()
-                format.setFontWeight(QFont.Bold if not cursor.charFormat().font().bold() else QFont.Normal)
+                format.setFontWeight(QFont.Weight.Bold if not cursor.charFormat().font().bold() else QFont.Weight.Normal)
                 cursor.mergeCharFormat(format)
 
                 return
 
-            if event.key() == Qt.Key_I:
+            if event.key() == Qt.Key.Key_I:
                 cursor = self.textCursor()
                 format = QTextCharFormat()
                 format.setFontItalic(True if not cursor.charFormat().font().italic() else False)
@@ -125,10 +142,10 @@ class MITextEdit(QTextEdit):
 
                 return
 
-            if event.key() == Qt.Key_U:
+            if event.key() == Qt.Key.Key_U:
                 cursor = self.textCursor()
                 format = QTextCharFormat()
-                format.setUnderlineStyle(QTextCharFormat.SingleUnderline if not cursor.charFormat().font().underline() else QTextCharFormat.NoUnderline)
+                format.setUnderlineStyle(QTextCharFormat.UnderlineStyle.SingleUnderline if not cursor.charFormat().font().underline() else QTextCharFormat.UnderlineStyle.NoUnderline)
                 cursor.mergeCharFormat(format)
 
                 return
@@ -155,12 +172,18 @@ class MILineEdit(QLineEdit):
         super().__init__(parent)
         self.dictInt = dictInt
 
-    def contextMenuEvent(self, event: QEvent) -> None:
+    def contextMenuEvent(self, event: typing.Optional[QContextMenuEvent]) -> None:
         menu = super().createStandardContextMenu()
+
+        if not menu:
+            raise RuntimeError('No standard context menu could be created.')
+
         search = QAction('Search')
         search.triggered.connect(self.searchSelected)
         menu.addAction(search)
-        menu.exec(event.globalPos())
+
+        if event:
+            menu.exec(event.globalPos())
 
     def searchSelected(self, in_browser: bool) -> None:
         if in_browser:
@@ -171,14 +194,13 @@ class MILineEdit(QLineEdit):
             self.dictInt.initSearch(self.selectedText())
 
 
-class CardExporter():
+class CardExporter:
     def __init__(
         self,
-        dictInt,
-        dictWeb,
+        dictInt: midict.DictInterface,
         templates = [],
-        sentence = False,
-        word = False,
+        sentence: str = "",
+        word: str = "",
         definition = False,
     ):
         self._progress_bar_closed_and_finished_importing: dict[QWidget, bool] = {}
@@ -194,7 +216,6 @@ class CardExporter():
         self.bulkTextImporting = False
         self.config = self.getConfig()
         self.definitionSettings = self.config["autoDefinitionSettings"]
-        self.dictWeb = dictWeb
         self.layout = QVBoxLayout()
         self.decks = self.getDecks()
         self.templates = self.config['ExportTemplates']
@@ -218,12 +239,14 @@ class CardExporter():
         self.clearButton = QPushButton('Clear Current Card')
         self.cancelButton = QPushButton("Cancel")
         self.addButton = QPushButton("Add")
+        self.audioMap = QLabel('No Audio Selected')
+        self.imageMap = QLabel('No Image Selected')
         self.exportJS = self.config['jReadingCards']
-        self.imgName = False
-        self.imgPath = False
-        self.audioTag = False
-        self.audioName = False
-        self.audioPath = False
+        self.imgName: typing.Optional[str] = None
+        self.imgPath: typing.Optional[str] = None
+        self.audioTag: typing.Optional[str] = None
+        self.audioName: typing.Optional[str] = None
+        self.audioPath: typing.Optional[str] = None
         self.audioPlayer = sound
         self.audioPlay = QPushButton('Play')
         self.audioPlay.clicked.connect(self.playAudio)
@@ -238,7 +261,7 @@ class CardExporter():
         self.scrollArea.resize(490, 654)
         self.scrollArea.setWindowIcon(QIcon(join(self.dictInt.addonPath, 'icons', 'migaku.png')))
         self.scrollArea.setWindowTitle('Migaku Card Exporter')
-        self.definitionList = []
+        self.definitionList: list[_Definition] = []
         self.word = ''
         self.sentence = ''
         self.initTooltips()
@@ -258,6 +281,12 @@ class CardExporter():
         self._progress_bar_closed_and_finished_importing[progressBar] = True
         progressBar.close()
         progressBar.deleteLater()
+
+    def _writeConfig(self, config: typer.Configuration) -> None:
+        self.mw.addonManager.writeConfig(
+            __name__,
+            typing.cast(dict[typing.Any, typing.Any], config),
+        )
 
     def maybeSetToAlwaysOnTop(self) -> None:
         if self.alwaysOnTop:
@@ -394,31 +423,31 @@ Please review your template and notetype combination."""), level='wrn', day = se
         config["unknownsToSearch"] = self.searchUnknowns.value()
         self.config = config
         self.mw.refreshMigakuDictConfig(config)
-        self.mw.addonManager.writeConfig(__name__, config)
+        self._writeConfig(config)
 
     def saveAutoAddChecked(self) -> None:
         config = self.getConfig()
         config["autoAddCards"] = self.autoAdd.isChecked()
         self.config = config
         self.mw.refreshMigakuDictConfig(config)
-        self.mw.addonManager.writeConfig(__name__, config)
+        self._writeConfig(config)
 
     def saveAddDefinitionChecked(self) -> None:
         config = self.getConfig()
         config["autoAddDefinitions"] = self.addDefinitionsCheckbox.isChecked()
         self.config = config
         self.mw.refreshMigakuDictConfig(config)
-        self.mw.addonManager.writeConfig(__name__, config)
+        self._writeConfig(config)
 
     def addCard(self) -> None:
         templateName = self.templateCB.currentText()
         if templateName in self.templates:
             template = self.templates[templateName]
             noteType = template['noteType']
-            model = self.mw.col.models.byName(noteType)
+            model = self.mw.col.models.by_name(noteType)
             if model:
                 note = Note(self.mw.col, model)
-                modelFields = self.mw.col.models.fieldNames(note.model())
+                modelFields = self.mw.col.models.field_names(note.model())
                 fieldsValues, imgField, audioField, tagsField = self.getFieldsValues(template)
                 word = self.wordLE.text()
                 if not fieldsValues:
@@ -475,7 +504,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
                     "dictName" : dictName
                     })
 
-        return self.mw.addDefinitionsToCardExporterNote(note, word, dictionaries)
+        return migaku_exporter.addDefinitionsToCardExporterNote(note, word, dictionaries)
 
     def moveImageToMediaFolder(self) -> None:
         if self.imgPath and self.imgName:
@@ -491,8 +520,8 @@ Please review your template and notetype combination."""), level='wrn', day = se
         finList: list[str] = []
         idxs: list[int] = []
         for idx, defList in enumerate(self.definitionList):
-            if defList[0] == dictionary:
-                finList.append(defList[2])
+            if defList.dictionary == dictionary:
+                finList.append(defList.field)
                 idxs.append(idx)
         idxs.reverse()
         for idx in idxs:
@@ -573,9 +602,9 @@ Please review your template and notetype combination."""), level='wrn', day = se
         unspecified = t['unspecified']
         for idx, defList in enumerate(self.definitionList):
             if unspecified not in fields:
-                fields[unspecified] = [defList[2]]
+                fields[unspecified] = [defList.field]
             else:
-                fields[unspecified].append(defList[2])
+                fields[unspecified].append(defList.field)
         return fields, imgField, audioField, tagsField;
 
     def clearCurrent(self) -> None:
@@ -584,13 +613,13 @@ Please review your template and notetype combination."""), level='wrn', day = se
         self.secondaryLE.clear()
         self.notesLE.clear()
         self.wordLE.clear()
-        self.definitionList = []
+        self.definitionList[:] = []
         self.audioMap.clear()
         self.audioMap.setText('No Audio Selected')
         self.audioPlay.hide()
         self.audioTag = False
-        self.audioName = False
-        self.audioPath = False
+        self.audioName = None
+        self.audioPath = None
         self.imageMap.clear()
         self.imageMap.setText('No Image Selected')
         self.imgPath = False
@@ -604,10 +633,14 @@ Please review your template and notetype combination."""), level='wrn', day = se
         definitions.setMinimumHeight(100)
         definitions.setColumnCount(3)
         tableHeader = definitions.horizontalHeader()
+
+        if not tableHeader:
+            raise RuntimeError(f'Expected a horizontal header for "{definitions}" widget.')
+
         vHeader = definitions.verticalHeader()
 
         if not vHeader:
-            raise RuntimeError(f'Expected a header for "{definitions}" widget.')
+            raise RuntimeError(f'Expected a vertical for "{definitions}" widget.')
 
         vHeader.setDefaultSectionSize(50);
         vHeader.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
@@ -623,7 +656,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         tableHeader.hide()
         return definitions
 
-    def getConfig(self):
+    def getConfig(self) -> typer.Configuration:
         return self.mw.addonManager.getConfig(__name__)
 
     def setupLayout(self) -> None:
@@ -672,11 +705,9 @@ Please review your template and notetype combination."""), level='wrn', day = se
         self.layout.addWidget(self.definitions)
 
         self.layout.addWidget(QLabel('Audio'))
-        self.audioMap = QLabel('No Audio Selected')
         self.layout.addWidget(self.audioMap)
         self.layout.addWidget(self.audioPlay)
         self.layout.addWidget(QLabel('Image'))
-        self.imageMap = QLabel('No Image Selected')
         self.layout.addWidget(self.imageMap)
         tagsL = QLabel('Tags')
         self.layout.addWidget(tagsL)
@@ -721,7 +752,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
 
     def addImgs(self, word: str, imgs: str, thumbs: QWidget) -> None:
         self.focusWindow()
-        defEntry = ["Google Images", False, imgs, imgs]
+        defEntry = _Definition("Google Images", None, imgs, imgs)
         if defEntry in self.definitionList:
             miInfo('A card cannot contain duplicate definitions.', level='not', day = self.dictInt.nightModeToggler.day)
             return
@@ -742,9 +773,16 @@ Please review your template and notetype combination."""), level='wrn', day = se
         self.wordLE.setText(word)
 
     def removeImgs(self, imgs: str) -> None:
+        model = self.definitions.selectionModel()
+
+        if not model:
+            _LOGGER.error(f'Cannot remove "%s" images. No model was found.', imgs)
+
+            return
+
         # TODO: @ColinKennedy - try/except
         try:
-            row = self.definitions.selectionModel().currentIndex().row()
+            row = model.currentIndex().row()
             self.definitions.removeRow(row)
             self.removeImgFromDefinitionList(imgs)
         except:
@@ -752,7 +790,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
 
     def removeImgFromDefinitionList(self, imgs: str) -> None:
         for idx, entry in enumerate(self.definitionList):
-            if entry[0] == 'Google Images' and entry[3] == imgs:
+            if entry.dictionary == 'Google Images' and entry.images == imgs:
                 self.definitionList.pop(idx)
                 break
 
@@ -762,7 +800,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
             shortDef = definition.replace('<br>', ' ')[:40] + '...'
         else:
             shortDef = definition.replace('<br>', ' ')
-        defEntry = [dictName, shortDef, definition, False]
+        defEntry = _Definition(dictName, shortDef, definition, None)
         if defEntry in self.definitionList:
             miInfo('A card can not contain duplicate definitions.', level='not', day = self.dictInt.nightModeToggler.day)
             return
@@ -816,20 +854,24 @@ Please review your template and notetype combination."""), level='wrn', day = se
 
     def removeFromDefinitionList(self, dictName: str, shortDef: str) -> None:
         for idx, entry in enumerate(self.definitionList):
-            if entry[0] == dictName and entry[1] == shortDef:
+            if entry.dictionary == dictName and entry.short_definition == shortDef:
                 self.definitionList.pop(idx)
                 break
 
     def removeDefinition(self) -> None:
         # TODO: @ColinKennedy Remove later
-        try:
-            row = self.definitions.selectionModel().currentIndex().row()
-            dictName = self.definitions.item(row, 0).text()
-            shortDef = self.definitions.item(row, 1).text()
-            self.definitions.removeRow(row)
-            self.removeFromDefinitionList(dictName, shortDef)
-        except:
-            return
+        model = self.definitions.selectionModel()
+
+        if not model:
+            raise RuntimeError(f'No model found for "{self.definitions}" definitions.')
+
+        row = model.currentIndex().row()
+
+        dictName = _verify(self.definitions.item(row, 0)).text()
+        shortDef = _verify(self.definitions.item(row, 1)).text()
+
+        self.definitions.removeRow(row)
+        self.removeFromDefinitionList(dictName, shortDef)
 
     def focusWindow(self) -> None:
         self.scrollArea.show()
@@ -945,7 +987,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         config = self.getConfig()
         self.definitionSettings = definitionSettings
         config["autoDefinitionSettings"] = definitionSettings
-        self.mw.addonManager.writeConfig(__name__, config)
+        self._writeConfig(config)
         settingsWidget.close()
         settingsWidget.deleteLater()
 
@@ -983,10 +1025,10 @@ Please review your template and notetype combination."""), level='wrn', day = se
         if templateName in self.templates:
             template = self.templates[templateName]
             noteType = template['noteType']
-            model = self.mw.col.models.byName(noteType)
+            model = self.mw.col.models.by_name(noteType)
             if model:
                 note = Note(self.mw.col, model)
-                modelFields = self.mw.col.models.fieldNames(note.model())
+                modelFields = self.mw.col.models.field_names(model)
                 fieldsValues, tagsField = self.getFieldsValuesForTextCard(template, word, sentence)
                 if fieldsValues:
                     for field in fieldsValues:
@@ -1002,7 +1044,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
                             note = self.automaticallyAddDefinitions(note, word,  template)
                         if self.exportJS:
                             note = self.dictInt.jHandler.attemptGenerate(note)
-                        note.model()['did'] = int(did)
+                        model['did'] = int(did)
                         self.mw.col.addNote(note)
                         self.mw.col.save()
                 else:
@@ -1055,37 +1097,38 @@ Please review your template and notetype combination."""), level='wrn', day = se
         templateName = self.templateCB.currentText()
         word = ""
         unknowns = card["unknownWords"]
-        if len(unknowns) > 0:
+        if unknowns:
             word = unknowns[0]
         if templateName in self.templates:
             template = self.templates[templateName]
             noteType = template['noteType']
-            model = self.mw.col.models.byName(noteType)
+            model = self.mw.col.models.by_name(noteType)
             if model:
                 note = Note(self.mw.col, model)
-                modelFields = self.mw.col.models.fieldNames(note.model())
+                modelFields = self.mw.col.models.field_names(model)
                 fieldsValues, tagsField = self.getFieldsValuesForMediaCard(template, word, card)
-                if fieldsValues:
-                    for field in fieldsValues:
-                        print(fieldsValues)
-                        print(field)
-                        if field in modelFields:
-                            note[field] = template['separator'].join(fieldsValues[field])
-                    note.setTagsFromStr(tagsField)
-                    did = False
-                    deck = self.deckCB.currentText()
-                    if deck in self.decks:
-                        did = self.decks[deck]
-                    if did:
-                        if word and self.addDefinitionsCheckbox.isChecked():
-                            note = self.automaticallyAddDefinitions(note, word,  template)
-                        if self.exportJS:
-                            note = self.dictInt.jHandler.attemptGenerate(note)
-                        note.model()['did'] = int(did)
-                        self.mw.col.addNote(note)
-                        self.mw.col.save()
-                else:
+
+                if not fieldsValues:
                     print("Invalid field values")
+
+                    return
+
+                for field in fieldsValues:
+                    if field in modelFields:
+                        note[field] = template['separator'].join(fieldsValues[field])
+                note.setTagsFromStr(tagsField)
+                did: typing.Optional[int] = None
+                deck = self.deckCB.currentText()
+                if deck in self.decks:
+                    did = self.decks[deck]
+                if did:
+                    if word and self.addDefinitionsCheckbox.isChecked():
+                        note = self.automaticallyAddDefinitions(note, word,  template)
+                    if self.exportJS:
+                        note = self.dictInt.jHandler.attemptGenerate(note)
+                    model['did'] = int(did)
+                    self.mw.col.addNote(note)
+                    self.mw.col.save()
 
     def getFieldsValuesForMediaCard(
         self,
@@ -1097,16 +1140,16 @@ Please review your template and notetype combination."""), level='wrn', day = se
         secondaryText = card["secondary"]
         imageFile = card["image"]
         audioFile = card["audio"]
-        audio = False
-        image = False
+        audio: typing.Optional[str] = None
+        image: typing.Optional[str] = None
         if audioFile:
             audio =  '[sound:' + audioFile +']'
         if imageFile:
             image = imageFile
-        imgField = False
-        audioField = False
+        imgField: typing.Optional[str] = None
+        audioField: typing.Optional[str] = None
         tagsField = ''
-        fields = {}
+        fields: dict[str, list[str]] = {}
         if sentenceText != '':
             sentenceField = t['sentence']
             if sentenceField !=  "Don't Export":
@@ -1178,7 +1221,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
                     miInfo("{} cards have been imported.".format(total))
 
                 self._closeProgressBar(self.bulkMediaExportProgressWindow)
-                self.bulkMediaExportProgressWindow = False
+                self.bulkMediaExportProgressWindow = None
         except:
             pass
 
@@ -1189,7 +1232,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         currentValue = self.bulkMediaExportProgressWindow.currentValue
         miInfo("Importing cards from the extension has been cancelled from within the browser.\n\n {} cards were imported.".format(currentValue))
         self._closeProgressBar(self.bulkMediaExportProgressWindow)
-        self.bulkMediaExportProgressWindow = False
+        self.bulkMediaExportProgressWindow = None
         global_state.IS_BULK_MEDIA_EXPORT_CANCELLED = False
 
     def getProgressBar(
@@ -1236,7 +1279,19 @@ Please review your template and notetype combination."""), level='wrn', day = se
 
 
 def _center(widget: QWidget) -> None:
-    geometry = QApplication.desktop().screenGeometry()
-    x = (geometry.width() - widget.width()) / 2
-    y = (geometry.height() - widget.height()) / 2
+    screen = QGuiApplication.primaryScreen()
+
+    if not screen:
+        raise RuntimeError(f'Cannot center "{widget}". No screen to center with.')
+
+    geometry = screen.geometry()
+    x = (geometry.width() - widget.width()) // 2
+    y = (geometry.height() - widget.height()) // 2
     widget.move(x, y)
+
+
+def _verify(value: typing.Optional[T]) -> T:
+    if value:
+        return value
+
+    raise RuntimeError("Value is not defined. Cannot continue.")

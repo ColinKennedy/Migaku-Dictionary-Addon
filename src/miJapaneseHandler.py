@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from anki.notes import Note
 from aqt import mw as mw_
 from aqt.utils import  showInfo
 
@@ -22,7 +23,7 @@ class miJHandler:
 
 		return activeNotes
 
-	def attemptGenerate(self, note):
+	def attemptGenerate(self, note: Note) -> Note:
 		if self.activeNotes:
 			model = note.model()
 			fields = self.mw.col.models.fieldNames(model)
