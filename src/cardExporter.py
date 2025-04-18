@@ -49,6 +49,7 @@ class _Dictionary(typing.TypedDict):
 class _Template(typing.TypedDict):
     audio: str
     image: str
+    secondary: typing.Optional[str]
     sentence: str
     word: str
 
@@ -422,21 +423,21 @@ Please review your template and notetype combination."""), level='wrn', day = se
         config = self.getConfig()
         config["unknownsToSearch"] = self.searchUnknowns.value()
         self.config = config
-        self.mw.refreshMigakuDictConfig(config)
+        migaku_configuration.refresh_configuration(config)
         self._writeConfig(config)
 
     def saveAutoAddChecked(self) -> None:
         config = self.getConfig()
         config["autoAddCards"] = self.autoAdd.isChecked()
         self.config = config
-        self.mw.refreshMigakuDictConfig(config)
+        migaku_configuration.refresh_configuration(config)
         self._writeConfig(config)
 
     def saveAddDefinitionChecked(self) -> None:
         config = self.getConfig()
         config["autoAddDefinitions"] = self.addDefinitionsCheckbox.isChecked()
         self.config = config
-        self.mw.refreshMigakuDictConfig(config)
+        migaku_configuration.refresh_configuration(config)
         self._writeConfig(config)
 
     def addCard(self) -> None:
@@ -447,7 +448,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
             model = self.mw.col.models.by_name(noteType)
             if model:
                 note = Note(self.mw.col, model)
-                modelFields = self.mw.col.models.field_names(note.model())
+                modelFields = self.mw.col.models.field_names(model)
                 fieldsValues, imgField, audioField, tagsField = self.getFieldsValues(template)
                 word = self.wordLE.text()
                 if not fieldsValues:
@@ -486,7 +487,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         dictToTable = self.getDictionaryNameToTableNameDictionary()
         unspecifiedDefinitionField = template["unspecified"]
         specificFields = template["specific"]
-        dictionaries: list[_Dictionary] = []
+        dictionaries: list[typer.DictionaryConfiguration] = []
         for setting in self.definitionSettings:
             dictName = setting["name"]
             if dictName in dictToTable:
@@ -533,12 +534,14 @@ Please review your template and notetype combination."""), level='wrn', day = se
             return ""
         return value
 
-    def getFieldsValues(self, t):
-        # TODO: tuple[fields, imgField, audioField, tagsField]
-        imgField = False
-        audioField = False
+    def getFieldsValues(
+        self,
+        t: _Template,
+    ) -> tuple[dict[str, list[str]], typing.Optional[str], typing.Optional[str], str]:
+        imgField: typing.Optional[str] = None
+        audioField: typing.Optional[str] = None
         tagsField = ''
-        fields = {}
+        fields: dict[str, list[str]] = {}
         sentenceText = self.cleanHTML(self.sentenceLE.toHtml())
         sentenceText = self.emptyValueIfEmptyHtml(sentenceText)
         if sentenceText != '':
@@ -616,13 +619,13 @@ Please review your template and notetype combination."""), level='wrn', day = se
         self.audioMap.clear()
         self.audioMap.setText('No Audio Selected')
         self.audioPlay.hide()
-        self.audioTag = False
+        self.audioTag = None
         self.audioName = None
         self.audioPath = None
         self.imageMap.clear()
         self.imageMap.setText('No Image Selected')
-        self.imgPath = False
-        self.imgName = False
+        self.imgPath = None
+        self.imgName = None
 
     def getDefinitions(self) -> QTableWidget:
         macLin = False

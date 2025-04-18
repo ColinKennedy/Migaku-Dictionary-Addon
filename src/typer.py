@@ -74,6 +74,13 @@ class Dictionary(typing.NamedTuple):
     text: str
 
 
+class DictionaryConfiguration(typing.TypedDict):
+    dictName: str
+    field: str
+    limit: int
+    tableName: str
+
+
 class DictionaryLanguagePair(typing.TypedDict):
     dict: str
     lang: str  # TODO: @ColinKennedy this type may not be right

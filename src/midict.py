@@ -1809,6 +1809,14 @@ class DictInterface(QWidget):
         ...
 
     @typing.overload
+    def writeConfig(self, attribute: typing.Literal["exporterSizePos"], value: tuple[int, int, int, int]) -> None:
+        ...
+
+    @typing.overload
+    def writeConfig(self, attribute: typing.Literal["exporterLastTags"], value: str) -> None:
+        ...
+
+    @typing.overload
     def writeConfig(self, attribute: typing.Literal["fontSizes"], value: tuple[int, int]) -> None:
         ...
 
@@ -1826,6 +1834,9 @@ class DictInterface(QWidget):
 
 
     def writeConfig(self, attribute: str, value: typing.Any) -> None:
+        if attribute == "exporterSizePos":
+            value = list(value)
+
         newConfig = self.getConfig()
         newConfig[attribute] = value
         # TODO: @ColinKennedy - type-ignore this if needed

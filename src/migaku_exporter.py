@@ -5,13 +5,6 @@ from anki import notes as notes_
 from . import google_imager, migaku_forvo, typer
 
 
-class _DictionaryConfiguration(typing.TypedDict):
-    dictName: str
-    field: str
-    limit: int
-    tableName: str
-
-
 def _getTermHeaderText(th: str, entry: typer.DictionaryResult, fb: str, bb: str) -> str:
     term = entry['term']
     altterm = entry['altterm']
@@ -40,7 +33,7 @@ def _getTermHeaderText(th: str, entry: typer.DictionaryResult, fb: str, bb: str)
 def addDefinitionsToCardExporterNote(
     note: notes_.Note,
     term: str,
-    dictionaryConfigurations: _DictionaryConfiguration,
+    dictionaryConfigurations: typing.Iterable[typer.DictionaryConfiguration],
 ) -> notes_.Note:
     config = mw.addonManager.getConfig(__name__)
     fb = config['frontBracket']
