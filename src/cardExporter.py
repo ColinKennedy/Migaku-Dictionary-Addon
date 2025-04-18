@@ -23,7 +23,7 @@ if typing.TYPE_CHECKING:
     # TODO: @ColinKennedy - fix cyclic import
     from . import midict
 
-from . import dictdb, global_state, migaku_exporter, typer
+from . import dictdb, global_state, migaku_configuration, migaku_exporter, typer
 
 
 T = typing.TypeVar("T")
@@ -456,7 +456,6 @@ Please review your template and notetype combination."""), level='wrn', day = se
                 for field in fieldsValues:
                     if field in modelFields:
                         note[field] = template['separator'].join(fieldsValues[field])
-                note.setTagsFromStr(tagsField)
                 did = False
                 deck = self.deckCB.currentText()
                 if deck in self.decks:
@@ -1034,8 +1033,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
                     for field in fieldsValues:
                         if field in modelFields:
                             note[field] = template['separator'].join(fieldsValues[field])
-                    note.setTagsFromStr(tagsField)
-                    did = False
+                    did: typing.Optional[int] = None
                     deck = self.deckCB.currentText()
                     if deck in self.decks:
                         did = self.decks[deck]
@@ -1116,7 +1114,6 @@ Please review your template and notetype combination."""), level='wrn', day = se
                 for field in fieldsValues:
                     if field in modelFields:
                         note[field] = template['separator'].join(fieldsValues[field])
-                note.setTagsFromStr(tagsField)
                 did: typing.Optional[int] = None
                 deck = self.deckCB.currentText()
                 if deck in self.decks:
