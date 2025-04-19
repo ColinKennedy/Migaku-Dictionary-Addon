@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import typing
 
 
@@ -22,7 +24,7 @@ class Card(typing.TypedDict):
 class Configuration(typing.TypedDict):
     autoAddCards: bool
     autoAddDefinitions: bool
-    autoDefinitionSettings: bool
+    autoDefinitionSettings: typing.Optional[list[DefinitionSetting]]
     backBracket: str
     condensedAudioDirectory: typing.Optional[str]
     currentDeck: typing.Union[str, typing.Literal[False]]
@@ -60,12 +62,17 @@ class Configuration(typing.TypedDict):
     unknownsToSearch: int
 
     DictionaryGroups: dict
-    ExportTemplates: dict
+    ExportTemplates: dict[str, ExportTemplate]
     GoogleImageFields: list[str]
     ForvoFields: list[str]
     ForvoAddType: typing.Literal["add"]
     ForvoLanguage: str  # typing.Literal["Japanese"]  # TODO: @ColinKennedy add more languages later
     GoogleImageAddType: typing.Literal["add"]
+
+
+class DefinitionSetting(typing.TypedDict):
+    name: str
+    limit: int
 
 
 class Dictionary(typing.NamedTuple):
@@ -116,6 +123,21 @@ class DictionaryFrequencyResult(typing.TypedDict):
     audio: str
     starCount: str
     frequency: int
+
+
+class ExportTemplate(typing.TypedDict):
+    audio: str
+    image: str
+    secondary: typing.Optional[str]
+    sentence: str
+    word: str
+
+    # TODO: @ColinKennedy - Not sure if these keys/values are correct. It seemed as
+    # though `src/cardExporter.py` needed them but still not sure.
+    notes: str
+    noteType: str
+    separator: str
+
 
 
 def check_t(item: typing.Optional[T]) -> T:

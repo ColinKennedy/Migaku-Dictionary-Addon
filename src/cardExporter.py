@@ -37,23 +37,6 @@ class _Definition(typing.NamedTuple):
     images: typing.Optional[str]
 
 
-class _DefinitionSetting(typing.TypedDict):
-    name: str
-    limit: int
-
-
-class _Dictionary(typing.TypedDict):
-    tableName: str
-
-
-class _Template(typing.TypedDict):
-    audio: str
-    image: str
-    secondary: typing.Optional[str]
-    sentence: str
-    word: str
-
-
 # TODO: @ColinKennedy - This progress window is probably (visually) messed up. Fix later
 class _ProgressWindow(QWidget):
     request_stop_bulk_text_import = pyqtSignal()
@@ -199,7 +182,6 @@ class CardExporter:
     def __init__(
         self,
         dictInt: midict.DictInterface,
-        templates = [],
         sentence: str = "",
         word: str = "",
         definition = False,
@@ -263,8 +245,8 @@ class CardExporter:
         self.scrollArea.setWindowIcon(QIcon(join(self.dictInt.addonPath, 'icons', 'migaku.png')))
         self.scrollArea.setWindowTitle('Migaku Card Exporter')
         self.definitionList: list[_Definition] = []
-        self.word = ''
-        self.sentence = ''
+        self.word = word
+        self.sentence = sentence
         self.initTooltips()
         self.restoreSizePos()
         self.scrollArea.closeEvent = self.closeEvent
@@ -406,7 +388,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         size = self.scrollArea.size()
         width = size.width()
         height = size.height()
-        posSize = [x,y,width, height]
+        posSize = (x,y,width, height)
         self.dictInt.writeConfig('exporterSizePos', posSize)
         self.dictInt.writeConfig('exporterLastTags', self.tagsLE.text())
 
@@ -480,7 +462,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         miInfo('A card could not be added with this current configuration. Please ensure that your template is configured correctly for this collection.', level='err', day = self.dictInt.nightModeToggler.day)
 
     # TODO: @ColinKennedy - `word` might not be a str. Check later.
-    def automaticallyAddDefinitions(self, note: Note, word: str, template: _Template) -> Note:
+    def automaticallyAddDefinitions(self, note: Note, word: str, template: typer.ExportTemplate) -> Note:
         if not self.definitionSettings:
             return note
 
@@ -536,7 +518,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
 
     def getFieldsValues(
         self,
-        t: _Template,
+        t: typer.ExportTemplate,
     ) -> tuple[dict[str, list[str]], typing.Optional[str], typing.Optional[str], str]:
         imgField: typing.Optional[str] = None
         audioField: typing.Optional[str] = None
@@ -982,7 +964,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         dict3: str,
         limit3: int,
     ):
-        definitionSettings: list[_DefinitionSetting] = []
+        definitionSettings: list[typer.DefinitionSetting] = []
         definitionSettings.append({ "name": dict1, "limit" : limit1})
         definitionSettings.append({ "name": dict2, "limit" : limit2})
         definitionSettings.append({ "name": dict3, "limit" : limit3})
@@ -1053,12 +1035,12 @@ Please review your template and notetype combination."""), level='wrn', day = se
 
     def getFieldsValuesForTextCard(
         self,
-        t: _Template,
+        t: typer.ExportTemplate,
         wordText: str,
         sentenceText: str,
     ) -> tuple[dict[str, list[str]], str]:
         tagsField = ''
-        fields = {}
+        fields: dict[str, list[str]] = {}
         if sentenceText != '':
             sentenceField = t['sentence']
             if sentenceField !=  "Don't Export":
@@ -1107,7 +1089,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
             if model:
                 note = Note(self.mw.col, model)
                 modelFields = self.mw.col.models.field_names(model)
-                fieldsValues, tagsField = self.getFieldsValuesForMediaCard(template, word, card)
+                fieldsValues, _ = self.getFieldsValuesForMediaCard(template, word, card)
 
                 if not fieldsValues:
                     print("Invalid field values")
@@ -1132,7 +1114,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
 
     def getFieldsValuesForMediaCard(
         self,
-        t: _Template,
+        t: typer.ExportTemplate,
         wordText: str,
         card: typer.Card,
     ) -> tuple[dict[str, list[str]], str]:
@@ -1157,7 +1139,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
                     fields[sentenceField] = [sentenceText]
         if secondaryText != '' and 'secondary' in t:
             secondaryField = t['secondary']
-            if secondaryField !=  "Don't Export":
+            if secondaryField and secondaryField !=  "Don't Export":
                 if self.fieldValid(secondaryField):
                     fields[secondaryField] = [secondaryText]
         if wordText != '':
