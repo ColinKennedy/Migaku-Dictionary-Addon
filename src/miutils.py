@@ -9,7 +9,16 @@ from os.path import dirname, join
 from aqt.webview import AnkiWebView
 
 
+T = typing.TypeVar("T")
 addon_path = dirname(__file__)
+
+
+def _verify(item: typing.Optional[T]) -> T:
+    if item is not None:
+        return item
+
+    raise RuntimeError('Expected item to exist but got none.')
+
 
 def miInfo(
     text: str,
@@ -46,11 +55,11 @@ def miAsk(text: str, parent: typing.Optional[QWidget]=None, day: bool=True, cust
     msg.setWindowTitle("Migaku Dictionary")
     msg.setText(text)
     icon = QIcon(join(addon_path, 'icons', 'migaku.png'))
-    b = msg.addButton(QMessageBox.StandardButton.Yes)
+    b = _verify(msg.addButton(QMessageBox.StandardButton.Yes))
     
     b.setFixedSize(100, 30)
     b.setDefault(True)
-    c = msg.addButton(QMessageBox.StandardButton.No)
+    c = _verify(msg.addButton(QMessageBox.StandardButton.No))
     c.setFixedSize(100, 30)
 
     if customText:

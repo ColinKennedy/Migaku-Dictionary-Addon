@@ -16,7 +16,7 @@ from shutil import copyfile
 from .miutils import miInfo, miAsk
 import json
 from anki.notes import Note
-from anki import sound
+from aqt import sound
 import re
 
 if typing.TYPE_CHECKING:
@@ -150,8 +150,8 @@ class MITextEdit(QTextEdit):
 class MILineEdit(QLineEdit):
     def __init__(
         self,
+        dictInt: midict.DictInterface,
         parent: typing.Optional[QWidget] = None,
-        dictInt: typing.Optional[midict.DictInterface] = None,
     ):
         super().__init__(parent)
         self.dictInt = dictInt
@@ -184,9 +184,10 @@ class CardExporter:
         dictInt: midict.DictInterface,
         sentence: str = "",
         word: str = "",
-        definition = False,
-    ):
+    ) -> None:
+        self._shortcuts: list[QShortcut] = []
         self._progress_bar_closed_and_finished_importing: dict[QWidget, bool] = {}
+
         self.window = QWidget()
         self.scrollArea = QScrollArea()
         self.scrollArea.setWidget(self.window)
@@ -230,7 +231,6 @@ class CardExporter:
         self.audioTag: typing.Optional[str] = None
         self.audioName: typing.Optional[str] = None
         self.audioPath: typing.Optional[str] = None
-        self.audioPlayer = sound
         self.audioPlay = QPushButton('Play')
         self.audioPlay.clicked.connect(self.playAudio)
         self.audioPlay.hide()
@@ -249,8 +249,6 @@ class CardExporter:
         self.sentence = sentence
         self.initTooltips()
         self.restoreSizePos()
-        self.scrollArea.closeEvent = self.closeEvent
-        self.scrollArea.hideEvent = self.hideEvent
         self.setHotkeys()
         self.scrollArea.show()
         self.alwaysOnTop = self.config['dictAlwaysOnTop']
@@ -294,16 +292,25 @@ class CardExporter:
             ensureWidgetInScreenBoundaries(self.scrollArea)
 
     def setHotkeys(self) -> None:
-        self.sentencehotkeyS = QShortcut(
-            QKeySequence('Ctrl+S'), self.scrollArea, lambda : self.attemptSearch(False))
-        self.sentencehotkeyS = QShortcut(
-            QKeySequence('Ctrl+F'), self.scrollArea, lambda : self.attemptSearch(True))
-        self.scrollArea.hotkeyEsc = QShortcut(QKeySequence("Esc"), self.scrollArea)
-        self.scrollArea.hotkeyEsc.activated.connect(self.scrollArea.hide)
+        self._shortcuts.append(
+            QShortcut(
+                QKeySequence('Ctrl+S'), self.scrollArea, lambda: self.attemptSearch(False)
+            )
+        )
+        self._shortcuts.append(
+            QShortcut(
+                QKeySequence('Ctrl+F'), self.scrollArea, lambda: self.attemptSearch(True)
+            )
+        )
 
-    def attemptSearch(self, in_browser) -> None:
+        shortcut = QShortcut(QKeySequence("Esc"), self.scrollArea)
+        self._shortcuts.append(shortcut)
+        shortcut.activated.connect(self.scrollArea.hide)
+
+    def attemptSearch(self, in_browser: bool) -> None:
         focused = self.scrollArea.focusWidget()
-        if type(focused).__name__ in  ['MILineEdit', 'MITextEdit']:
+
+        if isinstance(focused, (MILineEdit, MITextEdit)):
             focused.searchSelected(in_browser)
 
     def setColors(self) -> None:
@@ -327,15 +334,20 @@ class CardExporter:
                 self.deckCB.setStyleSheet(self.dictInt.getComboStyle())
             self.definitions.setStyleSheet(self.dictInt.getTableStyle())
 
-    def addNote(self, note, did) -> bool:
-        note.model()['did'] = int(did)
+    def addNote(self, note: Note, did: int) -> bool:
+        model = note.note_type()
+
+        if not model:
+            raise RuntimeError(f'Note "{note}" has no Note type.')
+
+        model['did'] = int(did)
         ret = note.dupeOrEmpty()
         if ret == 1:
             if not miAsk('Your note\'s sorting field will be empty with this configuration. Would you like to continue?', self.scrollArea, self.dictInt.nightModeToggler.day):
                 return False
-        if '{{cloze:' in note.model()['tmpls'][0]['qfmt']:
+        if '{{cloze:' in model['tmpls'][0]['qfmt']:
             if not self.mw.col.models._availClozeOrds(
-                    note.model(), note.joinedFields(), False):
+                    model, note.joined_fields(), False):
                 if not miAsk("You have a cloze deletion note type "
                 "but have not made any cloze deletions. Would you like to continue?", self.scrollArea, self.dictInt.nightModeToggler.day):
                     return False
@@ -367,16 +379,18 @@ Please review your template and notetype combination."""), level='wrn', day = se
         decks.sort()
         cb.addItems(decks)
         current = self.config['currentDeck']
-        if current in decks:
+        if current and current in decks:
             cb.setCurrentText(current)
         cb.currentIndexChanged.connect(lambda: self.dictInt.writeConfig('currentDeck', cb.currentText()))
         return cb
 
-    def hideEvent(self, event: QEvent) -> None:
+    def hideEvent(self, event: QHideEvent) -> None:
+        self.scrollArea.hideEvent(event)  # TODO: @ColinKennedy - not sure if this is needed
         self.saveSizeAndPos()
         event.accept()
 
-    def closeEvent(self, event: QEvent) -> None:
+    def closeEvent(self, event: QCloseEvent) -> None:
+        self.scrollArea.closeEvent(event)  # TODO: @ColinKennedy - not sure if this is needed
         self.clearCurrent()
         self.saveSizeAndPos()
         event.accept()
@@ -536,7 +550,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         if secondaryText != '' and 'secondary' in t:
             secondaryField = t['secondary']
             if secondaryField !=  "Don't Export":
-                if self.fieldValid(secondaryField):
+                if secondaryField and self.fieldValid(secondaryField):
                     fields[secondaryField] = [secondaryText]
         notesText = self.cleanHTML(self.notesLE.toHtml())
         notesText = self.emptyValueIfEmptyHtml(notesText)
@@ -730,7 +744,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         current = self.config['currentTemplate']
 
         cb.currentIndexChanged.connect(lambda: self.dictInt.writeConfig('currentTemplate', cb.currentText()))
-        if current in self.templates:
+        if current and current in self.templates:
             cb.setCurrentText(current)
         return cb
 
@@ -827,7 +841,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
 
     def playAudio(self) -> None:
         if self.audioPath:
-            self.audioPlayer.play(self.audioPath)
+            sound.play(self.audioPath)
 
     def exportSentence(self, sentence: str) -> None:
         self.focusWindow()
@@ -963,7 +977,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         limit2: int,
         dict3: str,
         limit3: int,
-    ):
+    ) -> None:
         definitionSettings: list[typer.DefinitionSetting] = []
         definitionSettings.append({ "name": dict1, "limit" : limit1})
         definitionSettings.append({ "name": dict2, "limit" : limit2})

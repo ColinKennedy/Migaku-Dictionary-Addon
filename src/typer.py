@@ -27,9 +27,9 @@ class Configuration(typing.TypedDict):
     autoDefinitionSettings: typing.Optional[list[DefinitionSetting]]
     backBracket: str
     condensedAudioDirectory: typing.Optional[str]
-    currentDeck: typing.Union[str, typing.Literal[False]]
+    currentDeck: typing.Optional[str]
     currentGroup: GroupName
-    currentTemplate: typing.Union[str, typing.Literal[False]]
+    currentTemplate: typing.Optional[str]
     day: bool
     deinflect: bool
     dictAlwaysOnTop: bool
@@ -38,6 +38,7 @@ class Configuration(typing.TypedDict):
     dictSizePos: typing.Union[tuple[int, int, int, int], typing.Literal[False]]
     disableCondensed: bool
     displayAgain: bool
+    exporterLastTags: str
     exporterSizePos: typing.Union[tuple[int, int, int, int], typing.Literal[False]]
     failedFFMPEGInstallation: bool
     fontSizes: tuple[int, int]
