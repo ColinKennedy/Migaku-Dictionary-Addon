@@ -135,9 +135,14 @@ class ExportTemplate(typing.TypedDict):
 
     # TODO: @ColinKennedy - Not sure if these keys/values are correct. It seemed as
     # though `src/cardExporter.py` needed them but still not sure.
-    notes: str
     noteType: str
+    notes: str
     separator: str
+
+    # TODO: @ColinKennedy - Not sure if these keys/values are correct. It seemed as
+    # though `src/cardExporter.py` needed them but still not sure.
+    specific: dict[str, list[str]]
+    unspecified: str
 
 
 

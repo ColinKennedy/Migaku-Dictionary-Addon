@@ -1016,8 +1016,8 @@ Please review your template and notetype combination."""), level='wrn', day = se
         templateName = self.templateCB.currentText()
         sentence = card["primary"]
         word = ""
-        unknowns = card["unknowns"]
-        if len(unknowns) > 0:
+        unknowns = card["unknownWords"]
+        if unknowns:
             word = unknowns[0]
 
         if templateName in self.templates:
