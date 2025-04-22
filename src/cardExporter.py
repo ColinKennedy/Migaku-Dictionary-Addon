@@ -453,7 +453,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
                 for field in fieldsValues:
                     if field in modelFields:
                         note[field] = template['separator'].join(fieldsValues[field])
-                did = False
+                did = 0
                 deck = self.deckCB.currentText()
                 if deck in self.decks:
                     did = self.decks[deck]
@@ -572,7 +572,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         if tagsText != '':
             tagsField = tagsText
         imgText = self.imageMap.text()
-        if imgText != 'No Image Selected':
+        if imgText != 'No Image Selected' and self.imgName:
             imgField = t['image']
             if imgField !=  "Don't Export":
                 imgTag = '<img src="'+ self.imgName +'">'
@@ -582,7 +582,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
                     else:
                         fields[imgField].append(imgTag)
         audioText = self.imageMap.text()
-        if audioText != 'No Audio Selected' and 'audio' in t and self.audioTag != False:
+        if audioText != 'No Audio Selected' and 'audio' in t and self.audioTag:
             audioField = t['audio']
             if audioField !=  "Don't Export":
                 if self.fieldValid(audioField):
@@ -655,7 +655,7 @@ Please review your template and notetype combination."""), level='wrn', day = se
         return definitions
 
     def getConfig(self) -> typer.Configuration:
-        return self.mw.addonManager.getConfig(__name__)
+        return typing.cast(typer.Configuration, self.mw.addonManager.getConfig(__name__))
 
     def setupLayout(self) -> None:
         tempLayout = QHBoxLayout()
