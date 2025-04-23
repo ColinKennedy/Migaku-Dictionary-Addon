@@ -475,7 +475,12 @@ def importDict(lang_name: str, path: str, dict_name: str) -> None:
     has_index = any(fn == 'index.json' for fn in zfile.namelist())
 
     # Load frequency table
-    frequency_dict, is_reading_type = getFrequencyList(lang_name)
+    result = getFrequencyList(lang_name)
+
+    if not result:
+        raise RuntimeError(f'Language "{lang_name}" has no frequency list.')
+
+    frequency_dict, is_reading_type = result
 
     # Create dictionary
     dict_name = dict_name.replace(' ', '_')

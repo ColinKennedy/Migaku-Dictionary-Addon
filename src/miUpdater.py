@@ -13,7 +13,7 @@ from . import dictdb, migaku_dictionary
 
 
 addonId = 1655992655
-dledIds = []
+dledIds: list[int] = []
 
 
 def shutdownDB(
@@ -26,9 +26,9 @@ def shutdownDB(
 ) -> None:
     global dledIds
 
-    dledIds = ids
+    dledIds = list(ids)
 
-    if addonId in ids:
+    if addonId in dledIds:
         miInfo('The Migaku Dictionary database will be diconnected so that the update may proceed. The add-on will not function properly until Anki is restarted after the update.')
         dictdb.get().closeConnection()
         dictdb.clear()

@@ -126,6 +126,14 @@ class DictionaryFrequencyResult(typing.TypedDict):
     frequency: int
 
 
+class DictionaryLanguageIndex(typing.TypedDict):
+    # TODO: @ColinKennedy - Check if these key / values work
+    name_en: str
+    name_native: str
+    to_languages: typing.Optional[typing.Sequence[DictionaryLanguageIndex]]
+    dictionaries: typing.Sequence[IndexDictionary]
+
+
 class ExportTemplate(typing.TypedDict):
     audio: str
     image: str
@@ -144,6 +152,10 @@ class ExportTemplate(typing.TypedDict):
     specific: dict[str, list[str]]
     unspecified: str
 
+
+class IndexDictionary(typing.TypedDict):
+    name: str
+    description: str
 
 
 def check_t(item: typing.Optional[T]) -> T:

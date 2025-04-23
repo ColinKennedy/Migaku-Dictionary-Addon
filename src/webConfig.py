@@ -5,21 +5,10 @@ import typing
 
 from anki.httpclient import HttpClient
 
+from . import typer
+
 
 DEFAULT_SERVER = 'dicts.migaku.io'
-
-
-class _Dictionary(typing.TypedDict):
-    name: str
-    description: str
-
-
-class DictionaryLanguage(typing.TypedDict):
-    # TODO: @ColinKennedy - Check if these key / values work
-    name_en: str
-    name_native: str
-    to_languages: typing.Optional[typing.Sequence[DictionaryLanguage]]
-    dictionaries: typing.Sequence[_Dictionary]
 
 
 def normalize_url(url: str) -> str:
@@ -32,7 +21,7 @@ def normalize_url(url: str) -> str:
     return url
 
 
-def download_index(server_url: str=DEFAULT_SERVER) -> typing.Optional[DictionaryLanguage]:
+def download_index(server_url: str=DEFAULT_SERVER) -> typing.Optional[typer.DictionaryLanguageIndex]:
     server_url = normalize_url(server_url)
 
     index_url = server_url + '/index.json'
@@ -45,5 +34,5 @@ def download_index(server_url: str=DEFAULT_SERVER) -> typing.Optional[Dictionary
 
     data = client.stream_content(resp)
 
-    # TODO: @ColinKennedy - should check that the output works with DictionaryLanguage
-    return typing.cast(DictionaryLanguage, json.loads(data))
+    # TODO: @ColinKennedy - should check that the output works with DictionaryLanguageIndex
+    return typing.cast(typer.DictionaryLanguageIndex, json.loads(data))
