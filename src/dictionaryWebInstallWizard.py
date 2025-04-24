@@ -355,144 +355,6 @@ class DictionaryConfirmPage(MiWizardPage):
 
 
 class DictionaryInstallPage(MiWizardPage):
-
-    class InstallThread(QThread):
-
-        progress_update = pyqtSignal(int)
-        log_update = pyqtSignal(str)
-
-        def __init__(
-            self,
-            server_root: str,
-            install_index: typing.Sequence[typer.InstallLanguage],
-            install_freq: bool,
-            install_conj: bool,
-            force_lang: typing.Optional[str]=None,
-            parent: typing.Optional[QObject]=None,
-        ) -> None:
-            super().__init__(parent)
-
-            self.server_root = server_root
-            self.install_index = install_index
-            self.install_freq = install_freq
-            self.install_conj = install_conj
-            self.force_lang = force_lang
-            self.cancel_requested = False
-
-        def construct_url(self, url: str) -> str:
-            if not url.startswith('http'):
-                return self.server_root + url
-            return url
-
-        def run(self) -> None:
-            from .dictionaryManager import importDict
-
-            client = HttpClient()
-
-            num_dicts = 0
-            num_installed = 0
-
-            def update_dict_progress(amt: typing.Union[float, int]) -> None:
-                progress = 0
-                if num_dicts > 0:
-                    progress = num_installed / num_dicts
-                    progress += amt // num_dicts
-                progress_percent = round(progress * 100)
-                self.progress_update.emit(progress_percent)
-
-            for l in self.install_index:
-                num_dicts += len(l.get('dictionaries', []))
-
-            self.log_update.emit('Installing %d dictionaries...' % num_dicts)
-
-            freq_path = os.path.join(addon_path, 'user_files', 'db', 'frequency')
-            os.makedirs(freq_path, exist_ok=True)
-
-            conj_path = os.path.join(addon_path, 'user_files', 'db', 'conjugation')
-            os.makedirs(conj_path, exist_ok=True)
-
-            for l in self.install_index:
-                if self.cancel_requested:
-                    return
-
-                lname = self.force_lang
-                if not lname:
-                    lname = l.get('name_en')
-                if not lname:
-                    continue
-
-                # Create Language
-                try:
-                    dictdb.get().addLanguages([lname])
-                except Exception as e:
-                    # Lanugage already exists
-                    pass
-
-                # Install frequency data
-                if self.install_freq:
-                    furl = l.get('frequency_url')
-                    if furl:
-                        self.log_update.emit('Installing %s frequency data...' % lname)
-                        furl = self.construct_url(furl)
-                        dl_resp = client.get(furl)
-                        if dl_resp.status_code == 200:
-                            fdata = client.stream_content(dl_resp)
-                            dst_path = os.path.join(freq_path, '%s.json' % lname)
-                            with open(dst_path, 'wb') as f:
-                                f.write(fdata)
-                        else:
-                            self.log_update.emit(' ERROR: Download failed (%d).' % dl_resp.status_code)
-
-                # Install conjugation data
-                if self.install_conj:
-                    curl = l.get('conjugation_url')
-                    if curl:
-                        self.log_update.emit('Installing %s conjugation data...' % lname)
-                        curl = self.construct_url(curl)
-                        dl_resp = client.get(curl)
-                        if dl_resp.status_code == 200:
-                            cdata = client.stream_content(dl_resp)
-                            dst_path = os.path.join(conj_path, '%s.json' % lname)
-                            with open(dst_path, 'wb') as f:
-                                f.write(cdata)
-                        else:
-                            self.log_update.emit(' ERROR: Download failed (%d).' % dl_resp.status_code)
-
-                # Install dictionaries
-                for d in l.get('dictionaries', []):
-                    if self.cancel_requested:
-                        return
-
-                    dname = d['name']
-                    durl = self.construct_url(d.get('url'))
-
-                    self.log_update.emit('Installing %s...' % dname)
-
-                    self.log_update.emit(' Downloading %s...' % durl)
-                    dl_resp = client.get(durl)
-
-                    if dl_resp.status_code == 200:
-                        update_dict_progress(0.5)
-                        self.log_update.emit(' Importing...')
-                        ddata = client.stream_content(dl_resp)
-                        try:
-                            importDict(lname, io.BytesIO(ddata), dname)
-                        except ValueError as e:
-                            self.log_update.emit(' ERROR: %s' % str(e))
-                    else:
-                        self.log_update.emit(' ERROR: Download failed (%d).' % dl_resp.status_code)
-
-                    update_dict_progress(1.0)
-                    num_installed += 1
-
-                # Only once language can be installed when language is forced
-                if self.force_lang:
-                    # Should never happen
-                    break
-
-            self.progress_update.emit(100)
-            self.log_update.emit('All done.')
-
     def __init__(self, wizard: DictionaryWebInstallWizard, is_last_page: bool=True) -> None:
         super().__init__(wizard)
         self.wizard: DictionaryWebInstallWizard = wizard
@@ -581,7 +443,7 @@ class DictionaryInstallPage(MiWizardPage):
         install_conj = self.wizard.dictionary_install_conjugation
         force_lang = self.wizard.dictionary_force_lang
 
-        self.install_thread = self.InstallThread(server_root, install_index, install_freq, install_conj, force_lang)
+        self.install_thread = InstallThread(server_root, install_index, install_freq, install_conj, force_lang)
         self.install_thread.finished.connect(self.on_thread_finish)
         self.install_thread.progress_update.connect(self.update_progress)
         self.install_thread.log_update.connect(self.add_log)
@@ -596,6 +458,144 @@ class DictionaryInstallPage(MiWizardPage):
             self.cancel_enabled = False
 
         self.refresh_wizard_states()
+
+
+class InstallThread(QThread):
+
+    progress_update = pyqtSignal(int)
+    log_update = pyqtSignal(str)
+
+    def __init__(
+        self,
+        server_root: str,
+        install_index: typing.Sequence[typer.InstallLanguage],
+        install_freq: bool,
+        install_conj: bool,
+        force_lang: typing.Optional[str]=None,
+        parent: typing.Optional[QObject]=None,
+    ) -> None:
+        super().__init__(parent)
+
+        self.server_root = server_root
+        self.install_index = install_index
+        self.install_freq = install_freq
+        self.install_conj = install_conj
+        self.force_lang = force_lang
+        self.cancel_requested = False
+
+    def construct_url(self, url: str) -> str:
+        if not url.startswith('http'):
+            return self.server_root + url
+        return url
+
+    def run(self) -> None:
+        from .dictionaryManager import importDict
+
+        client = HttpClient()
+
+        num_dicts = 0
+        num_installed = 0
+
+        def update_dict_progress(amt: typing.Union[float, int]) -> None:
+            progress = 0
+            if num_dicts > 0:
+                progress = num_installed / num_dicts
+                progress += amt // num_dicts
+            progress_percent = round(progress * 100)
+            self.progress_update.emit(progress_percent)
+
+        for l in self.install_index:
+            num_dicts += len(l.get('dictionaries', []))
+
+        self.log_update.emit('Installing %d dictionaries...' % num_dicts)
+
+        freq_path = os.path.join(addon_path, 'user_files', 'db', 'frequency')
+        os.makedirs(freq_path, exist_ok=True)
+
+        conj_path = os.path.join(addon_path, 'user_files', 'db', 'conjugation')
+        os.makedirs(conj_path, exist_ok=True)
+
+        for l in self.install_index:
+            if self.cancel_requested:
+                return
+
+            lname = self.force_lang
+            if not lname:
+                lname = l.get('name_en')
+            if not lname:
+                continue
+
+            # Create Language
+            try:
+                dictdb.get().addLanguages([lname])
+            except Exception as e:
+                # Lanugage already exists
+                pass
+
+            # Install frequency data
+            if self.install_freq:
+                furl = l.get('frequency_url')
+                if furl:
+                    self.log_update.emit('Installing %s frequency data...' % lname)
+                    furl = self.construct_url(furl)
+                    dl_resp = client.get(furl)
+                    if dl_resp.status_code == 200:
+                        fdata = client.stream_content(dl_resp)
+                        dst_path = os.path.join(freq_path, '%s.json' % lname)
+                        with open(dst_path, 'wb') as f:
+                            f.write(fdata)
+                    else:
+                        self.log_update.emit(' ERROR: Download failed (%d).' % dl_resp.status_code)
+
+            # Install conjugation data
+            if self.install_conj:
+                curl = l.get('conjugation_url')
+                if curl:
+                    self.log_update.emit('Installing %s conjugation data...' % lname)
+                    curl = self.construct_url(curl)
+                    dl_resp = client.get(curl)
+                    if dl_resp.status_code == 200:
+                        cdata = client.stream_content(dl_resp)
+                        dst_path = os.path.join(conj_path, '%s.json' % lname)
+                        with open(dst_path, 'wb') as f:
+                            f.write(cdata)
+                    else:
+                        self.log_update.emit(' ERROR: Download failed (%d).' % dl_resp.status_code)
+
+            # Install dictionaries
+            for d in l.get('dictionaries', []):
+                if self.cancel_requested:
+                    return
+
+                dname = d['name']
+                durl = self.construct_url(d.get('url'))
+
+                self.log_update.emit('Installing %s...' % dname)
+
+                self.log_update.emit(' Downloading %s...' % durl)
+                dl_resp = client.get(durl)
+
+                if dl_resp.status_code == 200:
+                    update_dict_progress(0.5)
+                    self.log_update.emit(' Importing...')
+                    ddata = client.stream_content(dl_resp)
+                    try:
+                        importDict(lname, io.BytesIO(ddata), dname)
+                    except ValueError as e:
+                        self.log_update.emit(' ERROR: %s' % str(e))
+                else:
+                    self.log_update.emit(' ERROR: Download failed (%d).' % dl_resp.status_code)
+
+                update_dict_progress(1.0)
+                num_installed += 1
+
+            # Only once language can be installed when language is forced
+            if self.force_lang:
+                # Should never happen
+                break
+
+        self.progress_update.emit(100)
+        self.log_update.emit('All done.')
 
 
 def _verify(value: typing.Optional[T]) -> T:
