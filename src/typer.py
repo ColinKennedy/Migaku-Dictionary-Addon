@@ -90,6 +90,7 @@ class DictionaryConfiguration(typing.TypedDict):
 
 
 class DictionaryLanguagePair(typing.TypedDict):
+    description: typing.Optional[str]
     dict: str
     lang: str  # TODO: @ColinKennedy this type may not be right
 
@@ -156,6 +157,11 @@ class ExportTemplate(typing.TypedDict):
 class IndexDictionary(typing.TypedDict):
     name: str
     description: str
+
+
+class InstallLanguage(DictionaryLanguageIndex):
+    conjugation_url: str
+    frequency_url: str
 
 
 def check_t(item: typing.Optional[T]) -> T:

@@ -18,15 +18,17 @@ if typing.TYPE_CHECKING:
 from . import typer
 
 
-class _Template(typing.TypedDict):
-    noteType: str
-    sentence: typing.Union[str, typing.Literal["Don't Export"]]
-    notes: typing.Union[str, typing.Literal["Don't Export"]]
-    word: str
-    image: str
-    audio: typing.Optional[str]
-    unspecified: str
-    separator: str
+T = typing.TypeVar("T")
+_Template = typer.ExportTemplate
+# class _Template(typing.TypedDict):
+#     noteType: str
+#     sentence: typing.Union[str, typing.Literal["Don't Export"]]
+#     notes: typing.Union[str, typing.Literal["Don't Export"]]
+#     word: str
+#     image: str
+#     audio: typing.Optional[str]
+#     unspecified: str
+#     separator: str
 
 
 class TemplateEditor(QDialog):
@@ -35,16 +37,19 @@ class TemplateEditor(QDialog):
         mw: main.AnkiQt,
         parent: addonSettings.SettingsGui,
         dictionaries: typing.Optional[typing.Iterable[str]] = None,
-        toEdit: _Template = False,
+        toEdit: typing.Optional[_Template] = None,
         tName: str = "",
     ) -> None:
-        super().__init__(parent, Qt.Window)
+        super().__init__(parent, Qt.WindowType.Window)
 
+        self.new = False
         dictionaries = dictionaries or None
-        self.setMinimumSize(QSize(400, 0))
-        self.setWindowTitle("Add Export Template")
         self.settings = parent
         self.mw = mw
+
+        self.setMinimumSize(QSize(400, 0))
+        self.setWindowTitle("Add Export Template")
+
         self.templateName = QLineEdit()
         self.noteType = QComboBox()
         self.wordField = QComboBox()
@@ -65,7 +70,7 @@ class TemplateEditor(QDialog):
         self._main_layout = QVBoxLayout()
         self.notesFields = self.getNotesFields()
         self.setupLayout()
-        self.loadTemplateEditor(toEdit, tName, True)
+        self.loadTemplateEditor(toEdit, tName)
         self.initHandlers()
         self.initTooltips()
 
@@ -99,7 +104,7 @@ class TemplateEditor(QDialog):
         self.dictFieldsTable.setRowCount(0)
         self.entrySeparator.clear()
 
-    def loadTemplateEditor(self, toEdit: _Template = False, tName: str = "") -> None:
+    def loadTemplateEditor(self, toEdit: typing.Optional[_Template] = None, tName: str = "") -> None:
         self.clearTemplateEditor()
 
         self.loadDictionaries()
@@ -160,20 +165,23 @@ class TemplateEditor(QDialog):
         if self.new and tn in curGroups:
             miInfo('A new export template must have a unique name.', level='wrn')
             return
-        exportTemplate = {
-        'noteType' : self.noteType.currentText(),
-        'sentence' : self.sentenceField.currentText(),
-        'secondary' : self.secondaryField.currentText(),
-        'notes' : self.notesField.currentText(),
-        'word' : self.wordField.currentText(),
-        'image' : self.imageField.currentText(),
-        'audio' :   self.audioField.currentText(),
-        'unspecified' : self.otherDictsField.currentText(),
-        'specific' : self.getSpecificDictFields(),
-        'separator' : self.entrySeparator.text()
+        exportTemplate: typer.ExportTemplate = {
+            'noteType' : self.noteType.currentText(),
+            'sentence' : self.sentenceField.currentText(),
+            'secondary' : self.secondaryField.currentText(),
+            'notes' : self.notesField.currentText(),
+            'word' : self.wordField.currentText(),
+            'image' : self.imageField.currentText(),
+            'audio' :   self.audioField.currentText(),
+            'unspecified' : self.otherDictsField.currentText(),
+            'specific' : self.getSpecificDictFields(),
+            'separator' : self.entrySeparator.text()
         }
         curGroups[tn] = exportTemplate
-        self.mw.addonManager.writeConfig(__name__, newConfig)
+        self.mw.addonManager.writeConfig(
+            __name__,
+            typing.cast(dict[typing.Any, typing.Any], newConfig),
+        )
         self.settings.loadTemplateTable()
         self.hide()
 
@@ -183,7 +191,7 @@ class TemplateEditor(QDialog):
     def getDictFieldsTable(self) -> QTableWidget:
         dictFields = QTableWidget()
         dictFields.setColumnCount(3)
-        tableHeader = dictFields.horizontalHeader()
+        tableHeader = _verify(dictFields.horizontalHeader())
         tableHeader.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         tableHeader.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         tableHeader.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
@@ -203,7 +211,7 @@ class TemplateEditor(QDialog):
 
     def notInTable(self, dictName: str) -> bool:
         for i in range(self.dictFieldsTable.rowCount()):
-            if self.dictFieldsTable.item(i, 0).text() == dictName:
+            if _verify(self.dictFieldsTable.item(i, 0)).text() == dictName:
                 return False
         return True
 
@@ -356,3 +364,10 @@ class TemplateEditor(QDialog):
 
         # TODO: @ColinKennedy - why would this line be needed?
         self.setLayout(self._main_layout)
+
+
+def _verify(item: typing.Optional[T]) -> T:
+    if item is not None:
+        return item
+
+    raise ValueError("Item cannot be None.")

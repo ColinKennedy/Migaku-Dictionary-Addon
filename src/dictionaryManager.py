@@ -461,7 +461,11 @@ class DictionaryManagerWidget(QWidget):
 
 addon_path = os.path.dirname(__file__)
 
-def importDict(lang_name: str, path: str, dict_name: str) -> None:
+def importDict(
+    lang_name: str,
+    path: typing.Union[os.PathLike, str],
+    dict_name: str,
+) -> None:
     db = dictdb.get()
 
     # Load ZIP file

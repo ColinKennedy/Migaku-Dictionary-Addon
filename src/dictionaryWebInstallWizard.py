@@ -151,28 +151,31 @@ class DictionarySelectPage(MiWizardPage):
         options_lyt.addStretch()
 
 
-    def on_show(self, is_next, is_back):
+    def on_show(self, is_next: bool) -> None:
         if is_next:
             self.setup_entries()
 
 
-    def on_next(self):
+    def on_next(self) -> bool:
 
         dictionaries_to_install: list[typer.DictionaryLanguageIndex] = []
 
-        dict_root = self.dict_tree.invisibleRootItem()
+        dict_root = _verify(self.dict_tree.invisibleRootItem())
 
         for li in range(dict_root.childCount()):
-            lang_item = dict_root.child(li)
+            lang_item = _verify(dict_root.child(li))
             language = typing.cast(
                 typing.Optional[typer.DictionaryLanguageIndex],
                 lang_item.data(0, Qt.ItemDataRole.UserRole+0),
             )
+            if not language:
+                raise RuntimeError(f'Language "{lang_item}" has no language index.')
+
             dictionaries: list[typer.IndexDictionary] = []
 
-            def scan_tree(item):
+            def scan_tree(item: QTreeWidgetItem) -> None:
                 for di in range(item.childCount()):
-                    dict_item = item.child(di)
+                    dict_item = _verify(item.child(di))
                     dictionary = typing.cast(
                         typing.Optional[typer.IndexDictionary],
                         dict_item.data(0, Qt.ItemDataRole.UserRole+1),
@@ -223,7 +226,10 @@ class DictionarySelectPage(MiWizardPage):
 
             self.dict_tree.addTopLevelItem(lang_item)
 
-            def load_dict_list(dict_list, parent_item):
+            def load_dict_list(
+                dictionaries: typing.Iterable[typer.DictionaryLanguagePair],
+                parent_item: QTreeWidgetItem,
+            ) -> None:
                 for dictionary in dictionaries:
                     dictionary_name = dictionary.get('name')
                     if not dictionary_name:
@@ -231,7 +237,7 @@ class DictionarySelectPage(MiWizardPage):
 
                     dictionary_text = dictionary_name
 
-                    dictionary_description = dictionary.get('description')
+                    dictionary_description = dictionary['description']
                     if dictionary_description:
                         dictionary_text += ' - ' + dictionary_description
 
@@ -291,7 +297,7 @@ class DictionaryConfirmPage(MiWizardPage):
         lyt.addWidget(self.box)
 
 
-    def on_show(self, is_next: bool, is_prev: bool) -> None:
+    def on_show(self, is_next: bool) -> None:
         install_index = self.wizard.dictionary_install_index
         install_freq = self.wizard.dictionary_install_frequency
         install_conj = self.wizard.dictionary_install_conjugation
@@ -331,7 +337,7 @@ class DictionaryConfirmPage(MiWizardPage):
                     if 'conjugation_url' in language:
                         txt += '<li>Installing conjugation data</li>'
                     else:
-                        txt += '<li><b>No conjugation data available</b></li>'                
+                        txt += '<li><b>No conjugation data available</b></li>'
 
                 for dictionary in language.get('dictionaries', []):
                     txt += '<li>'
@@ -358,7 +364,7 @@ class DictionaryInstallPage(MiWizardPage):
         def __init__(
             self,
             server_root: str,
-            install_index: typing.Sequence[str],
+            install_index: typing.Sequence[typer.InstallLanguage],
             install_freq: bool,
             install_conj: bool,
             force_lang: typing.Optional[str]=None,
@@ -457,7 +463,7 @@ class DictionaryInstallPage(MiWizardPage):
                     if self.cancel_requested:
                         return
 
-                    dname = d.get('name')
+                    dname = d['name']
                     durl = self.construct_url(d.get('url'))
 
                     self.log_update.emit('Installing %s...' % dname)
@@ -516,7 +522,7 @@ class DictionaryInstallPage(MiWizardPage):
         self.install_thread: typing.Optional[InstallThread] = None
 
 
-    def on_show(self, is_next: bool, is_back: bool) -> None:
+    def on_show(self, is_next: bool) -> None:
         if not is_next:
             _LOGGER.warn("Nothing to show next.")
 
@@ -531,12 +537,11 @@ class DictionaryInstallPage(MiWizardPage):
 
     def on_cancel(self) -> bool:
         if self.install_thread and self.install_thread.isRunning():
-            dlg = QMessageBox(QMessageBox.Question, 'Migaku Dictioanry',
+            r = QMessageBox.question(self, 'Migaku Dictioanry',
                               'Do you really want to cancel the import process?',
-                              QMessageBox.Yes | QMessageBox.No, self)
-            r = dlg.exec_()
+                              QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
 
-            if r != QMessageBox.Yes:
+            if r != QMessageBox.StandardButton.Yes:
                 return False
 
             self.install_thread.cancel_requested = True
@@ -565,6 +570,12 @@ class DictionaryInstallPage(MiWizardPage):
             return
 
         server_root = self.wizard.dictionary_server_root
+
+        if not server_root:
+            raise RuntimeError(
+                f'Wizard "{self.wizard}" needs a server, cannot start a thread.'
+            )
+
         install_index = self.wizard.dictionary_install_index
         install_freq = self.wizard.dictionary_install_frequency
         install_conj = self.wizard.dictionary_install_conjugation

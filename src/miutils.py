@@ -34,8 +34,10 @@ def miInfo(
         title = "Migaku Dictionary Error"
     else:
         title = "Migaku Dictionary"
-    if parent is False:
+
+    if not parent:
         parent = aqt.mw.app.activeWindow() or aqt.mw
+
     icon = QIcon(join(addon_path, 'icons', 'migaku.png'))
     mb = QMessageBox(parent)
     if not day:
@@ -43,11 +45,11 @@ def miInfo(
     mb.setText(text)
     mb.setWindowIcon(icon)
     mb.setWindowTitle(title)
-    b = mb.addButton(QMessageBox.StandardButton.Ok)
+    b = _verify(mb.addButton(QMessageBox.StandardButton.Ok))
     b.setFixedSize(100, 30)
     b.setDefault(True)
 
-    return mb.exec_()
+    return mb.exec()
 
 
 def miAsk(text: str, parent: typing.Optional[QWidget]=None, day: bool=True, customText: str = "") -> bool:
@@ -72,6 +74,6 @@ def miAsk(text: str, parent: typing.Optional[QWidget]=None, day: bool=True, cust
         msg.setStyleSheet(" QMessageBox {background-color: #272828;}")
 
     msg.setWindowIcon(icon)
-    msg.exec_()
+    msg.exec()
 
     return msg.clickedButton() == b

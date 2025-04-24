@@ -28,7 +28,7 @@ class MiWizardPage(QWidget):
         self.cancel_enabled = True
         self.cancel_visible = True
 
-    def on_show(self, is_next: bool, is_back: bool) -> None:
+    def on_show(self, is_next: bool) -> None:
         pass
 
     def on_hide(self, is_next: bool, is_back: bool) -> None:
@@ -170,7 +170,7 @@ class MiWizard(QDialog):
             self._current_page.hide()
         self._current_page = page
 
-        page.on_show(is_next, is_back)
+        page.on_show(is_next)
 
         self.refresh_states()
 
