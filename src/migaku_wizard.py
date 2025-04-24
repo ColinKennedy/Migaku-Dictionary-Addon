@@ -5,13 +5,16 @@ from PyQt6.QtWidgets import QSizePolicy, QLayout
 from PyQt6.QtGui import QPalette
 
 
+T = typing.TypeVar("T", bound=MiWizard)
+
+
 # TODO: @ColinKennedy - What is all this? An abstract class without using ``abc``?
-class MiWizardPage(QWidget):
+class MiWizardPage(typing.Generic[T], QWidget):
 
     def __init__(self, parent: typing.Optional[QWidget]=None) -> None:
         super().__init__(parent)
 
-        self.wizard: typing.Optional[MiWizardPage] = None
+        self.wizard: typing.Optional[T] = None
         self.title = None
         self.subtitle = None
         self.pixmap = None

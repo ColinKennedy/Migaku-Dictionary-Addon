@@ -11,7 +11,6 @@ from aqt.qt import *
 import aqt
 
 from . import migaku_wizard
-from .migaku_wizard import *
 from . import webConfig
 
 from . import dictdb, typer
@@ -36,10 +35,14 @@ class DictionaryWebInstallWizard(migaku_wizard.MiWizard):
 
     INITIAL_SIZE = (600, 400)
 
-    def __init__(self, force_lang: typing.Optional[str]=None, parent: typing.Optional[QWidget]=None) -> None:
+    def __init__(
+        self,
+        force_lang: typing.Optional[str]=None,
+        parent: typing.Optional[QWidget]=None,
+    ) -> None:
         super().__init__(parent)
 
-        self.dictionary_install_index: list[typer.DictionaryLanguageIndex] = []
+        self.dictionary_install_index: list[typer.InstallLanguage] = []
         self.dictionary_install_frequency = False
         self.dictionary_install_conjugation = False
         self.dictionary_force_lang = force_lang
@@ -63,11 +66,10 @@ class DictionaryWebInstallWizard(migaku_wizard.MiWizard):
 
 
 
-class ServerAskPage(MiWizardPage):
+class ServerAskPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard]):
 
     def __init__(self, wizard: DictionaryWebInstallWizard) -> None:
         super(ServerAskPage, self).__init__(wizard)
-        self.wizard: DictionaryWebInstallWizard = wizard
 
         self.title = 'Select Dictionary Server'
 
@@ -104,6 +106,9 @@ class ServerAskPage(MiWizardPage):
 
 
     def on_next(self) -> bool:
+        if not self.wizard:
+            raise RuntimeError("No Wizard is defined. Cannot call on_next.")
+
         server_url_usr = self.server_line.text().strip()
         server_url = webConfig.normalize_url(server_url_usr)
 
@@ -122,11 +127,10 @@ class ServerAskPage(MiWizardPage):
 
 
 
-class DictionarySelectPage(MiWizardPage):
+class DictionarySelectPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard]):
 
     def __init__(self, wizard: DictionaryWebInstallWizard) -> None:
         super(DictionarySelectPage, self).__init__(wizard)
-        self.wizard: DictionaryWebInstallWizard = wizard
 
         self.title = 'Select the dictionaries you want to install'
 
@@ -194,6 +198,9 @@ class DictionarySelectPage(MiWizardPage):
                 lang_w_enabled_dicts['dictionaries'] = dictionaries
                 dictionaries_to_install.append(lang_w_enabled_dicts)
 
+        if not self.wizard:
+            raise RuntimeError("No Wizard is defined. Cannot call on_next.")
+
         self.wizard.dictionary_install_index = dictionaries_to_install
         self.wizard.dictionary_install_frequency = self.install_freq.isChecked()
         self.wizard.dictionary_install_conjugation = self.install_conj.isChecked()
@@ -203,6 +210,8 @@ class DictionarySelectPage(MiWizardPage):
 
     # TODO: Add whitelist functionality so only limited amount is displayed based on user target language, native language, etc
     def setup_entries(self) -> None:
+        if not self.wizard:
+            raise RuntimeError("No Wizard is defined. Cannot call setup_entries.")
 
         self.dict_tree.clear()
 
@@ -272,7 +281,7 @@ class DictionarySelectPage(MiWizardPage):
             load_dict_list(dictionaries, lang_item)
 
 
-class DictionaryConfirmPage(MiWizardPage):
+class DictionaryConfirmPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard]):
 
     def __init__(
         self,
@@ -281,7 +290,6 @@ class DictionaryConfirmPage(MiWizardPage):
     ) -> None:
         super(DictionaryConfirmPage, self).__init__(wizard)
 
-        self.wizard: DictionaryWebInstallWizard = wizard
         self.can_select_none = can_select_none
 
         self.title = 'Confirm selected dictionaries'
@@ -298,6 +306,9 @@ class DictionaryConfirmPage(MiWizardPage):
 
 
     def on_show(self, is_next: bool) -> None:
+        if not self.wizard:
+            raise RuntimeError("No Wizard is defined. Cannot call on_show.")
+
         install_index = self.wizard.dictionary_install_index
         install_freq = self.wizard.dictionary_install_frequency
         install_conj = self.wizard.dictionary_install_conjugation
@@ -354,10 +365,9 @@ class DictionaryConfirmPage(MiWizardPage):
         self.refresh_wizard_states()
 
 
-class DictionaryInstallPage(MiWizardPage):
+class DictionaryInstallPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard]):
     def __init__(self, wizard: DictionaryWebInstallWizard, is_last_page: bool=True) -> None:
         super().__init__(wizard)
-        self.wizard: DictionaryWebInstallWizard = wizard
         self.is_last_page = is_last_page
 
         self.title = 'Installing selected dictionaries...'
@@ -431,6 +441,9 @@ class DictionaryInstallPage(MiWizardPage):
         if self.install_thread:
             return
 
+        if not self.wizard:
+            raise RuntimeError("No Wizard is defined. Cannot call start_thread.")
+
         server_root = self.wizard.dictionary_server_root
 
         if not server_root:
@@ -499,8 +512,8 @@ class InstallThread(QThread):
         def update_dict_progress(amt: typing.Union[float, int]) -> None:
             progress = 0
             if num_dicts > 0:
-                progress = num_installed / num_dicts
-                progress += amt // num_dicts
+                progress = num_installed // num_dicts
+                progress += int(amt // num_dicts)
             progress_percent = round(progress * 100)
             self.progress_update.emit(progress_percent)
 
@@ -568,7 +581,7 @@ class InstallThread(QThread):
                     return
 
                 dname = d['name']
-                durl = self.construct_url(d.get('url'))
+                durl = self.construct_url(d['url'])
 
                 self.log_update.emit('Installing %s...' % dname)
 
