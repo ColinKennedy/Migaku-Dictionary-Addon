@@ -44,7 +44,7 @@ import ntpath
 from .miutils import miInfo
 from PyQt6.QtSvgWidgets import QSvgWidget
 
-from . import migaku_settings, typer, welcomer
+from . import migaku_configuration, migaku_settings, typer, welcomer
 
 
 _CURRENT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
@@ -506,7 +506,7 @@ class MIDict(AnkiWebView):
         image = image.scaled(
             QSize(self.maxW,self.maxH),
             Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.AspectRatioMode.SmoothTransformation,
+            Qt.TransformationMode.SmoothTransformation,
         )
         image.save(filename)
 
@@ -520,7 +520,7 @@ class MIDict(AnkiWebView):
         vLayout.addLayout(hLayout)
         for idx, path in enumerate(paths):
             image = QPixmap(path)
-            image = image.scaled(QSize(50,50), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            image = image.scaled(QSize(50,50), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
             label = QLabel('')
             label.setPixmap(image)
             label.setFixedSize(40,40)
@@ -888,7 +888,13 @@ class ClipThread(QObject):
         self.keyboard = keyboard
         self.addonPath = path
         self.mw = mw
-        self.config = self.mw.addonManager.getConfig(__name__)
+
+        configuration = self.mw.addonManager.getConfig(__name__)
+
+        if not configuration:
+            raise EnvironmentError(f'Unable to load a configuration for "{__name__}".')
+
+        self.config = configuration
 
     def on_press(self,key: list[str]) -> None:
         self.test.emit([key])
@@ -997,8 +1003,8 @@ class ClipThread(QObject):
         image = QImage(imageTempPath)
         image = image.scaled(
             QSize(configuration['maxWidth'], configuration['maxHeight']),
-            Qt.KeepAspectRatio,
-            Qt.SmoothTransformation,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
         )
         image.save(path)
 
@@ -1039,9 +1045,19 @@ class ClipThread(QObject):
         self.pageRefreshDuringBulkMediaImport.emit()
 
     def handleImageExport(self) -> None:
+        # TODO: @ColinKennedy - Invert this if statement later
         if self.checkDict():
-            mime = self.mw.app.clipboard().mimeData()
-            clip = self.mw.app.clipboard().text()
+            clipboard = self.mw.app.clipboard()
+
+            if not clipboard:
+                raise RuntimeError("No clipboard data was found.")
+
+            mime = clipboard.mimeData()
+
+            if not mime:
+                raise RuntimeError("No MIME data was found.")
+
+            clip = clipboard.text()
 
             if not clip.endswith('.mp3') and mime.hasImage():
                 image = mime.imageData()
@@ -1049,7 +1065,11 @@ class ClipThread(QObject):
                 fullpath = join(self.addonPath, 'temp', filename)
                 maxW = max(self.config['maxWidth'], image.width())
                 maxH = max(self.config['maxHeight'], image.height())
-                image = image.scaled(QSize(maxW, maxH), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                image = image.scaled(
+                    QSize(maxW, maxH),
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
                 image.save(fullpath)
                 self.image.emit([fullpath, filename])
             elif clip.endswith('.mp3'):
@@ -1064,8 +1084,14 @@ class ClipThread(QObject):
 
                             return
 
+                        data = clipboard.mimeData()
+
+                        if not data:
+                            # TODO: @ColinKennedy - Add logging
+                            return
+
                         try:
-                            clip = str(clipboard.mimeData().urls()[0].url())
+                            clip = str(data.urls()[0].url())
                         except:
                             return
 
@@ -1077,12 +1103,15 @@ class ClipThread(QObject):
                             else:
                                 path = clip.replace('file:///', '', 1)
                             temp, mp3 = self.moveAudioToTempFolder(path)
-                            if mp3:
+                            if temp and mp3:
                                 self.image.emit([temp, '[sound:' + mp3 + ']', mp3])
                         except:
                             return
 
-    def moveAudioToTempFolder(self, path: str) -> tuple[bool, bool]:
+    def moveAudioToTempFolder(
+        self,
+        path: str,
+    ) -> tuple[typing.Optional[str], typing.Optional[str]]:
         # TODO: @ColinKennedy - remove try/except
         try:
             if exists(path):
@@ -1090,10 +1119,10 @@ class ClipThread(QObject):
                 destpath = join(self.addonPath, 'temp', filename)
                 if not exists(destpath):
                     copyfile(path, destpath)
-                    return destpath, filename;
-            return False, False;
+                    return destpath, filename
+            return None, None
         except:
-            return False, False;
+            return None, None
 
     def handleSentenceExport(self) -> None:
         if not self.checkDict():
@@ -1117,7 +1146,7 @@ class DictInterface(QWidget):
         path: str,
         welcome: str,
         parent: typing.Optional[QWidget]=None,
-        terms: typing.Optional[list[str]] = False,
+        terms: typing.Optional[list[str]] = None,
     ):
         super().__init__(parent)
         self.db = dictdb
@@ -1178,7 +1207,7 @@ class DictInterface(QWidget):
     def startUp(self, terms: list[str]) -> None:
         terms = self.refineToValidSearchTerms(terms)
         willSearch = False
-        if terms is not False:
+        if terms:
             willSearch = True
         self.allGroups = self.getAllGroups()
         self.config = self.getConfig()
@@ -1296,7 +1325,7 @@ class DictInterface(QWidget):
     def getAllGroups(self) -> typer.DictionaryGroup:
         return {
             'dictionaries': self.db.getAllDictsWithLang(),
-            'customFont': bool,
+            'customFont': False,
             'font': "",
         }
 
@@ -1382,7 +1411,7 @@ class DictInterface(QWidget):
             self.dict.addWindow.scrollArea.deleteLater()
         self.currentTarget.setText('')
         self.dict.currentEditor = False
-        self.dict.reviewer = False
+        self.dict.reviewer = None
         self.mainLayout.replaceWidget(self.dict, newDict)
         self.dict.close()
         self.dict.deleteLater()
@@ -1704,7 +1733,7 @@ class DictInterface(QWidget):
 
     def setupDictGroups(self, dictGroups: typing.Optional[QComboBox]=None) -> QComboBox:
 
-        def _get_item(model: qt.QAbstractItemModel, index: int) -> QComboBoxItem:
+        def _get_item(model: qt.QStandardItemModel, index: int) -> QStandardItem:
             item = model.item(index)
 
             if item:
@@ -1723,6 +1752,12 @@ class DictInterface(QWidget):
 
         if not model:
             raise RuntimeError("No dictionary group model could be found.")
+
+        if not isinstance(model, qt.QStandardItemModel):
+            raise RuntimeError(
+                f'Expected QAbstractItemModel, from "{dictGroups}" '
+                f'but got "{model}" instead.',
+            )
 
         get_item = functools.partial(_get_item, model)
 

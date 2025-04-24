@@ -90,7 +90,6 @@ class DictionaryConfiguration(typing.TypedDict):
 
 
 class DictionaryLanguagePair(typing.TypedDict):
-    description: typing.Optional[str]
     dict: str
     lang: str  # TODO: @ColinKennedy this type may not be right
 

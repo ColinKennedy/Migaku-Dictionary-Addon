@@ -463,7 +463,7 @@ addon_path = os.path.dirname(__file__)
 
 def importDict(
     lang_name: str,
-    path: typing.Union[os.PathLike, str],
+    path: typing.Union[io.BytesIO, os.PathLike, str],
     dict_name: str,
 ) -> None:
     db = dictdb.get()

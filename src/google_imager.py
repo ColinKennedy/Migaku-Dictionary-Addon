@@ -37,7 +37,7 @@ def _download_image(
         file = urlopen(req).read()
         image = aqt.QImage()
         image.loadFromData(file)
-        image = image.scaled(aqt.QSize(maxW,maxH), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        image = image.scaled(aqt.QSize(maxW,maxH), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
         image.save(filename)
         return '<img src="' + filename + '">'
     except:

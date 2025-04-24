@@ -447,6 +447,7 @@ class DictDB:
         self.c.execute('UPDATE dictnames SET addtype = ? WHERE dictname=?', (addType, name))
         self.commitChanges()
 
+    # TODO: @ColinKennedy update this return type
     def getFieldsSetting(self, name: str) -> None:
         self.c.execute('SELECT fields FROM dictnames WHERE dictname=?', (name, ))
 

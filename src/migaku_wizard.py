@@ -56,9 +56,9 @@ class MiWizard(QDialog):
     def __init__(self, parent: typing.Optional[QWidget]=None) -> None:
         super(MiWizard, self).__init__(parent)
 
-        self._current_page: typing.Optional[MiWizardPage] = None
-        self._page_back: dict[MiWizardPage, typing.Optional[MiWizardPage]] = {}
-        self._page_next: dict[MiWizardPage, typing.Optional[MiWizardPage]] = {}
+        self._current_page: typing.Optional[MiWizardPage[MiWizard]] = None
+        self._page_back: dict[MiWizardPage[MiWizard], typing.Optional[MiWizardPage[MiWizard]]] = {}
+        self._page_next: dict[MiWizardPage[MiWizard], typing.Optional[MiWizardPage[MiWizard]]] = {}
 
         lyt = QVBoxLayout()
         lyt.setContentsMargins(0, 0, 0, 0)
@@ -125,11 +125,11 @@ class MiWizard(QDialog):
 
     def add_page(
         self,
-        page: MiWizardPage,
-        back_page: typing.Optional[MiWizardPage]=None,
-        next_page: typing.Optional[MiWizardPage]=None,
+        page: MiWizardPage[MiWizard],
+        back_page: typing.Optional[MiWizardPage[MiWizard]]=None,
+        next_page: typing.Optional[MiWizardPage[MiWizard]]=None,
         back_populate: bool=True,
-    ) -> MiWizardPage:
+    ) -> MiWizardPage[MiWizard]:
         page.wizard = self
         page.hide()
         page_lyt = page.layout()
@@ -148,8 +148,8 @@ class MiWizard(QDialog):
 
     def set_page_back(
         self,
-        page: MiWizardPage,
-        back_page: typing.Optional[MiWizardPage],
+        page: MiWizardPage[MiWizard],
+        back_page: typing.Optional[MiWizardPage[MiWizard]],
         back_populate: bool=True,
     ) -> None:
         self._page_back[page] = back_page
@@ -159,15 +159,15 @@ class MiWizard(QDialog):
 
     def set_page_next(
         self,
-        page: MiWizardPage,
-        next_page: typing.Optional[MiWizardPage],
+        page: MiWizardPage[MiWizard],
+        next_page: typing.Optional[MiWizardPage[MiWizard]],
         back_populate: bool=True,
     ) -> None:
         self._page_next[page] = next_page
         if back_populate and next_page:
             self.set_page_back(next_page, page, back_populate=False)
 
-    def set_current_page(self, page: MiWizardPage, is_next: bool=False, is_back: bool=False) -> None:
+    def set_current_page(self, page: MiWizardPage[MiWizard], is_next: bool=False, is_back: bool=False) -> None:
         if self._current_page:
             self._current_page.on_hide(is_next, is_back)
             self._current_page.hide()

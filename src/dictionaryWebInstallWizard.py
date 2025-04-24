@@ -240,7 +240,7 @@ class DictionarySelectPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard
                 parent_item: QTreeWidgetItem,
             ) -> None:
                 for dictionary in dictionaries:
-                    dictionary_name = dictionary.get('name')
+                    dictionary_name = dictionary["name"]
                     if not dictionary_name:
                         continue
 
