@@ -84,7 +84,7 @@ class MIDict(AnkiWebView):
         self.conjugations = self.loadConjugations()
         self.deinflect = True
         self.addWindow: typing.Optional[CardExporter] = None
-        self.currentEditor = False
+        self.currentEditor: typing.Optional[Editor] = None
         self.reviewer: typing.Optional[Reviewer] = None
         self.threadpool = QThreadPool()
         self.customFontsLoaded = []
@@ -532,7 +532,7 @@ class MIDict(AnkiWebView):
         thumbCase.setLayout(vLayout)
         return thumbCase
 
-    def addDefToExportWindow(self, dictName: str, word: str) -> None:
+    def addDefToExportWindow(self, dictName: str, word: str, text: str) -> None:
         self.initCardExporterIfNeeded()
 
         if self.addWindow:
@@ -673,7 +673,13 @@ class MIDict(AnkiWebView):
                 tFields = self.config['ForvoFields']
                 addType =  self.config['ForvoAddType']
             else:
-                tFields, addType = self.db.getAddTypeAndFields(name)
+                result = self.db.getAddTypeAndFields(name)
+
+                if not result:
+                    raise RuntimeError(f'Unable to get fields for "{name}" dictionary.')
+
+                tFields, addType = result
+
             note = self.reviewer.card.note()
             model = note.model()
             fields = model['flds']
@@ -684,7 +690,12 @@ class MIDict(AnkiWebView):
                     if newField is not False:
                         changed = True
                         if self.jSend:
-                            note[field['name']] = self.dictInt.jHandler.attemptFieldGenerate(newField, field['name'], model['name'], note)
+                            note[field['name']] = self.dictInt.jHandler.attemptFieldGenerate(
+                                newField,
+                                field['name'],
+                                model['name'],
+                                note,
+                            )
                         else:
                             note[field['name']] =  newField
             if not changed:
@@ -706,7 +717,12 @@ class MIDict(AnkiWebView):
                 tFields = self.config['ForvoFields']
                 addType = self.config['ForvoAddType']
             else:
-                tFields, addType = self.db.getAddTypeAndFields(name)
+                result = self.db.getAddTypeAndFields(name)
+
+                if not result:
+                    raise RuntimeError(f'Unable to get fields for "{name}" dictionary.')
+
+                tFields, addType = result
 
             note = self.currentEditor.note
 
@@ -738,6 +754,10 @@ class MIDict(AnkiWebView):
             addType = self.config['ForvoAddType']
         else:
             addType = self.db.getAddType(dictName)
+
+            if not addType:
+                raise RuntimeError(f'Dictionary "{dictName}" has no adder-type.')
+
         tooltip = ''
         if self.config['tooltips']:
             tooltip = ' title="This determines the conditions for sending a definition (or a Google Image) to a field. Overwrite the target field\'s content. Add to the target field\'s current contents. Only add definitions to the target field if it is empty."'
@@ -789,7 +809,7 @@ class MIDict(AnkiWebView):
             self.getCheckBoxes(dictName, selF) +'</div>')
         return select
 
-    def getCheckBoxes(self, dictName: str, selF) -> str:
+    def getCheckBoxes(self, dictName: str, selF: typing.Sequence[str]) -> str:
         fields = self.getFieldNames()
         options = '<div class="fieldCheckboxes"  data-dictname="' + dictName + '">'
 
@@ -825,7 +845,7 @@ class MIDict(AnkiWebView):
 
     def setReviewer(self, reviewer: Reviewer) -> None:
         self.reviewer = reviewer
-        self.currentEditor = False
+        self.currentEditor = None
         self.dictInt.currentTarget.setText('Reviewer')
 
     def checkEditorClose(self, editor: Editor) -> None:
@@ -834,7 +854,7 @@ class MIDict(AnkiWebView):
 
     def closeEditor(self) -> None:
         self.reviewer = None
-        self.currentEditor = False
+        self.currentEditor = None
         self.dictInt.currentTarget.setText('')
 
 class HoverButton(QPushButton):

@@ -1,8 +1,10 @@
+import re
 import typing
 
 from anki import notes as notes_
+from aqt import mw
 
-from . import google_imager, migaku_forvo, typer
+from . import dictdb, google_imager, migaku_forvo, typer
 
 
 def _getTermHeaderText(th: str, entry: typer.DictionaryResult, fb: str, bb: str) -> str:

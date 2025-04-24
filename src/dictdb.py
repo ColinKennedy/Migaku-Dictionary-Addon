@@ -16,7 +16,11 @@ from aqt import mw
 
 
 _INSTANCE: typing.Optional[DictDB] = None
-AddType = typing.Union[typing.Literal["add"], typing.Literal["no"]]
+AddType = typing.Union[
+    typing.Literal["add"],
+    typing.Literal["no"],
+    typing.Literal["overwrite"],
+]
 
 
 class _Conjugation(typing.TypedDict):

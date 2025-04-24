@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
 from anki.notes import Note
-from aqt import mw as mw_
+from aqt import main
 from aqt.utils import  showInfo
 
 class miJHandler:
 
-	def __init__(self, mw: mw_) -> None:
+	def __init__(self, mw: main.AnkiQt) -> None:
 		super().__init__()
 
 		self.mw = mw
@@ -14,10 +14,11 @@ class miJHandler:
 
 	def getActiveNotes(self) -> dict[str, list[str]]:
 		if not hasattr(self.mw,'CSSJSHandler'):
-			# TODO: @ColinKennedy add logging
+			# TODO: @ColinKennedy - add logging
 			return {}
 
 		activeNotes, _ = self.mw.CSSJSHandler.getWrapperDict()
+
 		for noteType in activeNotes:
 			activeNotes[noteType] = list(dict.fromkeys([item[1] for item in activeNotes[noteType]]))
 
@@ -26,7 +27,8 @@ class miJHandler:
 	def attemptGenerate(self, note: Note) -> Note:
 		if self.activeNotes:
 			model = note.model()
-			fields = self.mw.col.models.fieldNames(model)
+			fields = self.mw.col.models.field_names(model)
+
 			if model['name'] in self.activeNotes:
 				for field in fields:
 					if field in self.activeNotes[model['name']] and note[field] != '':
