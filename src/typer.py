@@ -113,6 +113,7 @@ class DictionaryResult(typing.TypedDict):
     starCount: str
 
 
+# TODO: @ColinKennedy - Rename this classes later
 # TODO: @ColinKennedy - DictionaryFrequencyResult might actually be DictionaryResult
 class DictionaryFrequencyResult(typing.TypedDict):
     term: str
@@ -132,6 +133,20 @@ class DictionaryLanguageIndex(typing.TypedDict):
     name_native: str
     to_languages: typing.Optional[typing.Sequence[DictionaryLanguageIndex]]
     dictionaries: typing.Sequence[IndexDictionary]
+
+
+class DictionaryLanguageIndex2Pack(typing.TypedDict):
+    # TODO: @ColinKennedy - Check if these key / values work
+    languages: typing.Optional[typing.Sequence[DictionaryLanguageIndex2Index]]
+
+
+class DictionaryLanguageIndex2Index(typing.TypedDict):
+    # TODO: @ColinKennedy - Can we merge this class with `DictionaryLanguageIndex`
+    code: str
+    frequency_url: str
+    name_en: str
+    name_native: str
+    to_languages: typing.Optional[typing.Sequence[DictionaryLanguageIndex]]
 
 
 class ExportTemplate(typing.TypedDict):

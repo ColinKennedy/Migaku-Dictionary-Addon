@@ -1,8 +1,56 @@
+from __future__ import annotations
+
 import typing
 
 from aqt.qt import *
 from PyQt6.QtWidgets import QSizePolicy, QLayout
 from PyQt6.QtGui import QPalette
+
+
+T = typing.TypeVar("T")
+
+
+# TODO: @ColinKennedy - What is all this? An abstract class without using ``abc``?
+class MiWizardPage(typing.Generic[T], QWidget):
+
+    def __init__(self, parent: typing.Optional[QWidget]=None) -> None:
+        super().__init__(parent)
+
+        self.wizard: typing.Optional[T] = None
+        self.title = None
+        self.subtitle = None
+        self.pixmap = None
+
+        self.back_text = '< Back'
+        self.back_enabled = True
+        self.back_visible = True
+
+        self.next_text = 'Next >'
+        self.next_enabled = True
+        self.next_visible = True
+        
+        self.cancel_text = 'Cancel'
+        self.cancel_enabled = True
+        self.cancel_visible = True
+
+    def on_show(self, is_next: bool) -> None:
+        pass
+
+    def on_hide(self, is_next: bool, is_back: bool) -> None:
+        pass
+
+    def on_back(self) -> bool:
+        return True
+
+    def on_next(self) -> bool:
+        return True
+
+    def on_cancel(self) -> bool:
+        return True
+
+    def refresh_wizard_states(self) -> None:
+        if self.wizard:
+            self.wizard.refresh_states()
 
 
 class MiWizard(QDialog):
@@ -219,49 +267,3 @@ class MiWizard(QDialog):
 
         if event:
             event.ignore()
-
-
-T = typing.TypeVar("T", bound=MiWizard)
-
-
-# TODO: @ColinKennedy - What is all this? An abstract class without using ``abc``?
-class MiWizardPage(typing.Generic[T], QWidget):
-
-    def __init__(self, parent: typing.Optional[QWidget]=None) -> None:
-        super().__init__(parent)
-
-        self.wizard: typing.Optional[T] = None
-        self.title = None
-        self.subtitle = None
-        self.pixmap = None
-
-        self.back_text = '< Back'
-        self.back_enabled = True
-        self.back_visible = True
-
-        self.next_text = 'Next >'
-        self.next_enabled = True
-        self.next_visible = True
-        
-        self.cancel_text = 'Cancel'
-        self.cancel_enabled = True
-        self.cancel_visible = True
-
-    def on_show(self, is_next: bool) -> None:
-        pass
-
-    def on_hide(self, is_next: bool, is_back: bool) -> None:
-        pass
-
-    def on_back(self) -> bool:
-        return True
-
-    def on_next(self) -> bool:
-        return True
-
-    def on_cancel(self) -> bool:
-        return True
-
-    def refresh_wizard_states(self) -> None:
-        if self.wizard:
-            self.wizard.refresh_states()

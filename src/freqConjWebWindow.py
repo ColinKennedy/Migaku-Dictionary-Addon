@@ -5,7 +5,7 @@ from enum import Enum
 from aqt.qt import *
 from anki.httpclient import HttpClient
 
-from . import webConfig
+from . import typer, webConfig
 
 addon_path = os.path.dirname(__file__)
 
@@ -22,7 +22,7 @@ class FreqConjWebWindow(QDialog):
     def __init__(
         self,
         dst_lang: str,
-        index_data: webConfig.DictionaryLanguage,
+        index_data: typer.DictionaryLanguageIndex2Pack,
         mode: Mode,
         parent: typing.Optional[QWidget]=None,
     ) -> None:
@@ -44,15 +44,31 @@ class FreqConjWebWindow(QDialog):
         self.lst = QListWidget()
         lyt.addWidget(self.lst)
 
-        for lang in index_data.get('languages', []):
-            url = lang.get(self.mode_str + '_url')
+        for lang in index_data.get('languages') or []:
+            url = lang.get(
+                typing.cast(
+                    typing.Union[
+                        typing.Literal["conjugation_url"],
+                        typing.Literal["frequency_url"],
+                    ],
+                    self.mode_str + '_url',
+                )
+            )
+
             if url is None:
                 continue
+
+            if not isinstance(url, str):
+                raise RuntimeError(f'Unexpected "{url}" data. It should be a string.')
+
             if not url.startswith('http'):
                 url = webConfig.normalize_url(webConfig.DEFAULT_SERVER + url)
+
             lang_str = lang.get('name_en', '<Unnamed>')
+
             if 'name_native' in lang:
                 lang_str += ' (' + lang['name_native'] + ')'
+
             itm = QListWidgetItem(lang_str)
             itm.setData(Qt.ItemDataRole.UserRole, url)
             self.lst.addItem(itm)
