@@ -226,7 +226,7 @@ class DictDB:
     def cleanDictName(self, name: str) -> str:
         return re.sub(r'l\d+name', '', name)
 
-    def getDuplicateSetting(self, name: str) -> typing.Optional[tuple[str, str]]:
+    def getDuplicateSetting(self, name: str) -> typing.Optional[tuple[int, str]]:
         self.c.execute('SELECT duplicateHeader, termHeader  FROM dictnames WHERE dictname=?', (name, ))
         try:
             (duplicateHeader,termHeader) = self.c.fetchone()
@@ -408,19 +408,23 @@ class DictDB:
         dN: str,
         limit: str,
         rN: str,
-    ) -> tuple[list, int, typer.DictionaryResult]:
+    ) -> tuple[list[typer.DictionaryResult], int, str]:
         duplicateHeader, termHeader = self.getDuplicateSetting(rN)
-        results = []
+        results: list[typer.DictionaryResult] = []
         columns = ['term','altterm', 'pronunciation']
+
         for col in columns:
             terms = [term]
             toQuery =  ' ' + col + ' = ? '
             termTuple = tuple(terms)
             allRs = self.executeSearch(dN, toQuery, limit, termTuple)
+
             if len(allRs) > 0:
                 for r in allRs:
                     results.append(self.resultToDict(r))
+
                 break
+
         return results,  duplicateHeader, termHeader;
 
     def cleanLT(self, text: str) -> str:

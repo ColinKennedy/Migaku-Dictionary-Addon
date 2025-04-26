@@ -15,6 +15,9 @@ import re
 from aqt.utils import openLink
 
 
+_MIGAKU_SHOULD_NOT_SHOW_MESSAGE = False
+T = typing.TypeVar("T")
+
 class _Config(typing.TypedDict):
     displayAgain: bool
 
@@ -28,15 +31,22 @@ def attemptOpenLink(cmd: str) -> None:
 addon_path = dirname(__file__)
 
 
+def _verify(value: typing.Optional[T]) -> T:
+    if value is None:
+        raise TypeError("Got empty value. Cannot continue.")
+
+    return value
+
+
 def getConfig() -> _Config:
-    return mw.addonManager.getConfig(__name__)
+    return typing.cast(_Config, mw.addonManager.getConfig(__name__))
 
 
 def saveConfiguration(newConf: dict[str, typing.Any]) -> None:
     mw.addonManager.writeConfig(__name__, newConf)
 
 # TODO: @ColinKennedy remove try/except
-def getLatestVideos(config: _Config) -> tuple[str, str]:
+def getLatestVideos() -> tuple[typing.Optional[str], typing.Optional[str]]:
     try:
         resp = req.get("https://www.youtube.com/channel/UCQFe3x4WAgm7joN5daMm5Ew/videos")
         pattern = "\{\"videoId\"\:\"(.*?)\""
@@ -58,13 +68,14 @@ def getLatestVideos(config: _Config) -> tuple[str, str]:
                 videoEmbeds.append('<div class="iframe-wrapper" style="display:inline-block"><div class="clickable-video-link" data-vid="'+ vid + '"></div><iframe width="320" height="180" src="https://www.youtube.com/embed/'+ vid + '" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>')
         return "".join(videoEmbeds), videoIds[0]
     except:
-        return False, False
+        return None, None
 
 
 def miMessage(text: str, parent: typing.Optional[QWidget]=None) -> bool:
     title = "Migaku"
-    if parent is False:
-        parent = aqt.mw.app.activeWindow() or aqt.mw
+
+    parent = parent or aqt.mw.app.activeWindow() or aqt.mw
+
     icon = QIcon(join(addon_path, 'icons', 'migaku.png'))
     mb = QMessageBox(parent)
     mb.setWindowIcon(icon)
@@ -73,15 +84,16 @@ def miMessage(text: str, parent: typing.Optional[QWidget]=None) -> bool:
     wv = AnkiWebView()
     wv._page._bridge.onCmd = attemptOpenLink
     wv.setFixedSize(680, 450)
-    wv.page().setHtml(text)
+    _verify(wv.page()).setHtml(text)
     wide = QWidget()
     wide.setFixedSize(18,18)
-    mb.layout().addWidget(wv, 0, 1)
-    mb.layout().addWidget(wide, 0, 2)
-    mb.layout().setColumnStretch(0, 3)
-    mb.layout().addWidget(cb, 1, 1)
+    layout = typing.cast(QGridLayout, _verify(mb.layout()))
+    layout.addWidget(wv, 0, 1)
+    layout.addWidget(wide, 0, 2)
+    layout.setColumnStretch(0, 3)
+    layout.addWidget(cb, 1, 1)
     
-    b = mb.addButton(QMessageBox.StandardButton.Ok)
+    b = _verify(mb.addButton(QMessageBox.StandardButton.Ok))
     b.setFixedSize(100, 30)
     b.setDefault(True)
     mb.exec()
@@ -165,26 +177,28 @@ migakuMessage = '''
 
 def disableMessage(config: _Config) -> None:
     config["displayAgain"] = False
-    saveConfiguration(config)
-    mw.MigakuShouldNotShowMessage = True
+    saveConfiguration(typing.cast(dict[str, typing.Any], config))
+    _MIGAKU_SHOULD_NOT_SHOW_MESSAGE = True
 
 def displayMessageMaybeDisableMessage(content: str, config: _Config) -> None:
     if miMessage(migakuMessage%content):
         disableMessage(config)
      
 def attemptShowMigakuBrandUpdateMessage() -> None:
+    global _MIGAKU_SHOULD_NOT_SHOW_MESSAGE
+
     config = getConfig()
     shouldShow = config["displayAgain"]
-    if shouldShow and not hasattr(mw, "MigakuShouldNotShowMessage"):
-        videoIds,videoId = getLatestVideos(config)
+    if shouldShow and not _MIGAKU_SHOULD_NOT_SHOW_MESSAGE:
+        videoIds,videoId = getLatestVideos()
         if videoIds:
             displayMessageMaybeDisableMessage(videoIds, config)
         else:
             displayMessageMaybeDisableMessage("", config)
-    elif shouldShow and hasattr(mw, "MigakuShouldNotShowMessage"):
+    elif shouldShow and _MIGAKU_SHOULD_NOT_SHOW_MESSAGE:
         disableMessage(config)
     else:
-        mw.MigakuShouldNotShowMessage = True
+        _MIGAKU_SHOULD_NOT_SHOW_MESSAGE = True
 
 
 addHook("profileLoaded", attemptShowMigakuBrandUpdateMessage)

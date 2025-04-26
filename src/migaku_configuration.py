@@ -5,16 +5,13 @@ from aqt import mw
 from . import typer
 
 
-_NAMESPACE = __name__
 _INSTANCE: typing.Optional[typer.Configuration] = None
 
 
 def initialize_by_namespace() -> None:
     global _INSTANCE
 
-    _INSTANCE = mw.addonManager.getConfig(_NAMESPACE)
-
-    return _INSTANCE
+    _INSTANCE = typing.cast(typer.Configuration, mw.addonManager.getConfig(__name__))
 
 
 def get() -> typer.Configuration:
