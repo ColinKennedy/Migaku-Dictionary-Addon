@@ -153,8 +153,8 @@ class Forvo(QRunnable):
         # TODO: @ColinKennedy remove False?
         return False
 
-    # TODO: @ColinKennedy - Make a more specific type-hint
-    def generateURLS(self, results):
+    # TODO: @ColinKennedy - Make a more specific type-hint instead of a hard-coded tuple
+    def generateURLS(self, results: str) -> list[tuple[str, str, str, str]]:
         audio = re.findall(r'var pronunciations = \[([\w\W\n]*?)\];', results)
         if not audio:
             return []

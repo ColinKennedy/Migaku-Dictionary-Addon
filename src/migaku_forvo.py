@@ -1,7 +1,9 @@
 import logging
+import time
 import typing
 
 from aqt import mw, gui_hooks
+from os.path import join
 from urllib.request import Request, urlopen
 
 from .forvodl import Forvo
@@ -13,10 +15,16 @@ _INSTANCE: typing.Optional[Forvo] = None
 
 def _initialize() -> None:
     global _INSTANCE
-    _INSTANCE = Forvo(mw.addonManager.getConfig(__name__)['ForvoLanguage'])
+
+    configuration = mw.addonManager.getConfig(__name__)
+
+    if not configuration:
+        raise RuntimeError(f'Configuration "{__name__}" is not defined.')
+
+    _INSTANCE = Forvo(configuration['ForvoLanguage'])
 
 
-def _download_audio(urls: typing.Iterable[str], count: int) -> list[str]:
+def _download_audio(urls: list[tuple[str, str, str, str]], count: int) -> list[str]:
     tags: list[str] = []
 
     for url in urls:
@@ -56,8 +64,12 @@ def _download_audio(urls: typing.Iterable[str], count: int) -> list[str]:
 
 
 def export_audio(term: str, count: int, lang: str) -> str:
+    global _INSTANCE
+
     if not _INSTANCE:
         _initialize()
+
+    _INSTANCE = typing.cast(Forvo, _INSTANCE)
 
     audioSeparator = ''
     urls = _INSTANCE.search(term, lang)

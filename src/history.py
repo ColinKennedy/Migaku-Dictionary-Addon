@@ -21,7 +21,7 @@ class HistoryModel(QAbstractTableModel):
     # TODO: @ColinKennedy fix the cyclic dependency (midict -> history -> midict.DictInterface) later
     def __init__(
         self,
-        history: typing.Sequence[list[str]],
+        history: list[list[str]],
         parent: "midict.DictInterface",
     ) -> None:
         super().__init__(parent)
@@ -30,19 +30,24 @@ class HistoryModel(QAbstractTableModel):
         self.dictInt = parent
         self.justTerms = [item[0] for item in history]
 
-    def rowCount(self, index: QModelIndex=QModelIndex()) -> None:
+    def rowCount(self, index: QModelIndex=QModelIndex()) -> int:
         return len(self.history)
 
     def columnCount(self, index: QModelIndex=QModelIndex()) -> int:
         return 2
 
-    def data(self, index: QModelIndex, role: Qt.ItemDataRole=Qt.ItemDataRole.DisplayRole) -> typing.Optional[str]:
+    def data(
+        self,
+        index: QModelIndex,
+        role: int=Qt.ItemDataRole.DisplayRole,
+    ) -> typing.Optional[str]:
         if not index.isValid():
             # TODO: @ColinKennedy this check is not necessary
             return None
 
         if not 0 <= index.row() < len(self.history):
             return None
+
         if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             term = self.history[index.row()][0]
             date = self.history[index.row()][1]
@@ -51,18 +56,21 @@ class HistoryModel(QAbstractTableModel):
                 return term
             elif index.column() == 1:
                 return date
+
         return None
 
     def headerData(
         self,
         section: int,
         orientation: Qt.Orientation,
-        role: Qt.ItemDataRole=Qt.ItemDataRole.DisplayRole,
+        role: int=Qt.ItemDataRole.DisplayRole,
     ) -> typing.Optional[str]:
         if role != Qt.ItemDataRole.DisplayRole:
             return None
+
         if orientation == Qt.Orientation.Vertical:
-            return section + 1;
+            return str(section + 1)
+
         return None
 
     def insertRows(
@@ -80,13 +88,17 @@ class HistoryModel(QAbstractTableModel):
             return False
 
         changed = False
+
         self.beginInsertRows(QModelIndex(), position, position)
+
         for row in range(rows):
             if term and date:
                 if term in self.justTerms:
                     index_ = self.justTerms.index(term)
                     self.removeRows(index_)
+
                     del self.justTerms[index_]
+
                 self.history.insert(0, [term, date])
                 self.justTerms.insert(0, term)
 

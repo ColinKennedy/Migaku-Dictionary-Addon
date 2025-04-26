@@ -5,7 +5,7 @@ from anki.hooks import addHook
 from aqt.utils import openLink
 
 
-def checkForThirtyTwo():
+def checkForThirtyTwo() -> None:
 	if is_win or is_mac:
 		qVer = QT_VERSION_STR
 		invalid = ['5.12.6', '5.9.7']

@@ -52,7 +52,7 @@ def miInfo(
     return mb.exec()
 
 
-def miAsk(text: str, parent: typing.Optional[QWidget]=None, day: bool=True, customText: str = "") -> bool:
+def miAsk(text: str, parent: typing.Optional[QWidget]=None, day: bool=True, customText: typing.Sequence[str] = "") -> bool:
     msg = QMessageBox(parent)
     msg.setWindowTitle("Migaku Dictionary")
     msg.setText(text)
