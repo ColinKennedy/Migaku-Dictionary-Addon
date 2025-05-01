@@ -35,7 +35,7 @@ class miJHandler:
 						note[field] = self.mw.Exporter.fetchParsedField(note[field], note)
 		return note
 
-	def attemptFieldGenerate(self, text: str, field: str, model: str, note: str) -> str:
+	def attemptFieldGenerate(self, text: str, field: str, model: str, note: Note) -> str:
 		if self.activeNotes:
 			if model in self.activeNotes:
 				if field in self.activeNotes[model]:

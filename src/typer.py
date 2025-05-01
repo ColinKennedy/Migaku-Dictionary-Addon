@@ -5,8 +5,22 @@ import typing
 
 T = typing.TypeVar("T")
 
+AddType = typing.Union[
+    typing.Literal["add"],
+    typing.Literal["no"],
+    typing.Literal["overwrite"],
+]
+
 GroupName = typing.Union[typing.Literal["All"], typing.Literal["Google Images"], typing.Literal["Forvo"]]
 SearchMode = typing.Union[typing.Literal["Forward"], typing.Literal["Backward"], typing.Literal["Exact"], typing.Literal["Anywhere"], typing.Literal["Definition"], typing.Literal["Example"], typing.Literal["Pronunciation"]]
+SearchTerm = typing.Union[
+    typing.Literal["Forward"],
+    typing.Literal["Pronunciation"],
+    typing.Literal["Backward"],
+    typing.Literal["Anywhere"],
+    typing.Literal["Exact"],
+    typing.Literal["Definition"],
+]
 
 
 class Card(typing.TypedDict):
@@ -66,9 +80,15 @@ class Configuration(typing.TypedDict):
     ExportTemplates: dict[str, ExportTemplate]
     GoogleImageFields: list[str]
     ForvoFields: list[str]
-    ForvoAddType: typing.Literal["add"]
+    ForvoAddType: AddType
     ForvoLanguage: str  # typing.Literal["Japanese"]  # TODO: @ColinKennedy add more languages later
-    GoogleImageAddType: typing.Literal["add"]
+    GoogleImageAddType: AddType
+
+
+class Conjugation(typing.TypedDict):
+    dict: str
+    inflected: str
+    prefix: str
 
 
 class DefinitionSetting(typing.TypedDict):

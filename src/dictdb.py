@@ -16,17 +16,6 @@ from aqt import mw
 
 
 _INSTANCE: typing.Optional[DictDB] = None
-AddType = typing.Union[
-    typing.Literal["add"],
-    typing.Literal["no"],
-    typing.Literal["overwrite"],
-]
-
-
-class _Conjugation(typing.TypedDict):
-    dict: str
-    inflected: str
-    prefix: str
 
 
 class _DictionaryResultTuple(typing.NamedTuple):
@@ -237,9 +226,9 @@ class DictDB:
     def getDefEx(self, sT: str) -> bool:
         return sT in ['Definition', 'Example']
 
-    def applySearchType(self,terms: list[str], sT: str) -> None:
+    def applySearchType(self,terms: list[str], sT: typer.SearchTerm) -> None:
         for idx, _ in enumerate(terms):
-            if sT in  ['Forward','Pronunciation']:
+            if sT in  {'Forward','Pronunciation'}:
                terms[idx] = terms[idx] + '%';
             elif sT ==  'Backward':
                 terms[idx] = '%_' + terms[idx]
@@ -256,7 +245,7 @@ class DictDB:
     def deconjugate(
         self,
         terms: list[str],
-        conjugations: typing.Sequence[_Conjugation],
+        conjugations: typing.Sequence[typer.Conjugation],
     ) -> list[str]:
         deconjugations: list[str] = []
 
@@ -285,8 +274,8 @@ class DictDB:
         self,
         term: str,
         selectedGroup,
-        conjugations: typing.Sequence[_Conjugation],
-        sT: str,
+        conjugations: typing.Sequence[typer.Conjugation],
+        sT: typer.SearchTerm,
         deinflect: bool,
         dictLimit: str,
         maxDefs: int,
@@ -455,8 +444,7 @@ class DictDB:
         self.c.execute('UPDATE dictnames SET addtype = ? WHERE dictname=?', (addType, name))
         self.commitChanges()
 
-    # TODO: @ColinKennedy update this return type
-    def getFieldsSetting(self, name: str) -> None:
+    def getFieldsSetting(self, name: str) -> list[str] | None:
         self.c.execute('SELECT fields FROM dictnames WHERE dictname=?', (name, ))
 
         # TODO: Remove try/except
@@ -496,11 +484,13 @@ class DictDB:
         self.c.execute('UPDATE dictnames SET duplicateHeader = ? WHERE dictname=?', (duplicateHeader, name))
         self.commitChanges()
 
+    # TODO: Make a more direct type for the return type
     def getTermHeaders(self) -> typing.Optional[dict]:
         self.c.execute('SELECT dictname, termHeader FROM dictnames')
         # TODO: Remove try/except
         try:
             dictHeaders = self.c.fetchall()
+            # TODO: Make a more direct type for this type
             results = {}
             if len(dictHeaders) > 0:
                 for r in dictHeaders:
@@ -509,7 +499,7 @@ class DictDB:
         except:
             return None
 
-    def getAddType(self, name: str) -> typing.Optional[AddType]:
+    def getAddType(self, name: str) -> typing.Optional[typer.AddType]:
         self.c.execute('SELECT addtype FROM dictnames WHERE dictname=?', (name, ))
         # TODO: Remove try/except
         try:

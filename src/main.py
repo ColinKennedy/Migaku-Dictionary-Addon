@@ -603,6 +603,8 @@ def window_loaded() -> None:
 
     Previewer.open = wrap(Previewer.open, addHotkeysToPreview)  # type: ignore[method-assign]
 
+    def _get_parent_widget(widget: QWidget) -> QWidget:
+        return _verify(widget.parentWidget())
 
     def addEditorFunctionality(self: editor_.Editor) -> None:
         self.web.parentEditor = self
@@ -614,7 +616,8 @@ def window_loaded() -> None:
 
     def announceParent(self: TagEdit, event: typing.Optional[QFocusEvent] = None) -> None:
         if dictionary := migaku_dictionary.get_visible_dictionary():
-            parent = self.parentWidget().parentWidget().parentWidget()
+            get = _get_parent_widget
+            parent = get(get(get(self)))
             # TODO: @ColinKennedy - Not sure about typing.cast
             parent = typing.cast(browser_.Browser, parent)
             pName = gt(parent)

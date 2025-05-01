@@ -5,15 +5,16 @@ from __future__ import annotations
 
 import functools
 import logging
+import typing
 
 from aqt.utils import shortcut, saveGeom, saveSplitter, showInfo, askUser, ensureWidgetInScreenBoundaries
 from aqt import main
 from aqt import qt
-import typing
 import json
 import sys
 import math
 from anki.hooks import runHook
+from aqt import qt
 from aqt.qt import *
 from aqt.utils import openLink, tooltip
 from anki.utils import is_mac, is_win, is_lin
@@ -49,11 +50,17 @@ from . import migaku_configuration, migaku_settings, typer, welcomer
 
 _CURRENT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 _LOGGER = logging.getLogger(__name__)
+_StringSequence = typing.TypeVar("_StringSequence", bound=typing.Sequence[str])
+T = typing.TypeVar("T")
 
 
-class _AddType(typing.TypedDict):
+class _AddTypeGroup(typing.TypedDict):
     name: str
-    type: str
+    type: typer.AddType
+
+
+class _Conjugations(typing.TypedDict):
+    pass
 
 
 class MIDict(AnkiWebView):
@@ -67,7 +74,7 @@ class MIDict(AnkiWebView):
         terms: typing.Optional[list[str]] = None,
     ) -> None:
         AnkiWebView.__init__(self)
-        self._page.profile().setHttpUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36')
+        _verify(self._page.profile()).setHttpUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36')
         self.terms = terms or []
         self.dictInt = dictInt
         self.config = self.dictInt.getConfig()
@@ -76,9 +83,9 @@ class MIDict(AnkiWebView):
         self.maxH = self.config['maxHeight']
         self.onBridgeCmd = self.handleDictAction
         self.db = db
-        self.termHeaders = self.formatTermHeaders(self.db.getTermHeaders())
+        self.termHeaders = self.formatTermHeaders(self.db.getTermHeaders() or {})
         self.dupHeaders = self.db.getDupHeaders()
-        self.sType = False
+        self.sType: typing.Optional[QComboBox] = None
         self.radioCount = 0
         self.homeDir = path
         self.conjugations = self.loadConjugations()
@@ -87,7 +94,7 @@ class MIDict(AnkiWebView):
         self.currentEditor: typing.Optional[Editor] = None
         self.reviewer: typing.Optional[Reviewer] = None
         self.threadpool = QThreadPool()
-        self.customFontsLoaded = []
+        self.customFontsLoaded: list[str] = []
 
         gui_hooks.editor_did_init.append(self.on_editor_loaded)
 
@@ -110,14 +117,15 @@ class MIDict(AnkiWebView):
     def loadHTMLURL(self, html: str, url: aqt.QUrl) -> None:
         self._page.setHtml(html, url)
 
-
     def formatTermHeaders(
         self,
-        ths: typing.Sequence[str],
+        ths: dict[typing.Hashable, str],
     ) -> typing.Optional[dict[str, tuple[str, str]]]:
-        formattedHeaders = {}
+        formattedHeaders: dict[str, tuple[str, str]] = {}
+
         if not ths:
             return None
+
         for dictname in ths:
             headerString = ''
             sbHeaderString = ''
@@ -137,9 +145,9 @@ class MIDict(AnkiWebView):
     def setSType(self, sType: QComboBox) -> None:
         self.sType = sType
 
-    def loadConjugations(self):
+    def loadConjugations(self) -> dict[str, list[typer.Conjugation]]:
         langs = self.db.getCurrentDbLangs()
-        conjugations = {}
+        conjugations: dict[str, list[typer.Conjugation]] = {}
         for lang in langs:
             filePath = join(self.homeDir, "user_files", "db",  "conjugation", "%s.json" % lang)
             if not os.path.exists(filePath):
@@ -185,7 +193,7 @@ class MIDict(AnkiWebView):
                 term,
                 selectedGroup,
                 self.conjugations,
-                self.sType.currentText(),
+                typing.cast(typer.SearchTerm, self.sType.currentText()),
                 self.deinflect,
                 str(dictDefs),
                 maxDefs,
@@ -204,7 +212,7 @@ class MIDict(AnkiWebView):
         html, cleaned, singleTab= self.getHTMLResult(term, selectedGroup)
         self.eval("addNewTab('%s', '%s', %s);"%(html.replace('\r', '<br>').replace('\n','<br>'), cleaned, singleTab))
 
-    def addResultWrappers(self, results: typing.Iterable[str]) -> dict[int, str]:
+    def addResultWrappers(self, results: _StringSequence) -> _StringSequence:
         for idx, result in enumerate(results):
             if 'dictionaryTitleBlock' not in result:
                 results[idx] = '<div class="definitionBlock">' + result + '</div>'
@@ -408,20 +416,20 @@ class MIDict(AnkiWebView):
             tooltip = ' title="Enable this option if this dictionary has the target word\'s header within the definition. Enabling this will prevent the addon from exporting duplicate header."'
         checked = ' '
         className = 'checkDict' + re.sub(r'\s', '' , dictName)
-        if dictName in self.dupHeaders:
+        if dictName in (self.dupHeaders or {}):
             num = self.dupHeaders[dictName]
             if num == 1:
                 checked = ' checked '
         return '<div class="dupHeadCB" data-dictname="' + dictName + '">Duplicate Header:<input ' + checked + tooltip + ' class="' + className + '" onclick="handleDupChange(this, \'' + className + '\')" type="checkbox"></div>'
 
-    def maybeSearchTerms(self, terms: list[str]) -> None:
+    def maybeSearchTerms(self) -> None:
         for t in self.terms:
             self.dictInt.initSearch(t)
         self.terms = []
 
     def handleDictAction(self, dAct: str) -> None:
         if dAct.startswith("MigakuDictionaryLoaded"):
-            self.maybeSearchTerms(dAct)
+            self.maybeSearchTerms()
         elif dAct.startswith('forvo:'):
             urls = json.loads(dAct[6:])
             self.downloadForvoAudio(urls)
@@ -430,7 +438,7 @@ class MIDict(AnkiWebView):
             self.dictInt.search.setText(term)
         elif dAct.startswith('saveFS:'):
             f1, f2 = dAct[7:].split(':')
-            self.dictInt.writeConfig('fontSizes', [int(f1), int(f2)])
+            self.dictInt.writeConfig('fontSizes', (int(f1), int(f2)))
         elif dAct.startswith('setDup:'):
             dup, name =dAct[7:].split('◳')
             dup =  int(dup)
@@ -445,8 +453,8 @@ class MIDict(AnkiWebView):
             else:
                 self.dictInt.updateFieldsSetting(fields['dictName'], fields['fields'])
         elif dAct.startswith('overwriteSetting:'):
-            addType = json.loads(dAct[17:])
-            _validate_add_type(addType)
+            addType = _validate_add_type(json.loads(dAct[17:]))
+
             if addType['name'] == 'Google Images':
                 self.dictInt.writeConfig('GoogleImageAddType', addType['type'])
             elif addType['name'] == 'Forvo':
@@ -645,12 +653,11 @@ class MIDict(AnkiWebView):
 
         return tags
 
-    def sendImgToField(self, urls: str) -> None:
+    def sendImgToField(self, json_urls: str) -> None:
         if (self.reviewer and self.reviewer.card) or (self.currentEditor and self.currentEditor.note):
-            urlsList = []
+            urlsList: list[str] = []
             imgSeparator = ''
-            urls = json.loads(urls)
-            urls = typing.cast(list[str], urls)
+            urls = typing.cast(list[str], json.loads(json_urls))
 
             for imgurl in urls:
                 try:
@@ -665,6 +672,8 @@ class MIDict(AnkiWebView):
                 self.sendToField('Google Images', imgSeparator.join(urlsList))
 
     def sendToField(self, name: str, definition: str) -> None:
+        addType: str
+
         if self.reviewer and self.reviewer.card:
             if name == 'Google Images':
                 tFields = self.config['GoogleImageFields']
@@ -687,7 +696,7 @@ class MIDict(AnkiWebView):
             for field in fields:
                 if field['name'] in tFields:
                     newField = self.getFieldContent(note[field['name']], definition, addType)
-                    if newField is not False:
+                    if newField:
                         changed = True
                         if self.jSend:
                             note[field['name']] = self.dictInt.jHandler.attemptFieldGenerate(
@@ -746,17 +755,19 @@ class MIDict(AnkiWebView):
             self.currentEditor.loadNote()
 
     def getOverwriteChecks(self, dictCount: int, dictName: str) -> str:
-        addType: dictdb_.AddType
+        addType: typer.AddType
 
         if dictName == 'Google Images':
             addType = self.config['GoogleImageAddType']
         elif dictName == 'Forvo':
             addType = self.config['ForvoAddType']
         else:
-            addType = self.db.getAddType(dictName)
+            found = self.db.getAddType(dictName)
 
-            if not addType:
+            if not found:
                 raise RuntimeError(f'Dictionary "{dictName}" has no adder-type.')
+
+            addType = found
 
         tooltip = ''
         if self.config['tooltips']:
@@ -797,8 +808,10 @@ class MIDict(AnkiWebView):
         elif dictName == 'Forvo':
             selF = self.config['ForvoFields']
         else:
-            selF = self.db.getFieldsSetting(dictName);
+            selF = self.db.getFieldsSetting(dictName) or []
+
         tooltip = ''
+
         if self.config['tooltips']:
             tooltip = ' title="Select this dictionary\'s target fields for when sending a definition(or a Google Image) to a card. If a field does not exist in the target card, then it is ignored, otherwise the definition is added to all fields that exist within the target card."'
         title = '&nbsp;Select Fields ▾'
@@ -977,8 +990,11 @@ class ClipThread(QObject):
         else:
             raise RuntimeError('Cannot search columns. No clipboard was found.')
 
-    def getConfig(self):
-        return self.mw.addonManager.getConfig(__name__)
+    def getConfig(self) -> typer.Configuration:
+        return typing.cast(
+            typer.Configuration,
+            self.mw.addonManager.getConfig(__name__),
+        )
 
     def handleBulkTextExport(self, cards: list[typer.Card]) -> None:
         self.bulkTextExport.emit(cards)
@@ -1251,7 +1267,7 @@ class DictInterface(QWidget):
         self.sType = self.setupSearchType()
         self.openSB = self.setupOpenSB()
         self.openSB.opened = False
-        self.currentTarget = QLabel('')
+        self.currentTarget = qt.QLabel('')
         self.targetLabel = QLabel(' Target:')
         self.stretch1 = self.getStretchLay()
         self.stretch2 = self.getStretchLay()
@@ -1430,7 +1446,7 @@ class DictInterface(QWidget):
             self.dict.addWindow.scrollArea.close()
             self.dict.addWindow.scrollArea.deleteLater()
         self.currentTarget.setText('')
-        self.dict.currentEditor = False
+        self.dict.currentEditor = None
         self.dict.reviewer = None
         self.mainLayout.replaceWidget(self.dict, newDict)
         self.dict.close()
@@ -1816,11 +1832,15 @@ class DictInterface(QWidget):
         return searchTypes
 
     @typing.overload
+    def writeConfig(self, attribute: typing.Literal["GoogleImageAddType"], value: typer.AddType) -> None:
+        ...
+
+    @typing.overload
     def writeConfig(self, attribute: typing.Literal["GoogleImageFields"], value: list[str]) -> None:
         ...
 
     @typing.overload
-    def writeConfig(self, attribute: typing.Literal["ForvoAddType"], value: typing.Literal["add"]) -> None:
+    def writeConfig(self, attribute: typing.Literal["ForvoAddType"], value: typer.AddType) -> None:
         ...
 
     @typing.overload
@@ -1893,9 +1913,11 @@ class DictInterface(QWidget):
             value = list(value)
 
         newConfig = self.getConfig()
-        newConfig[attribute] = value
-        # TODO: @ColinKennedy - type-ignore this if needed
-        self.mw.addonManager.writeConfig(__name__, newConfig)
+        newConfig[attribute] = value  # type: ignore[literal-required]
+        self.mw.addonManager.writeConfig(
+            __name__,
+            typing.cast(dict[typing.Any, typing.Any], newConfig),
+        )
         self.reloadConfig(newConfig)
 
     def getSelectedDictGroup(self) -> typer.DictionaryGroup:
@@ -2336,9 +2358,9 @@ class SVGPushButton(QPushButton):
         self._main_layout.addWidget(svg)
 
 
-def _validate_add_type(item: typing.Any) -> _AddType:
+def _validate_add_type(item: typing.Any) -> _AddTypeGroup:
     # TODO: @ColinKennedy - Check this later
-    return item
+    return typing.cast(_AddTypeGroup, item)
 
 
 def _validate_strings(item: typing.Any) -> list[str]:
@@ -2356,6 +2378,13 @@ def _validate_strings(item: typing.Any) -> list[str]:
         output.append(item)
 
     return output
+
+
+def _verify(item: typing.Optional[T]) -> T:
+    if item is not None:
+        return item
+
+    raise RuntimeError('Expected item to exist but got none.')
 
 
 def dictionaryInit(terms: typing.Union[list[str], str, None]=None) -> None:
