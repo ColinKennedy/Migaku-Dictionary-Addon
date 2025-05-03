@@ -23,11 +23,21 @@ SearchTerm = typing.Union[
 ]
 
 
+class _GenerationPreferences(typing.TypedDict):
+    addType: str
+    destination: str
+    dict1: str
+    dict2: str
+    dict3: str
+    limit: int
+    origin: str
+
+
 class Card(typing.TypedDict):
     # unknowns: list[str]
     audio: str
     bulk: bool
-    image: str
+    image: typing.Optional[str]
     primary: str
     secondary: str
     total: int
@@ -63,7 +73,7 @@ class Configuration(typing.TypedDict):
     highlightTarget: bool
     jReadingCards: bool
     jReadingEdit: bool
-    massGenerationPreferences: bool
+    massGenerationPreferences: _GenerationPreferences
     maxHeight: int
     maxSearch: int
     maxWidth: int

@@ -248,7 +248,7 @@ class DictGroupEditor(QDialog):
             'font' : fontName,
         }
         curGroups[gn] = dictGroup
-        migaku_dictionary.get().writeConfig(__name__, newConfig)
+        self.mw.addonManager.writeConfig(__name__, newConfig)
         self.settings.loadTemplateTable()
         self.settings.loadGroupTable()
         self.hide()

@@ -468,7 +468,7 @@ class RequestHandler(object):
     def get_body_argument(
         self,
         name: str,
-        default: Union[None, str, _ArgDefaultMarker] = _ARG_DEFAULT,
+        default: typing.Optional[typing.Any] = _ARG_DEFAULT,
         strip: bool = True,
     ) -> Optional[str]:
         """Returns the value of the argument with the given name

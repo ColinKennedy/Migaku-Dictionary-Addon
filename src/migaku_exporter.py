@@ -37,7 +37,7 @@ def addDefinitionsToCardExporterNote(
     term: str,
     dictionaryConfigurations: typing.Iterable[typer.DictionaryConfiguration],
 ) -> notes_.Note:
-    config = mw.addonManager.getConfig(__name__)
+    config = typing.cast(typer.Configuration, mw.addonManager.getConfig(__name__))
     fb = config['frontBracket']
     bb = config['backBracket']
     lang = config['ForvoLanguage']

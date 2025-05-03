@@ -51,7 +51,12 @@ def getNextBatchOfCards(
     start: _PseudoNumber,
     incrementor: _PseudoNumber,
 ) -> list[list[str]]:
-    return collection.db.all("SELECT c.ivl, n.flds, c.ord, n.mid FROM cards AS c INNER JOIN notes AS n ON c.nid = n.id WHERE c.type != 0 ORDER BY c.ivl LIMIT %s, %s;"%(start, incrementor))
+    database = collection.db
+
+    if not database:
+        raise RuntimeError(f'Collection "{collection}" has no database.')
+
+    return database.all("SELECT c.ivl, n.flds, c.ord, n.mid FROM cards AS c INNER JOIN notes AS n ON c.nid = n.id WHERE c.type != 0 ORDER BY c.ivl LIMIT %s, %s;"%(start, incrementor))
 
 
 
@@ -233,10 +238,10 @@ class ImportHandler(MigakuHTTPHandler):
                     return
                 else: 
                     audioFileName = self.handleAudioFileInRequestAndReturnFilename(self.copyFileToTempDir)
-                    primary = self.get_body_argument("primary", default="")
-                    secondary = self.get_body_argument("secondary", default="")
+                    primary = self.get_body_argument("primary", default="") or ""
+                    secondary = self.get_body_argument("secondary", default="") or ""
                     unknownWords = json.loads(self.get_body_argument("unknown", default="[]"))
-                    imageFileName = False
+                    imageFileName: typing.Optional[str] = None
                     if "image" in self.request.files:
                         imageFile = self.request.files['image'][0]
                         imageFileName = imageFile["filename"]
@@ -269,7 +274,7 @@ class ImportHandler(MigakuHTTPHandler):
         return None
 
     def parseBoolean(self, bulk: typing.Union[bool, str, None]) -> bool:
-        if not bulk or bulk == "false" or bulk is False:
+        if not bulk or bulk == "false":
             return False
 
         return True
@@ -310,6 +315,10 @@ class LearningStatusHandler(MigakuHTTPHandler):
 
         if start:
             incrementor = self.get_body_argument("incrementor", default=None)
+
+            if not incrementor:
+                raise RuntimeError('No incrementor was found.')
+
             self.finish(self.getCards(start, incrementor))
 
             return
