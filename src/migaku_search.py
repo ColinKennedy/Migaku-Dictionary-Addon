@@ -6,7 +6,7 @@ from aqt.qt import *
 import aqt
 from aqt import mw
 
-from . import midict, migaku_dictionary
+from . import midict, migaku_dictionary, migaku_widget_global
 
 
 def _selectedText(page: QWebEngineView) -> typing.Optional[str]:
@@ -86,7 +86,8 @@ def searchTerm(self: QWebEngineView) -> None:
         if mw.state == 'review':
             dictionary.dict.setReviewer(mw.reviewer)
     elif title == 'editor':
-        target = getTarget(type(self.parentEditor.parentWindow).__name__)
-        dictionary.dict.setCurrentEditor(self.parentEditor, target=target or "")
+        parent = migaku_widget_global.get_parent_editor()
+        target = getTarget(type(parent.parentWindow).__name__)
+        dictionary.dict.setCurrentEditor(parent, target=target or "")
 
     midict.showAfterGlobalSearch()

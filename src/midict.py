@@ -44,6 +44,8 @@ from .forvodl import Forvo
 import ntpath
 from .miutils import miInfo
 from PyQt6.QtSvgWidgets import QSvgWidget
+from pynput import keyboard
+
 
 from . import migaku_configuration, migaku_search, migaku_settings, typer, welcomer
 
@@ -117,10 +119,7 @@ class MIDict(AnkiWebView):
     def loadHTMLURL(self, html: str, url: aqt.QUrl) -> None:
         self._page.setHtml(html, url)
 
-    def formatTermHeaders(
-        self,
-        ths: dict[typing.Hashable, str],
-    ) -> typing.Optional[dict[str, tuple[str, str]]]:
+    def formatTermHeaders(self, ths: dict[str, str]) -> typing.Optional[dict[str, tuple[str, str]]]:
         formattedHeaders: dict[str, tuple[str, str]] = {}
 
         if not ths:
@@ -193,7 +192,7 @@ class MIDict(AnkiWebView):
                 term,
                 selectedGroup,
                 self.conjugations,
-                typing.cast(typer.SearchTerm, self.sType.currentText()),
+                typing.cast(typer.SearchTerm, _verify(self.sType).currentText()),
                 self.deinflect,
                 str(dictDefs),
                 maxDefs,
@@ -345,7 +344,7 @@ class MIDict(AnkiWebView):
         self.threadpool.start(forvo)
         return 'Loading...'
 
-    def loadForvoResults(self, results: tuple[str, str]) -> str:
+    def loadForvoResults(self, results: tuple[str, str]) -> None:
         forvoData, idName = results
         if forvoData:
             html = "<div class=\\'forvo\\'  data-urls=\\'" + forvoData +"\\'></div>"
@@ -441,7 +440,6 @@ class MIDict(AnkiWebView):
             self.dictInt.writeConfig('fontSizes', (int(f1), int(f2)))
         elif dAct.startswith('setDup:'):
             dup, name =dAct[7:].split('◳')
-            dup =  int(dup)
             self.dictInt.db.setDupHeader(dup, name)
             self.dupHeaders = self.db.getDupHeaders()
         elif dAct.startswith('fieldsSetting:'):
@@ -912,10 +910,6 @@ class ClipThread(QObject):
         elif is_lin:
             sys.path.insert(0, join(dirname(__file__), 'linux'))
 
-        sys.path.insert(0, join(dirname(__file__)))
-
-        from pynput import keyboard
-
         super().__init__(mw)
 
         self.keyboard = keyboard
@@ -929,13 +923,11 @@ class ClipThread(QObject):
 
         self.config = configuration
 
-    def on_press(self,key: list[str]) -> None:
+    def on_press(self, key: typing.Union[keyboard.Key, keyboard.KeyCode, None]) -> None:
         self.test.emit([key])
 
-    # TODO: @ColinKennedy - remove bool?
-    def on_release(self, key: str) -> bool:
+    def on_release(self, key: typing.Union[keyboard.Key, keyboard.KeyCode, None]) -> None:
         self.release.emit([key])
-        return True
 
     def darwinIntercept(self, event_type, event):
         # TODO: @ColinKennedy - cyclic import

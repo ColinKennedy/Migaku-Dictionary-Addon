@@ -37,7 +37,7 @@ from PyQt6.QtCore import Qt
 from anki import notes as notes_
 
 from . import global_state, google_imager, migaku_dictionary, migaku_configuration, threader, typer, keypress_tracker
-from . import migaku_exporter, migaku_forvo, migaku_settings, migaku_search
+from . import migaku_exporter, migaku_forvo, migaku_widget_global, migaku_settings, migaku_search
 
 
 _IS_EXPORTING_DEFINITIONS = False
@@ -263,8 +263,8 @@ def window_loaded() -> None:
     if _get_configuration()['globalHotkeys']:
         initGlobalHotkeys()
 
-    mw.hotkeyW = QShortcut(QKeySequence("Ctrl+W"), mw)
-    mw.hotkeyW.activated.connect(midict.dictionaryInit)
+    hotkey = QShortcut(QKeySequence("Ctrl+W"), mw)
+    hotkey.activated.connect(midict.dictionaryInit)
 
     hotkey = QShortcut(QKeySequence("Ctrl+S"), mw)
     hotkey.activated.connect(lambda: migaku_search.searchTerm(mw.web))
@@ -639,7 +639,7 @@ def window_loaded() -> None:
         return _verify(widget.parentWidget())
 
     def addEditorFunctionality(self: editor_.Editor) -> None:
-        self.web.parentEditor = self
+        migaku_widget_global.PARENT_EDITOR = self
         addBodyClick(self)
         addHotkeys(self)
 
