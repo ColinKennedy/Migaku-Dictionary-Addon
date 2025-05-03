@@ -248,7 +248,7 @@ class DictGroupEditor(QDialog):
             'font' : fontName,
         }
         curGroups[gn] = dictGroup
-        self.mw.addonManager.writeConfig(__name__, newConfig)
+        self.mw.addonManager.writeConfig(__name__, typing.cast(dict[str, typing.Any], newConfig))
         self.settings.loadTemplateTable()
         self.settings.loadGroupTable()
         self.hide()

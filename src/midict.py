@@ -45,7 +45,7 @@ import ntpath
 from .miutils import miInfo
 from PyQt6.QtSvgWidgets import QSvgWidget
 
-from . import migaku_configuration, migaku_settings, typer, welcomer
+from . import migaku_configuration, migaku_search, migaku_settings, typer, welcomer
 
 
 _CURRENT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
@@ -1208,9 +1208,9 @@ class DictInterface(QWidget):
         hotkey = QShortcut(QKeySequence("Ctrl+W"), self)
         hotkey.activated.connect(dictionaryInit)
         hotkey = QShortcut(QKeySequence("Ctrl+S"), self)
-        hotkey.activated.connect(lambda: self.mw.searchTerm(self.dict._page))
+        hotkey.activated.connect(functools.partial(migaku_search.searchTerm, self.dict))
         hotkey = QShortcut(QKeySequence("Ctrl+Shift+B"), self)
-        hotkey.activated.connect(lambda: self.mw.searchCol(self.dict._page))
+        hotkey.activated.connect(functools.partial(migaku_search.searchCol, self.dict))
 
     def getFontColor(self, color: QColor) -> QPalette:
         pal = QPalette()

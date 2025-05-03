@@ -1,8 +1,11 @@
+import logging
 import os
 import requests
 import stat
 import typing
+
 import aqt
+from aqt import main
 from anki.utils import is_mac, is_win, is_lin
 from anki.hooks import addHook
 from os.path import join, exists, dirname
@@ -11,22 +14,22 @@ from aqt.qt import *
 from aqt import mw as mw_, gui_hooks
 import zipfile
 
+from . import typer
 
-class _Configuration(typing.TypedDict):
-    mp3Convert: bool
-    failedFFMPEGInstallation: bool
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class FFMPEGInstaller:
 
-    def __init__(self, mw: aqt.AnkiQt) -> None:
+    def __init__(self, mw: main.AnkiQt) -> None:
         super().__init__()
 
         self.mw = mw
-        self.config = self.mw.addonManager.getConfig(__name__)
         self.addonPath = dirname(__file__)
         self.ffmpegDir = join(self.addonPath, 'user_files', 'ffmpeg')
         self.ffmpegFilename = "ffmpeg"
+        # TODO: @ColinKennedy download these sources elsewhere
         if is_win:
             self.ffmpegFilename += ".exe"
             self.downloadURL = "http://dicts.migaku.io/ffmpeg/windows"
@@ -36,6 +39,11 @@ class FFMPEGInstaller:
             self.downloadURL = "http://dicts.migaku.io/ffmpeg/macos"
         self.ffmpegPath = join(self.ffmpegDir, self.ffmpegFilename)
         self.tempPath = join(self.addonPath, 'temp', 'ffmpeg')
+
+    def _get_configuration(self) -> typer.Configuration:
+        return typing.cast(typer.Configuration, self.mw.addonManager.getConfig(__name__))
+    def _write_configuration(self, configuration: typer.Configuration) -> None:
+        self.mw.addonManager.writeConfig(__name__, typing.cast(dict[str, typing.Any], configuration))
 
     def getFFMPEGProgressBar(
         self,
@@ -63,21 +71,21 @@ class FFMPEGInstaller:
         return progressWidget, bar, textDisplay;
 
     def toggleMP3Conversion(self, enable: bool) -> None:
-        config = self.mw.addonManager.getConfig(__name__)
+        config = self._get_configuration()
         config["mp3Convert"] = enable
-        self.mw.addonManager.writeConfig(__name__, config)
+        self._write_configuration(config)
 
-    def toggleFailedInstallation(self, failedInstallation: _Configuration) -> None:
-        config = self.mw.addonManager.getConfig(__name__)
+    def toggleFailedInstallation(self, failedInstallation: bool) -> None:
+        config = self._get_configuration()
         config["failedFFMPEGInstallation"] = failedInstallation
-        self.mw.addonManager.writeConfig(__name__, config)
-    
-    def roundToKb(self, value) -> float:
+        self._write_configuration(config)
+
+    def roundToKb(self, value: typing.Union[float, int]) -> float:
         return round(value / 1000)
 
        
     def downloadFFMPEG(self) -> bool:
-        progressWidget = False
+        progressWidget: typing.Optional[QWidget] = None
         try:
             with requests.get(self.downloadURL, stream=True) as ffmpegRequest:
                 ffmpegRequest.raise_for_status()
@@ -88,7 +96,7 @@ class FFMPEGInstaller:
                     downloadedSoFar = 0
                     progressWidget, bar, textDisplay = self.getFFMPEGProgressBar("Migaku Dictionary - FFMPEG Download", downloadingText.format( self.roundToKb(downloadedSoFar), roundedTotal))
                     bar.setMaximum(total)
-                    lastUpdated = 0
+                    lastUpdated: typing.Union[float, int] = 0
                     for chunk in ffmpegRequest.iter_content(chunk_size=8192):
                         if chunk: 
                             downloadedSoFar += len(chunk)
@@ -103,8 +111,9 @@ class FFMPEGInstaller:
                 self.closeProgressBar(progressWidget)
             return True
         except Exception as error:
-            print(error)
-            self.closeProgressBar(progressWidget)
+            _LOGGER.exception('Unabled to download FFMPEG.')
+            if progressWidget:
+                self.closeProgressBar(progressWidget)
             return False
 
     def closeProgressBar(self, progressBar: QWidget) -> None:
@@ -136,7 +145,7 @@ class FFMPEGInstaller:
 
         
     def installFFMPEG(self) -> None:
-        config = self.mw.addonManager.getConfig(__name__)
+        config = self._get_configuration()
         if (config["mp3Convert"] or config["failedFFMPEGInstallation"]) and not exists(self.ffmpegPath):
             currentStep = 1
             totalSteps = 3
@@ -175,7 +184,7 @@ class FFMPEGInstaller:
         else:
             print("FFMPEG already installed or conversion disabled.")
 
-def window_loaded():
+def window_loaded() -> None:
     ffmpegInstaller = FFMPEGInstaller(mw_)
     addHook("profileLoaded", ffmpegInstaller.installFFMPEG)
 gui_hooks.main_window_did_init.append(window_loaded)

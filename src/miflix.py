@@ -90,11 +90,18 @@ class MigakuHTTPHandler(tornado.web.RequestHandler):
 
     # TODO: @ColinKennedy not sure if this return value is right
     def checkVersion(self) -> bool:
-        version = int(self.get_body_argument("version", default=None))
+        raw_version = self.get_body_argument("version", default=None)
+
+        if not raw_version:
+            # TODO: @ColinKennedy add logging later
+            return False
+
+        version = int(raw_version)
+
         return self.application.checkVersion(version)
 
     def getConfig(self) -> typer.Configuration:
-        return self.mw.addonManager.getConfig(__name__)
+        return typing.cast(typer.Configuration, self.mw.addonManager.getConfig(__name__))
 
 
 class ImportHandler(MigakuHTTPHandler):
@@ -128,7 +135,11 @@ class ImportHandler(MigakuHTTPHandler):
         wavDir = join(self.tempDirectory, timestamp)
         if exists(wavDir):
             config = self.getConfig()
-            mp3dir = config.get('condensedAudioDirectory', False)
+            mp3dir = config.get('condensedAudioDirectory')
+
+            if not mp3dir:
+                raise RuntimeError(f'Configuration "{config}" has no audio directory.')
+
             wavs = [ f for f in os.listdir(wavDir)]
             wavs.sort()
             wavListFilePath = join(wavDir, "list.txt")
@@ -200,7 +211,8 @@ class ImportHandler(MigakuHTTPHandler):
                 return
 
             if bulk and requestType == "text":
-                    cards = json.loads(self.get_body_argument("cards", default="[]"))
+                    raw_cards = self.get_body_argument("cards", default="[]") or "[]"
+                    cards = json.loads(raw_cards)
                     thread.handleBulkTextExport(cards)
                     self.finish("Bulk Text Export")
                     return
@@ -215,7 +227,8 @@ class ImportHandler(MigakuHTTPHandler):
                     self.removeCondensedAudioInProgressMessage()
                     global_state.IS_BULK_MEDIA_EXPORT_CANCELLED = False
                 condensedAudio = self.parseBoolean(self.get_body_argument("condensedAudio", default=None))
-                total = int(self.get_body_argument("totalToRecord", default=1))     
+                raw_total = self.get_body_argument("totalToRecord", default="1") or "1"
+                total = int(raw_total)
                 _LOGGER.debug('TOTAL "%s" records.', total)
 
                 if condensedAudio:
@@ -238,9 +251,16 @@ class ImportHandler(MigakuHTTPHandler):
                     return
                 else: 
                     audioFileName = self.handleAudioFileInRequestAndReturnFilename(self.copyFileToTempDir)
+
+                    if not audioFileName:
+                        self.finish("No audioFileName was found. Cannot continue.")
+
+                        return
+
                     primary = self.get_body_argument("primary", default="") or ""
                     secondary = self.get_body_argument("secondary", default="") or ""
-                    unknownWords = json.loads(self.get_body_argument("unknown", default="[]"))
+                    raw_unknown_words = self.get_body_argument("unknown", default="[]") or "[]"
+                    unknownWords = json.loads(raw_unknown_words)
                     imageFileName: typing.Optional[str] = None
                     if "image" in self.request.files:
                         imageFile = self.request.files['image'][0]
@@ -286,7 +306,15 @@ class ImportHandler(MigakuHTTPHandler):
             handler_.write(handler['body'].encode())
 
     def copyFileToCondensedAudioDir(self, handler: _File, filename: str) -> None:
-        directoryPath = join(self.tempDirectory, self.application.settings.get('previousBulkTimeStamp'))
+        timestamp_value = self.application.settings.get('previousBulkTimeStamp')
+
+        if not timestamp_value:
+            timestamp = "0"
+        else:
+            timestamp = str(timestamp_value)
+
+        directoryPath = join(self.tempDirectory, timestamp)
+
         if not exists(directoryPath):
             os.mkdir(directoryPath)
 
