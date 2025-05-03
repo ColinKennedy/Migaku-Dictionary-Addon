@@ -271,7 +271,7 @@ class Google(QRunnable):
         super().__init__()
 
         self.GOOGLE_SEARCH_URL = "https://www.google.com/search"
-        self.term = False
+        self.term: typing.Optional[str] = None
         self.signals = GoogleSignals()
         self.initSession()
 
@@ -322,7 +322,7 @@ class Google(QRunnable):
     def setSafeSearch(self, safe: bool) -> None:
         self.safeSearch = safe
 
-    def getResultsFromRawHtml(self, html: list[str]) -> list[str]:
+    def getResultsFromRawHtml(self, html: str) -> list[str]:
         pattern = r"AF_initDataCallback[\s\S]+AF_initDataCallback\({key: '[\s\S]+?',[\s\S]+?data:(\[[\s\S]+\])[\s\S]+?<\/script><script id="
         matches = re.findall(pattern, html)
         results: list[str] = []
@@ -344,12 +344,12 @@ class Google(QRunnable):
         if not images or len(images) < 1:
             return 'No Images Found. This is likely due to a connectivity error.'
 
-        firstImages = []
-        tempImages = []
+        firstImages: list[str] = []
+        tempImages: list[str] = []
         for idx, image in enumerate(images):
             tempImages.append(image) 
             if len(tempImages) > 2 and len(firstImages) < 1:
-                firstImages += tempImages
+                firstImages.extend(tempImages)
                 tempImages = []
             if len(tempImages) > 2 and len(firstImages) > 1:
                 break
@@ -370,7 +370,12 @@ class Google(QRunnable):
     def getCleanedUrls(self, urls: typing.Iterable[str]) -> list[str]:
         return [x.replace('\\', '\\\\') for x in urls]
 
-    def image_search(self, query_gen, maximum: int, region: str = "") -> list[str]:
+    def image_search(
+        self,
+        query_gen: typing.Iterable[str],
+        maximum: int,
+        region: str = "",
+    ) -> typing.Optional[list[str]]:
         results: list[str] = []
         if not region:
             region = countryCodes[self.region]
@@ -394,7 +399,7 @@ class Google(QRunnable):
                         break
             except:
                 self.signals.noResults.emit('The Google Image Dictionary could not establish a connection. Please ensure you are connected to the internet and try again. If you will be without internet for some time, consider using a template that does not include the Google Images Dictionary in order to prevent this message appearing everytime a search is performed. ')
-                return False
+                return None
             results = self.getResultsFromRawHtml(html)
             if len(results) == 0:
                 soup = BeautifulSoup(html, "html.parser")
@@ -415,7 +420,7 @@ class Google(QRunnable):
                 break
         return results
 
-def search(target: str, number: int):
+def search(target: str, number: int) -> list[str]:
     parser = argparse.ArgumentParser(argument_default=argparse.SUPPRESS)
     parser.add_argument("-t", "--target", help="target name", type=str, required=True)
     parser.add_argument(

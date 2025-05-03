@@ -46,7 +46,6 @@ from .miutils import miInfo
 from PyQt6.QtSvgWidgets import QSvgWidget
 from pynput import keyboard
 
-
 from . import migaku_configuration, migaku_search, migaku_settings, typer, welcomer
 
 
