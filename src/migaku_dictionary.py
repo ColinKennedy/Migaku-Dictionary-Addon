@@ -1,6 +1,12 @@
+from __future__ import annotations
+
 import typing
 
-from . import midict
+if typing.TYPE_CHECKING:
+    # TODO: @ColinKennedy - there's a cyclic import that this if statement is hiding
+    # Anki will not startup correctly if this is removed. Fix this issue later.
+    #
+    from . import midict
 
 
 _DICTIONARY: typing.Optional[midict.DictInterface] = None
