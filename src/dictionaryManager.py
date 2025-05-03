@@ -469,17 +469,20 @@ def importDict(
 ) -> None:
     db = dictdb.get()
 
-    # Load ZIP file
-    try:
-        zfile = zipfile.ZipFile(path)
-    except zipfile.BadZipFile:
-        raise ValueError('Dictionary archive is invalid.')
+    with zipfile.ZipFile(path) as zfile:
+        is_yomichan = any(name.startswith('term_bank_') for name in zfile.namelist())
+        dict_files: list[str] = []
 
-    # Check if dict is yomichan or has index.json
-    is_yomichan = any(fn.startswith('term_bank_') for fn in zfile.namelist())
-    has_index = any(fn == 'index.json' for fn in zfile.namelist())
+        for name in zfile.namelist():
+            if not name.endswith('.json'):
+                continue
 
-    # Load frequency table
+            if is_yomichan and not name.startswith('term_bank_'):
+                continue
+
+            dict_files.append(name)
+
+    dict_files = natural_sort(dict_files)
     result = getFrequencyList(lang_name)
 
     if not result:
@@ -487,28 +490,13 @@ def importDict(
 
     frequency_dict, is_reading_type = result
 
-    # Create dictionary
     dict_name = dict_name.replace(' ', '_')
-    table_name = 'l' + str(db.getLangId(lang_name)) + 'name' + dict_name
-
     term_header = json.dumps(['term', 'altterm', 'pronunciation'])
 
     try:
         db.addDict(dict_name, lang_name, term_header)
     except Exception:
-        raise ValueError('Creating dictioanry failed. Make sure that no other dictionary with the same name exists. Several special characters are also no supported in dictionary names.')
-
-    # Load dict entries
-    dict_files = []
-
-    for fn in zfile.namelist():
-        if not fn.endswith('.json'):
-            continue
-        if is_yomichan and not fn.startswith('term_bank_'):
-            continue
-        dict_files.append(fn)
-
-    dict_files = natural_sort(dict_files)
+        raise ValueError('Creating dictionary failed. Make sure that no other dictionary with the same name exists. Several special characters are also no supported in dictionary names.')
 
     loadDict(
         zfile,
