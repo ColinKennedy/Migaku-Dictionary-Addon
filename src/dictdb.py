@@ -427,7 +427,7 @@ class DictDB:
         self.c.execute("CREATE INDEX IF NOT EXISTS iap" + text +" ON " + text +" ( altterm, pronunciation );")
         self.c.execute("CREATE INDEX IF NOT EXISTS ia" + text +" ON " + text +" (pronunciation);")
 
-    def importToDict(self, dictName: str, dictionaryData: list[str]) -> None:
+    def importToDict(self, dictName: str, dictionaryData: typing.Iterable[list[str]]) -> None:
         self.c.executemany('INSERT INTO ' + dictName + ' (term, altterm, pronunciation, pos, definition, examples, audio, frequency, starCount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);', dictionaryData)
 
     def dropTables(self, text: str) -> None:

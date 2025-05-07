@@ -1,3 +1,8 @@
+from __future__ import annotations
+
+from collections import abc
+import collections
+import dataclasses
 import io
 import json
 import logging
@@ -18,14 +23,131 @@ from PyQt6.QtWidgets import QMessageBox
 from . import dictdb, typer
 
 
+_DEFINITION_TABLE_SEPARATOR = ', '
+_NOT_SET_FREQUENCY = 999999  # NOTE: This means "not frequent or frequency is not known"
 _LOGGER = logging.getLogger(__name__)
-_FrequencyDict = dict[str, dict[str, int]]
+_FrequencyDict = dict[tuple[str, str], int]
 
 
-class _YomiDictEntry(typing.TypedDict):
-    term: str
-    not_sure: str
+class _FrequencyEntryValue(typing.TypedDict):
+    displayValue: str
+    value: int
+
+
+class _FrequencyReadingEntryValue(typing.TypedDict):
     reading: str
+    frequency: _FrequencyEntryValue
+
+
+
+class _FrequencyEntry(typing.NamedTuple):
+    category: str
+    frequency: typing.Union[_FrequencyEntryValue, _FrequencyReadingEntryValue]
+    term: str
+
+
+class _FlatDictionary:
+    def __init__(
+        self,
+        # TODO: @ColinKennedy find these keys later
+        term: str,
+        altterm: str,
+        pronunciation: str,
+        reading: str,
+        also_not_sure: int,
+        definitions: list[str],
+        i_dont_know: int,
+        last_one: str,
+    ) -> None:
+        self._term = term
+        self._altterm = altterm
+        self._pronunication = pronunciation
+        self._definitions = definitions
+
+        # NOTE: These are extra attributes that a dictionary would not define but we may
+        # be able to get from a frequency list and map manually, ourselves
+        #
+        self._frequency: typing.Optional[int] = None
+        self._star_count: typing.Optional[str] = None
+
+    @staticmethod
+    def is_valid(data: typing.Any) -> bool:
+        if len(data) != 8:
+            return False
+
+        # TODO: @ColinKennedy add a better example
+        # Example: ['πâ╜', 'πâ╜', 'n', '', 0, ['repetition mark in katakana'], 0, '']
+        index_types = {
+            0: str,
+            1: str,
+            2: str,
+            3: str,
+            4: int,
+            5: list,
+            6: int,
+            7: str,
+        }
+
+        for index, type_ in index_types.items():
+            if not isinstance(data[index], type_):
+                _LOGGER.debug(
+                    'Rejected "%s" data because "%s" index is not "%s" type.',
+                    data,
+                    index,
+                    type_,
+                )
+
+                return False
+
+        return True
+
+    @classmethod
+    def deserialize(cls, data: list[typing.Union[str, int]]) -> _FlatDictionary:
+        return cls(*data)  # type: ignore[arg-type]
+
+    def get_frequency(self) -> typing.Optional[int]:
+        return self._frequency
+
+    def get_reading(self) -> str:
+        if self._altterm:
+            return self._altterm
+
+        return self._term
+
+    def get_term(self) -> str:
+        return self._term
+
+    def clear_frequency(self) -> None:
+        self._frequency = None
+        self._star_count = None
+
+    def serialize(self) -> list[str]:
+        term = getAdjustedTerm(self._term)
+        reading = getAdjustedPronunciation(self.get_reading())
+        definition = getAdjustedDefinition(_DEFINITION_TABLE_SEPARATOR.join(self._definitions))
+
+        frequency: int
+
+        if self._frequency is not None:
+            frequency = self._frequency
+        else:
+            frequency = _NOT_SET_FREQUENCY
+
+        return [
+            term,
+            '',
+            reading,
+            self._pronunication,
+            definition,
+            '',
+            '',
+            str(frequency),
+            self._star_count or "",
+        ]
+
+    def set_frequency(self, frequency: int) -> None:
+        self._frequency = frequency
+        self._star_count = getStarCount(self._frequency)
 
 
 class DictionaryManagerWidget(QWidget):
@@ -462,33 +584,91 @@ class DictionaryManagerWidget(QWidget):
 
 addon_path = os.path.dirname(__file__)
 
+
+def _get_frequency_entry(data: dict[typing.Any, typing.Any]) -> _FrequencyEntryValue:
+    if "displayValue" not in data:
+        raise RuntimeError(f'Data "{data}" has no displayValue information.')
+
+    if not isinstance(data["displayValue"], str):
+        raise RuntimeError(f'displayValue from "{data}" is not a string.')
+
+    if "value" not in data:
+        raise RuntimeError(f'Data "{data}" has no value information.')
+
+    if not isinstance(data["displayValue"], int):
+        raise RuntimeError(f'value from "{data}" is not a string.')
+
+    return _FrequencyEntryValue(
+        displayValue=data["displayValue"],
+        value=data["value"],
+    )
+
+
+def _import_dictionary(table_name: str, jsonDict: typing.Iterable[_FlatDictionary]) -> None:
+    database = dictdb.get()
+    database.importToDict(table_name, [entry.serialize() for entry in jsonDict])
+    database.commitChanges()
+
+
+def _read_language_dictionary(zfile: zipfile.ZipFile) -> tuple[list[_FlatDictionary], bool]:
+    is_yomichan = any(name.startswith('term_bank_') for name in zfile.namelist())
+    dict_files: list[str] = []
+
+    for name in zfile.namelist():
+        if not name.endswith('.json'):
+            continue
+
+        if is_yomichan and not name.startswith('term_bank_'):
+            continue
+
+        dict_files.append(name)
+
+    dict_files = natural_sort(dict_files)
+    jsonDict: list[_FlatDictionary] = []
+
+    for filename in dict_files:
+        with zfile.open(filename, 'r') as jsonDictFile:
+            all_data = json.loads(jsonDictFile.read())
+
+            if not isinstance(all_data, abc.MutableSequence):
+                raise NotImplementedError(
+                    f'Data "{type(all_data)}" is not supported yet. '
+                    'Please ask the maintainer to add it!',
+                )
+
+            for entry in all_data:
+                if not _FlatDictionary.is_valid(entry):
+                    raise NotImplementedError(
+                        f'Entry "{entry}" is not supported yet. '
+                        'Please ask the maintainer to add it!',
+                    )
+
+                jsonDict.append(_FlatDictionary.deserialize(entry))
+
+    return jsonDict, is_yomichan
+
+
+def _recommend_table_name(lang: str, dictName: str) -> str:
+    return 'l' + str(dictdb.get().getLangId(lang)) + 'name' + dictName
+
+
 def importDict(
     lang_name: str,
-    path: typing.Union[io.BytesIO, os.PathLike, str],
+    path: typing.Union[io.BytesIO, str],
     dict_name: str,
 ) -> None:
     db = dictdb.get()
 
     with zipfile.ZipFile(path) as zfile:
-        is_yomichan = any(name.startswith('term_bank_') for name in zfile.namelist())
-        dict_files: list[str] = []
+        jsonDict, is_yomichan = _read_language_dictionary(zfile)
 
-        for name in zfile.namelist():
-            if not name.endswith('.json'):
-                continue
+    frequency_dict: typing.Optional[_FrequencyDict] = None
+    is_hyouki = False  # TODO: @ColinKennedy not sure about this default value
 
-            if is_yomichan and not name.startswith('term_bank_'):
-                continue
-
-            dict_files.append(name)
-
-    dict_files = natural_sort(dict_files)
-    result = getFrequencyList(lang_name)
-
-    if not result:
-        raise RuntimeError(f'Language "{lang_name}" has no frequency list.')
-
-    frequency_dict, is_reading_type = result
+    try:
+        frequency_dict, is_hyouki = getFrequencyDict(lang_name)
+    except RuntimeError:
+        _LOGGER.info('Unable to get a frequency list for "%s" language.', lang_name)
 
     dict_name = dict_name.replace(' ', '_')
     term_header = json.dumps(['term', 'altterm', 'pronunciation'])
@@ -496,17 +676,29 @@ def importDict(
     try:
         db.addDict(dict_name, lang_name, term_header)
     except Exception:
-        raise ValueError('Creating dictionary failed. Make sure that no other dictionary with the same name exists. Several special characters are also no supported in dictionary names.')
+        raise ValueError(
+            'Creating dictionary failed. '
+            'Make sure that no other dictionary with the same name exists. '
+            'Several special characters are also no supported in dictionary names.'
+        )
 
-    loadDict(
-        zfile,
-        dict_files,
-        lang_name,
-        dict_name,
-        frequency_dict,
-        is_reading_type=is_reading_type,
-        miDict=not is_yomichan,
-    )
+    table = _recommend_table_name(lang_name, dict_name)
+
+    if is_yomichan:
+        loadDictYomi(
+            jsonDict,
+            table,
+            frequency_dict,
+            is_hyouki=is_hyouki,
+        )
+    # TODO: @ColinKennedy add this later
+    # else:
+    #     loadDictMigaku(
+    #         jsonDict,
+    #         table,
+    #         frequency_dict,
+    #         is_hyouki=is_hyouki,
+    #     )
 
 
 def natural_sort(l: typing.Iterable[str]) -> list[str]:
@@ -521,49 +713,41 @@ def natural_sort(l: typing.Iterable[str]) -> list[str]:
     return sorted(l, key=alphanum_key)
 
 
-def loadDict(
-    zfile: zipfile.ZipFile,
-    filenames: typing.Iterable[str],
-    lang: str,
-    dictName: str,
-    frequencyDict: _FrequencyDict,
-    is_reading_type: bool,
-    miDict: bool = False,
+# def loadDictMigaku(
+#     jsonDict: list[_FlatDictionary],
+#     table: str,
+#     frequencyDict: typing.Optional[_FrequencyDict],
+#     is_hyouki: bool,
+# ) -> None:
+#     if frequencyDict:
+#         jsonDict = organizeMigakuDictionaryByFrequency(
+#             jsonDict,
+#             frequencyDict,
+#             readingHyouki=is_hyouki,
+#         )
+#
+#         for count, entry in enumerate(jsonDict):
+#             handleMigakuDictEntry(jsonDict, count, entry, freq=True)
+#
+#     _import_dictionary(table, jsonDict)
+
+
+def loadDictYomi(
+    jsonDict: typing.Sequence[_FlatDictionary],
+    table: str,
+    frequencyDict: typing.Optional[_FrequencyDict],
+    is_hyouki: bool,
 ) -> None:
-    tableName = 'l' + str(dictdb.get().getLangId(lang)) + 'name' + dictName
-    jsonDict: list[typer.DictionaryFrequencyResult] = []
-
-    for filename in filenames:
-        with zfile.open(filename, 'r') as jsonDictFile:
-            jsonDict += json.loads(jsonDictFile.read())
-
-    freq = False
-
     if frequencyDict:
-        freq = True
+        computeYomiDictionaryByFrequency(
+            jsonDict,
+            frequencyDict,
+            readingHyouki=is_hyouki,
+        )
 
-        if miDict:
-            jsonDict = organizeMigakuDictionaryByFrequency(
-                jsonDict,
-                frequencyDict,
-                readingHyouki=is_reading_type,
-            )
+        jsonDict = sorted(jsonDict, key=lambda item: item.get_frequency() or _NOT_SET_FREQUENCY)
 
-            for count, entry in enumerate(jsonDict):
-                handleMiDictEntry(jsonDict, count, entry, freq)
-        else:
-            jsonDict = organizeYomiDictionaryByFrequency(
-                jsonDict,
-                frequencyDict,
-                readingHyouki=is_reading_type,
-            )
-
-            for count, entry in enumerate(jsonDict):
-                handleYomiDictEntry(jsonDict, count, entry, freq)
-
-    database = dictdb.get()
-    database.importToDict(tableName, jsonDict)
-    database.commitChanges()
+    _import_dictionary(table, jsonDict)
 
 
 def getAdjustedTerm(term: str) -> str:
@@ -586,55 +770,36 @@ def getAdjustedDefinition(definition: str) -> str:
     return re.sub(r'<br>$', '', definition)
 
 
-def handleMiDictEntry(
-    jsonDict,
-    count: int,
-    entry: typer.DictionaryFrequencyResult,
-    freq: bool = False,
-) -> None:
-    starCount = ''
-    frequency = ''
-    if freq:
-        starCount = entry['starCount']
-        frequency = entry['frequency']
-    reading = entry['pronunciation']
-    if reading == '':
-        reading = entry['term']
-    term = getAdjustedTerm(entry['term'])
-    altTerm = getAdjustedTerm(entry['altterm'])
-    reading = getAdjustedPronunciation(reading)
-    definition = getAdjustedDefinition(entry['definition'])
-    jsonDict[count] = (
-        term,
-        altTerm,
-        reading,
-        entry['pos'],
-        definition,
-        '',
-        '',
-        frequency,
-        starCount,
-    )
+# def handleMigakuDictEntry(
+#     jsonDict,
+#     count: int,
+#     entry: typer.DictionaryFrequencyResult,
+#     freq: bool = False,
+# ) -> None:
+#     starCount = ''
+#     frequency = ''
+#     if freq:
+#         starCount = entry['starCount']
+#         frequency = entry['frequency']
+#     reading = entry['pronunciation']
+#     if reading == '':
+#         reading = entry['term']
+#     term = getAdjustedTerm(entry['term'])
+#     altTerm = getAdjustedTerm(entry['altterm'])
+#     reading = getAdjustedPronunciation(reading)
+#     definition = getAdjustedDefinition(entry['definition'])
+#     jsonDict[count] = (
+#         term,
+#         altTerm,
+#         reading,
+#         entry['pos'],
+#         definition,
+#         '',
+#         '',
+#         frequency,
+#         starCount,
+#     )
 
-
-def handleYomiDictEntry(
-    jsonDict: dict[int, _YomiDictEntry],
-    count: int,
-    entry: typing.Union[int, str],
-    freq: bool = False,
-) -> None:
-    starCount = ''
-    frequency = ''
-    if freq:
-        starCount = entry[9]
-        frequency = entry[8]
-    reading = entry[1]
-    if reading == '':
-        reading = entry[0]
-    term = getAdjustedTerm(entry[0])
-    reading = getAdjustedPronunciation(reading)
-    definition = getAdjustedDefinition(', '.join(entry[5]))
-    jsonDict[count] = (term, '', reading, entry[2], definition, '', '', frequency, starCount)
 
 def kaner(to_translate: str, hiraganer: bool = False) -> str:
     hiragana = u"がぎぐげござじずぜぞだぢづでどばびぶべぼぱぴぷぺぽ" \
@@ -660,71 +825,57 @@ def adjustReading(reading: str) -> str:
     return kaner(reading)
 
 
-def organizeMigakuDictionaryByFrequency(
-    jsonDict: typing.Sequence[typer.DictionaryFrequencyResult],
-    frequencyDict: _FrequencyDict,
-    readingHyouki: bool,
-) -> list[typer.DictionaryFrequencyResult]:
-    for idx, entry in enumerate(jsonDict):
-        if readingHyouki:
-            reading = entry['pronunciation']
+# def organizeMigakuDictionaryByFrequency(
+#     jsonDict: typing.Sequence[typer.DictionaryFrequencyResult],
+#     frequencyDict: _FrequencyDict,
+#     readingHyouki: bool,
+# ) -> list[typer.DictionaryFrequencyResult]:
+#     for idx, entry in enumerate(jsonDict):
+#         if readingHyouki:
+#             reading = entry['pronunciation']
+#
+#             if not reading:
+#                 reading = entry['term']
+#
+#             adjusted = adjustReading(reading)
+#
+#         if not readingHyouki and entry['term'] in frequencyDict:
+#             jsonDict[idx]['frequency'] = frequencyDict[entry['term']]
+#             jsonDict[idx]['starCount'] = getStarCount(jsonDict[idx]['frequency'])
+#         elif readingHyouki and entry['term'] in frequencyDict and adjusted in frequencyDict[entry['term']]:
+#             jsonDict[idx]['frequency'] = frequencyDict[entry['term']][adjusted]
+#             jsonDict[idx]['starCount'] = getStarCount(jsonDict[idx]['frequency'])
+#         else:
+#             jsonDict[idx]['frequency'] = 999999
+#             jsonDict[idx]['starCount'] = getStarCount(jsonDict[idx]['frequency'])
+#
+#     return sorted(jsonDict, key=operator.itemgetter("frequency"))
 
-            if not reading:
-                reading = entry['term']
 
-            adjusted = adjustReading(reading)
-
-        if not readingHyouki and entry['term'] in frequencyDict:
-            jsonDict[idx]['frequency'] = frequencyDict[entry['term']]
-            jsonDict[idx]['starCount'] = getStarCount(jsonDict[idx]['frequency'])
-        elif readingHyouki and entry['term'] in frequencyDict and adjusted in frequencyDict[entry['term']]:
-            jsonDict[idx]['frequency'] = frequencyDict[entry['term']][adjusted]
-            jsonDict[idx]['starCount'] = getStarCount(jsonDict[idx]['frequency'])
-        else:
-            jsonDict[idx]['frequency'] = 999999
-            jsonDict[idx]['starCount'] = getStarCount(jsonDict[idx]['frequency'])
-
-    return sorted(jsonDict, key=operator.itemgetter("frequency"))
-
-
-def organizeYomiDictionaryByFrequency(
-    jsonDict: typing.Sequence[list[str]],
+def computeYomiDictionaryByFrequency(
+    jsonDict: typing.Sequence[_FlatDictionary],
     frequencyDict: _FrequencyDict,
     readingHyouki: bool,
     # TODO: @ColinKennedy - The returned type is kind of "migaku-extended" to consider
-) -> list[typing.Union[int, str]]:
-    for idx, entry in enumerate(jsonDict):
-        if readingHyouki:
-            reading = entry[1]
+) -> None:
+    def _passthrough(value: str) -> str:
+        return value
 
-            if not reading:
-                reading = entry[0]
+    modify_reading: typing.Callable[[str], str]
 
-            adjusted = adjustReading(reading)
+    if readingHyouki:
+        modify_reading = adjustReading
+    else:
+        modify_reading = _passthrough
 
-        if not readingHyouki and entry[0] in frequencyDict:
-            if len(entry) > 8:
-                jsonDict[idx][8] = frequencyDict[entry[0]]
-                jsonDict[idx][9] = getStarCount(jsonDict[idx][8])
-            else:
-                jsonDict[idx].append(frequencyDict[entry[0]])
-                jsonDict[idx].append(getStarCount(jsonDict[idx][8]))
-        elif readingHyouki and entry[0] in frequencyDict and adjusted in frequencyDict[entry[0]]:
-            if len(entry) > 8:
-                jsonDict[idx][8] = frequencyDict[entry[0]][adjusted]
-                jsonDict[idx][9] = getStarCount(jsonDict[idx][8])
-            else:
-                jsonDict[idx].append(frequencyDict[entry[0]][adjusted])
-                jsonDict[idx].append(getStarCount(jsonDict[idx][8]))
+    for entry in jsonDict:
+        reading = modify_reading(entry.get_reading())
+        term = entry.get_term()
+
+        if (term, reading) in frequencyDict:
+            entry.set_frequency(frequencyDict[(term, reading)])
         else:
-            if len(entry) > 8:
-                jsonDict[idx][8] = 999999
-                jsonDict[idx][9] = ''
-            else:
-                jsonDict[idx].append(999999)
-                jsonDict[idx].append('')
-
-    return sorted(jsonDict, key=operator.itemgetter(8))
+            entry.clear_frequency()
 
 
 def getStarCount(freq: int) -> str:
@@ -742,37 +893,60 @@ def getStarCount(freq: int) -> str:
     return ''
 
 
-def getFrequencyList(lang: str) -> typing.Optional[tuple[_FrequencyDict, bool]]:
+def getFrequencyDict(lang: str) -> tuple[_FrequencyDict, bool]:
     filePath = os.path.join(addon_path, 'user_files', 'db', 'frequency', '%s.json' % lang)
-    frequencyDict: _FrequencyDict = {}
 
     if not os.path.exists(filePath):
-        _LOGGER.warning('Path "%s" does not exist.', filePath)
+        raise RuntimeError(f'Path "{filePath}" does not exist.')
 
-        return None
+    with open(filePath, 'r', encoding='utf-8-sig') as handler:
+        data = typing.cast(
+            typing.Union[dict[typing.Any, typing.Any], list[list[typing.Union[int, str]]]],
+            json.load(handler),
+        )
 
-    frequencyList = typing.cast(
-        list[typing.Union[list[str], str]],
-        json.load(open(filePath, 'r', encoding='utf-8-sig')),
-    )
+    if isinstance(data, abc.MutableMapping):
+        raise RuntimeError(f'Frequency file "{filePath}" was not a list.')
 
-    if isinstance(frequencyList[0], str):
-        yomi = False
-        is_reading_type = False
-    elif isinstance(frequencyList[0], list) and len(frequencyList[0]) == 2 and isinstance(frequencyList[0][0], str) and isinstance(frequencyList[0][1], str):
-        yomi = True
-        is_reading_type = True
-    else:
-        return None
+    if not isinstance(data, list):
+        raise RuntimeError(
+            f'Unable to read from frequency file "{filePath}" '
+            'because it is not a known layout.'
+        )
 
-    for idx, f in enumerate(frequencyList):
-        if yomi:
-            if f[0] in frequencyDict:
-                frequencyDict[f[0]][f[1]] = idx
-            else:
-                frequencyDict[f[0]] = {}
-                frequencyDict[f[0]][f[1]] = idx
+    frequencyDict: _FrequencyDict = {}
+
+    for item in data:
+        # Examples:
+        # ["の","freq",{"value":1,"displayValue":"1㋕"}]
+        # ["其","freq",{"reading":"それ","frequency":{"value":17,"displayValue":"17㋕"}}]
+
+        if len(item) != 3 or not isinstance(item[0], str) or not isinstance(item[1], str):
+            raise RuntimeError(
+                f'Unable to read "{item}" frequency item. Its structure is unknown.'
+            )
+
+        frequency_ = item[2]
+
+        if not isinstance(frequency_, abc.MutableMapping):
+            raise RuntimeError(f'Unable to read "{item}" frequency item. Its data is not a dict.')
+
+        frequency: typing.Union[_FrequencyEntryValue, _FrequencyReadingEntryValue]
+        term = item[0]
+
+        if "reading" in frequency_:
+            reading = frequency_["reading"]
+            frequencyDict[(term, reading)] = frequency_["frequency"]["value"]
         else:
-            frequencyDict[f] = idx
+            frequencyDict[(term, term)] = frequency_["value"]
 
-    return frequencyDict, is_reading_type
+    is_hyouki = True
+
+    if data and isinstance(data[0], str):
+        # NOTE: In the past migaku code it had a line roughly like this:
+        # `is_hyouki = frequencyDict['readingDictionaryType']`.
+        # Since we aren't sure what this is about, maybe just keep it.
+        #
+        is_hyouki = False
+
+    return frequencyDict, is_hyouki
