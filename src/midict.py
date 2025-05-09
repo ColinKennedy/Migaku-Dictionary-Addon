@@ -1492,7 +1492,9 @@ class DictInterface(QWidget):
 
         for name, group in groups.items():
             userGroups[name] = {
-                'dictionaries': self.db.getUserGroups(group['dictionaries']),
+                'dictionaries': self.db.getUserGroups(
+                    [dictionary["dict"] for dictionary in group['dictionaries']]
+                ),
                 'customFont': group['customFont'],
                 'font': group['font'],
             }

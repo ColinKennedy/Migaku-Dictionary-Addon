@@ -131,13 +131,6 @@ class DictionaryGroup(typing.TypedDict):
     font: str
 
 
-class DictionaryGroup2(typing.TypedDict):
-    # TODO: @ColinKennedy - I think bool is actually str. Test that later.
-    customFont: bool
-    dictionaries: list[str]
-    font: str
-
-
 class DictionaryResult(typing.TypedDict):
     # TODO: @ColinKennedy - Check the types here, later
     term: str

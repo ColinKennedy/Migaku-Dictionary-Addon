@@ -288,7 +288,7 @@ class ImportHandler(MigakuHTTPHandler):
     ) -> typing.Optional[str]:
         if "audio" in self.request.files:
             audioFile = self.request.files['audio'][0]
-            audioFileName = audioFile["filename"]
+            audioFileName: str = audioFile["filename"]
             copyFileFunction(audioFile, audioFileName)
 
             return audioFileName
@@ -463,7 +463,10 @@ class MigakuHTTPServer(tornado.web.Application):
         ]
 
         settings: dict[str, typing.Any] = {'mw' : mw}
-        super().__init__(handlers, **settings)
+        # TODO: @ColinKennedy - This type is complicated and probably fine to ignore for
+        # the long-term. Come back to it later
+        #
+        super().__init__(handlers, **settings)  # type: ignore[arg-type]
 
     def run(self, port: int=12345) -> None:
         self.listen(port)

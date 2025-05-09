@@ -42,6 +42,7 @@ class DictionaryWebInstallWizard(migaku_wizard.MiWizard):
     ) -> None:
         super().__init__(parent)
 
+        self.dictionary_index: typing.Optional[typer.DictionaryLanguageIndex2Pack] = None
         self.dictionary_install_index: list[typer.InstallLanguage] = []
         self.dictionary_install_frequency = False
         self.dictionary_install_conjugation = False
@@ -120,7 +121,7 @@ class ServerAskPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard]):
                                     'Make sure you are connected to the internet and the url you entered is valid.' % server_url_usr)
             return False
 
-        self.wizard.dictionary_install_index = index_data
+        self.wizard.dictionary_index = index_data
         self.wizard.dictionary_server_root = server_url
 
         return True
@@ -216,9 +217,11 @@ class DictionarySelectPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard
         self.dict_tree.clear()
 
         dictionary_index = self.wizard.dictionary_index
-        languages = dictionary_index.get('languages', [])
 
-        for language in languages:
+        if not dictionary_index:
+            raise RuntimeError(f'Wizard {self.wizard} has no dictionary index defined.')
+
+        for language in dictionary_index.get('languages') or []:
             name_en = language.get('name_en')
             name_native = language.get('name_native')
 
@@ -257,7 +260,7 @@ class DictionarySelectPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard
 
                     parent_item.addChild(dict_item)
 
-            for to_language in language.get('to_languages', []):
+            for to_language in language.get('to_languages') or []:
                 to_name_en = to_language.get('name_en')
                 to_name_native = to_language.get('name_native')
 
