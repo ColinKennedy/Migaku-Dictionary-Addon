@@ -20,6 +20,7 @@ if typing.TYPE_CHECKING:
     # TODO: @ColinKennedy - fix cyclic dependency "addonSettings.SettingsGui" later
     from . import addonSettings
 
+from . import dictdb
 from . import typer
 
 
@@ -107,7 +108,7 @@ class DictGroupEditor(QDialog):
         else:
             self.fontDropDown.setCurrentText(group['font'])
 
-        self.loadSelectedDictionaries(group['dictionaries'])
+        self.loadSelectedDictionaries([dictionary["dict"] for dictionary in group['dictionaries']])
 
     def loadSelectedDictionaries(self, dicts: typing.Iterable[str]) -> None:
         count = 1
@@ -242,9 +243,10 @@ class DictGroupEditor(QDialog):
 
             return
 
+        groups = {dictionary["dict"]: dictionary for dictionary in dictdb.get().getUserGroups(selectedDicts)}
         dictGroup: typer.DictionaryGroup = {
             'customFont' : customFont,
-            'dictionaries' : selectedDicts,
+            'dictionaries' : [groups[dictionary_name] for dictionary_name in selectedDicts],
             'font' : fontName,
         }
         curGroups[gn] = dictGroup
