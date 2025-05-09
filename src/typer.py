@@ -164,6 +164,9 @@ class DictionaryLanguageIndex(typing.TypedDict):
     to_languages: typing.Optional[typing.Sequence[DictionaryLanguageIndex]]
     dictionaries: typing.Sequence[IndexDictionary]
 
+    conjugation_url: str
+    frequency_url: str
+
 
 class DictionaryLanguageIndex2Pack(typing.TypedDict):
     # TODO: @ColinKennedy - Check if these key / values work
@@ -173,6 +176,7 @@ class DictionaryLanguageIndex2Pack(typing.TypedDict):
 class DictionaryLanguageIndex2Index(typing.TypedDict):
     # TODO: @ColinKennedy - Can we merge this class with `DictionaryLanguageIndex`
     code: str
+    dictionaries: typing.Sequence[IndexDictionary]
     frequency_url: str
     name_en: str
     name_native: str
@@ -202,11 +206,6 @@ class IndexDictionary(typing.TypedDict):
     name: str
     description: str
     url: str
-
-
-class InstallLanguage(DictionaryLanguageIndex):
-    conjugation_url: str
-    frequency_url: str
 
 
 def check_t(item: typing.Optional[T]) -> T:

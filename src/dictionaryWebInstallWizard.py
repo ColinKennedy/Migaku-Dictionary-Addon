@@ -43,7 +43,7 @@ class DictionaryWebInstallWizard(migaku_wizard.MiWizard):
         super().__init__(parent)
 
         self.dictionary_index: typing.Optional[typer.DictionaryLanguageIndex2Pack] = None
-        self.dictionary_install_index: list[typer.InstallLanguage] = []
+        self.dictionary_install_index: list[typer.DictionaryLanguageIndex] = []
         self.dictionary_install_frequency = False
         self.dictionary_install_conjugation = False
         self.dictionary_force_lang = force_lang
@@ -239,7 +239,7 @@ class DictionarySelectPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard
             self.dict_tree.addTopLevelItem(lang_item)
 
             def load_dict_list(
-                dictionaries: typing.Iterable[typer.DictionaryLanguagePair],
+                dictionaries: typing.Iterable[typer.IndexDictionary],
                 parent_item: QTreeWidgetItem,
             ) -> None:
                 for dictionary in dictionaries:
@@ -484,7 +484,7 @@ class InstallThread(QThread):
     def __init__(
         self,
         server_root: str,
-        install_index: typing.Sequence[typer.InstallLanguage],
+        install_index: typing.Sequence[typer.DictionaryLanguageIndex],
         install_freq: bool,
         install_conj: bool,
         force_lang: typing.Optional[str]=None,
