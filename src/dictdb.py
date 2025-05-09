@@ -18,6 +18,7 @@ from aqt import mw
 
 _DictionaryHeader = tuple[typing.Literal["term"], typing.Literal["altterm"], typing.Literal["pronunication"]]
 _INSTANCE: typing.Optional[DictDB] = None
+DictSearchResults = dict[str, list[typer.DictionaryResult]]
 
 
 class _DictionaryResultTuple(typing.NamedTuple):
@@ -27,7 +28,7 @@ class _DictionaryResultTuple(typing.NamedTuple):
     pronunciation: str
     pos: int
     definition: str
-    examples: list
+    examples: str
     audio: str
     starCount: str
 
@@ -242,7 +243,6 @@ class DictDB:
                 terms[idx] = '%' + terms[idx] + '%'
             else:
                 terms[idx] = '%「%' + terms[idx] + '%」%'
-        return terms;
 
     def deconjugate(
         self,
@@ -275,13 +275,13 @@ class DictDB:
     def searchTerm(
         self,
         term: str,
-        selectedGroup,
+        selectedGroup: typer.DictionaryGroup,
         conjugations: abc.MutableMapping[str, typing.Sequence[typer.Conjugation]],
         sT: typer.SearchTerm,
         deinflect: bool,
         dictLimit: str,
         maxDefs: int,
-    ) -> dict[str, list[typer.DictionaryResult]]:
+    ) -> tuple[DictSearchResults, set[str]]:
         alreadyConjTyped: dict[str, list[str]] = {}
         results: dict[str, list[typer.DictionaryResult]] = {}
         group = selectedGroup['dictionaries']
@@ -300,12 +300,14 @@ class DictDB:
         terms.append(term.lower())
         terms.append(term.capitalize())
         terms = list(set(terms))
+        known_dictionaries: set[str] = set()
+
         for dic in group:
             if dic['dict'] == 'Google Images':
-                results['Google Images'] = True
+                known_dictionaries.add("Google Images")
                 continue
             elif dic['dict'] == 'Forvo':
-                results['Forvo'] = True
+                known_dictionaries.add("Forvo")
                 continue
 
             if deinflect:
@@ -336,7 +338,7 @@ class DictDB:
                     dictRes.append(self.resultToDict(r))
                     if totalDefs >= maxDefs:
                         results[self.cleanDictName(dic['dict'])] = dictRes
-                        return results
+                        return results, known_dictionaries
                 results[self.cleanDictName(dic['dict'])] = dictRes
             elif not defEx and not sT == 'Pronunciation':
                 columns = ['altterm', 'pronunciation']
@@ -350,10 +352,10 @@ class DictDB:
                             dictRes.append(self.resultToDict(r))
                             if totalDefs >= maxDefs:
                                 results[self.cleanDictName(dic['dict'])] = dictRes
-                                return results
+                                return results, known_dictionaries
                         results[self.cleanDictName(dic['dict'])] = dictRes
                         break
-        return results
+        return results, known_dictionaries
 
     def resultToDict(self, r: _DictionaryResultTuple) -> typer.DictionaryResult:
         return {

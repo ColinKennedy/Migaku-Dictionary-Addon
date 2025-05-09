@@ -301,12 +301,13 @@ class MIDict(AnkiWebView):
 
     def prepareResults(
         self,
-        results: dict[str, list[typer.DictionaryResult]],
+        all_results: tuple[dictdb_.DictSearchResults, set[str]],
         term: str,
         font: str,
     ) -> str:
         frontBracket = self.config['frontBracket']
         backBracket = self.config['backBracket']
+        results, known_dictionaries = all_results
 
         if results:
             html = self.getSideBar(results, term, font, frontBracket, backBracket)
@@ -320,17 +321,18 @@ class MIDict(AnkiWebView):
                 imgTooltip = ' title="Add this definition, or any selected text and this definition\'s header to the card exporter (opens the card exporter if it is not yet opened)." '
                 clipTooltip = ' title="Copy this definition, or any selected text to the clipboard." '
                 sendTooltip = ' title="Send this definition, or any selected text and this definition\'s header to the card exporter to this dictionary\'s target fields. It will send it to the current target window, be it an Editor window, or the Review window." '
+
+            if "Google Images" in known_dictionaries:
+                html += self.getGoogleDictionaryResults(term, dictCount, frontBracket, backBracket,entryCount, font)
+                dictCount += 1
+                entryCount += 1
+
+            if "Forvo" in known_dictionaries:
+                html += self.getForvoDictionaryResults(term, dictCount, frontBracket, backBracket,entryCount, font)
+                dictCount += 1
+                entryCount += 1
+
             for dictName, dictResults in results.items():
-                    if dictName == 'Google Images':
-                        html += self.getGoogleDictionaryResults(term, dictCount, frontBracket, backBracket,entryCount, font)
-                        dictCount += 1
-                        entryCount += 1
-                        continue
-                    if  dictName == 'Forvo':
-                        html += self.getForvoDictionaryResults(term, dictCount, frontBracket, backBracket,entryCount, font)
-                        dictCount += 1
-                        entryCount += 1
-                        continue
                     duplicateHeader = self.getDuplicateHeaderCB(dictName)
                     overwrite = self.getOverwriteChecks(dictCount, dictName)
                     select = self.getFieldChecks(dictName)
@@ -1281,7 +1283,7 @@ class DictInterface(QWidget):
         self.sType = self.setupSearchType()
         self.openSB = self.setupOpenSB()
         self.openSB.opened = False
-        self.currentTarget = qt.QLabel('')
+        self.currentTarget = QLabel('')
         self.targetLabel = QLabel(' Target:')
         self.stretch1 = self.getStretchLay()
         self.stretch2 = self.getStretchLay()

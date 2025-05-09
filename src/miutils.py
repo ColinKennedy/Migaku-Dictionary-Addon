@@ -25,7 +25,7 @@ def miInfo(
     parent: typing.Optional[QWidget]=None,
     level: str = 'msg',
     day: bool = True,
-) -> bool:
+) -> int:
     if level == 'wrn':
         title = "Migaku Dictionary Warning"
     elif level == 'not':

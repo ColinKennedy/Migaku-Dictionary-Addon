@@ -45,6 +45,14 @@ _MENU = None
 T = typing.TypeVar("T")
 
 
+class _ExporterBaseWidget(QWidget):
+    def closeEvent(self, event: typing.Optional[QCloseEvent]) -> None:
+        _IS_EXPORTING_DEFINITIONS = False
+
+        if event:
+            event.accept()
+
+
 def _get_configuration() -> typer.Configuration:
     return typing.cast(typer.Configuration, mw.addonManager.getConfig(__name__))
 
@@ -401,9 +409,8 @@ def window_loaded() -> None:
         else:
             miInfo('Please select some cards before attempting to export definitions.', level='not')
 
-    def getProgressWidgetDefs() -> tuple[QWidget, QProgressBar]:
-        progressWidget = QWidget(None)
-        layout = QVBoxLayout()
+    def getProgressWidgetDefs() -> QProgressBar:
+        progressWidget = _ExporterBaseWidget(None)
         progressWidget.setFixedSize(400, 70)
         progressWidget.setWindowIcon(QIcon(join(addon_path, 'icons', 'migaku.png')))
         progressWidget.setWindowTitle("Generating Definitions...")
@@ -417,11 +424,7 @@ def window_loaded() -> None:
         per = QLabel(bar)
         per.setAlignment(Qt.AlignmentFlag.AlignCenter)
         progressWidget.show()
-        return progressWidget, bar;
-
-    def closeBar(event: QCloseEvent) -> None:
-        _IS_EXPORTING_DEFINITIONS = False
-        event.accept()
+        return bar
 
     def exportDefinitions(
         og: str,
@@ -452,8 +455,8 @@ def window_loaded() -> None:
         if not miAsk('Are you sure you want to export definitions for the "'+ og + '" field into the "' + dest +'" field?'):
             return
 
-        progWid, bar = getProgressWidgetDefs()
-        progWid.closeEvent = closeBar
+
+        bar = getProgressWidgetDefs()
         bar.setMinimum(0)
         bar.setMaximum(len(notes))
         val = 0;
@@ -468,7 +471,12 @@ def window_loaded() -> None:
                 break
 
             note = mw.col.get_note(nid)
-            fields = mw.col.models.field_names(note.model())
+            note_type = note.note_type()
+
+            if not note_type:
+                raise RuntimeError(f'Note "{note}" has no note type.')
+
+            fields = mw.col.models.field_names(note_type)
 
             if og in fields and dest in fields:
                 term = re.sub(r'<[^>]+>', '', note[og])

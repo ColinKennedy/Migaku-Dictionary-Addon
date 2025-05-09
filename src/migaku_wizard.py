@@ -4,10 +4,10 @@ import typing
 
 from aqt.qt import *
 from PyQt6.QtWidgets import QSizePolicy, QLayout
-from PyQt6.QtGui import QPalette
+from PyQt6.QtGui import QPalette, QPixmap
 
 
-T = typing.TypeVar("T")
+T = typing.TypeVar("T", bound="MiWizard", covariant=True)
 
 
 # TODO: @ColinKennedy - What is all this? An abstract class without using ``abc``?
@@ -17,9 +17,9 @@ class MiWizardPage(typing.Generic[T], QWidget):
         super().__init__(parent)
 
         self.wizard: typing.Optional[T] = None
-        self.title = None
-        self.subtitle = None
-        self.pixmap = None
+        self.title: typing.Optional[str] = None
+        self.subtitle: typing.Optional[str] = None
+        self.pixmap: typing.Optional[QPixmap] = None
 
         self.back_text = '< Back'
         self.back_enabled = True

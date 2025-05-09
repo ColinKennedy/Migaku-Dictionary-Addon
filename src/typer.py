@@ -86,7 +86,7 @@ class Configuration(typing.TypedDict):
     tooltips: bool
     unknownsToSearch: int
 
-    DictionaryGroups: dict
+    DictionaryGroups: dict[str, DictionaryGroup]
     ExportTemplates: dict[str, ExportTemplate]
     GoogleImageFields: list[str]
     ForvoFields: list[str]
@@ -107,7 +107,7 @@ class DefinitionSetting(typing.TypedDict):
 
 
 class Dictionary(typing.NamedTuple):
-    index: int
+    dictionary_index: int
     order: int
     text: str
 
@@ -138,7 +138,7 @@ class DictionaryResult(typing.TypedDict):
     pronunciation: str
     pos: int
     definition: str
-    examples: list
+    examples: str
     audio: str
     starCount: str
 
@@ -151,7 +151,7 @@ class DictionaryFrequencyResult(typing.TypedDict):
     pronunciation: str
     pos: int
     definition: str
-    examples: list
+    examples: str
     audio: str
     starCount: str
     frequency: int
@@ -201,6 +201,7 @@ class ExportTemplate(typing.TypedDict):
 class IndexDictionary(typing.TypedDict):
     name: str
     description: str
+    url: str
 
 
 class InstallLanguage(DictionaryLanguageIndex):

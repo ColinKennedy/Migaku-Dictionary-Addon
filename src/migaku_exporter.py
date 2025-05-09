@@ -41,7 +41,12 @@ def addDefinitionsToCardExporterNote(
     fb = config['frontBracket']
     bb = config['backBracket']
     lang = config['ForvoLanguage']
-    fields = mw.col.models.field_names(note.model())
+    note_type = note.note_type()
+
+    if not note_type:
+        raise RuntimeError(f'Note "{note}" has no note type.')
+
+    fields = mw.col.models.field_names(note_type)
     database = dictdb.get()
 
     for dictionary in dictionaryConfigurations:
