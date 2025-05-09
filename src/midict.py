@@ -74,7 +74,7 @@ class MIDict(AnkiWebView):
 
     def __init__(
         self,
-        dictInt: DictInterface,
+        dictInt: "DictInterface",
         db: dictdb_.DictDB,
         path: str,
         day: bool,
@@ -951,7 +951,10 @@ class ClipThread(QObject):
 
     def darwinIntercept(
         self,
-        event_type: typing.Union[typing.Literal[Quartz.kCGEventKeyDown], typing.Literal[Quartz.kCGEventKeyUp]],
+        event_type: typing.Union[  # type: ignore[valid-type]
+            typing.Literal[Quartz.kCGEventKeyDown],
+            typing.Literal[Quartz.kCGEventKeyUp],
+        ],
         event: _CGEventRef,
     ) ->  typing.Optional[_CGEventRef]:
         # TODO: @ColinKennedy - cyclic import
@@ -1283,7 +1286,7 @@ class DictInterface(QWidget):
         self.sType = self.setupSearchType()
         self.openSB = self.setupOpenSB()
         self.openSB.opened = False
-        self.currentTarget = QLabel('')
+        self.currentTarget: QLabel = QLabel('')
         self.targetLabel = QLabel(' Target:')
         self.stretch1 = self.getStretchLay()
         self.stretch2 = self.getStretchLay()

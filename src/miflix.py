@@ -456,7 +456,7 @@ class MigakuHTTPServer(tornado.web.Application):
         self.mw = mw
         self.previousBulkTimeStamp = 0
         self.thread = thread
-        handlers: list[tuple[str, typing.Type[tornado.web.RequestHandler]]] = [
+        handlers: typing.Sequence[tuple[str, typing.Type[tornado.web.RequestHandler]]] = [
             (r"/import", ImportHandler),
             (r"/learning-statuses", LearningStatusHandler),
             (r"/search", SearchHandler),

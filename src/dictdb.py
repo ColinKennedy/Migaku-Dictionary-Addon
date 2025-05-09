@@ -75,9 +75,9 @@ class DictDB:
 
         # TODO: Remove try/except
         try:
-            (lid,) = self.c.fetchone()
             # TODO: @ColinKennedy - I think ``lid`` is an int or str but don't know
-            lid = typing.cast(int, lid)
+            lid: int
+            (lid,) = self.c.fetchone()
 
             return lid
         except:
@@ -156,19 +156,19 @@ class DictDB:
 
         return dicts
 
-    def fetchDefs(self):
-        self.c.execute("SELECT definition FROM l64name大辞林 LIMIT 10;")
-        langs = []
-
-        try:
-            allLs = self.c.fetchall()
-        except:
-            return []
-
-        for l in allLs:
-            langs.append(l[0])
-
-        return langs
+    # def fetchDefs(self) -> list[str]:
+    #     self.c.execute("SELECT definition FROM l64name大辞林 LIMIT 10;")
+    #     langs: list[str] = []
+    #
+    #     try:
+    #         allLs = self.c.fetchall()
+    #     except:
+    #         return []
+    #
+    #     for l in allLs:
+    #         langs.append(l[0])
+    #
+    #     return langs
 
     def getAllDicts(self) -> list[str]:
         self.c.execute("SELECT dictname, lid FROM dictnames;")
@@ -198,9 +198,9 @@ class DictDB:
 
         return dicts
 
-    def getDefaultGroups(self) -> dict[str, typer.DictionaryLanguagePair]:
+    def getDefaultGroups(self) -> dict[str, list[typer.DictionaryLanguagePair]]:
         langs = self.getCurrentDbLangs()
-        dictsByLang: dict[str, typer.DictionaryLanguagePair] = {}
+        dictsByLang: dict[str, list[typer.DictionaryLanguagePair]] = {}
 
         for lang in langs:
             self.c.execute("SELECT dictname, lid FROM dictnames INNER JOIN langnames ON langnames.id = dictnames.lid WHERE langname = ?;", (lang,))
@@ -276,7 +276,7 @@ class DictDB:
         self,
         term: str,
         selectedGroup: typer.DictionaryGroup,
-        conjugations: abc.MutableMapping[str, typing.Sequence[typer.Conjugation]],
+        conjugations: dict[str, list[typer.Conjugation]],
         sT: typer.SearchTerm,
         deinflect: bool,
         dictLimit: str,

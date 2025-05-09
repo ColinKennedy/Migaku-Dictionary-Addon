@@ -19,9 +19,9 @@ class miJHandler:
 			# TODO: @ColinKennedy - add logging
 			return {}
 
+		# TODO: @ColinKennedy - This type-cast is a total guess. Check later.
+		activeNotes: dict[str, list[str]]
 		activeNotes, _ = self.mw.CSSJSHandler.getWrapperDict()
-		# TODO: @ColinKennedy - This typing.cast is a total guess. Check later.
-		activeNotes = typing.cast(dict[str, list[str]], activeNotes)
 
 		for noteType in activeNotes:
 			activeNotes[noteType] = list(dict.fromkeys([item[1] for item in activeNotes[noteType]]))
