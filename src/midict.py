@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+# TODO: @ColinKennedy - Clean these imports later
+
 import functools
 import logging
 import typing
@@ -48,10 +50,14 @@ from pynput import keyboard
 
 from . import migaku_configuration, migaku_search, migaku_settings, typer, welcomer
 
+if typing.TYPE_CHECKING:
+    import Quartz  # type: ignore[import-not-found]
+
 
 _CURRENT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 _LOGGER = logging.getLogger(__name__)
-_StringSequence = typing.TypeVar("_StringSequence", bound=typing.Sequence[str])
+_CGEventRef = typing.Any  # TODO: @ColinKennedy - not sure how to refer to this in ``Quartz``.
+_StringSequence = typing.TypeVar("_StringSequence", bound=list[str])
 T = typing.TypeVar("T")
 
 
@@ -84,7 +90,12 @@ class MIDict(AnkiWebView):
         self.maxH = self.config['maxHeight']
         self.onBridgeCmd = self.handleDictAction
         self.db = db
-        self.termHeaders = self.formatTermHeaders(self.db.getTermHeaders() or {})
+        self.termHeaders = self.formatTermHeaders(
+            {
+                key: list(value)
+                for key, value in (self.db.getTermHeaders() or {}).items()
+            }
+        )
         self.dupHeaders = self.db.getDupHeaders()
         self.sType: typing.Optional[QComboBox] = None
         self.radioCount = 0
@@ -118,7 +129,7 @@ class MIDict(AnkiWebView):
     def loadHTMLURL(self, html: str, url: aqt.QUrl) -> None:
         self._page.setHtml(html, url)
 
-    def formatTermHeaders(self, ths: dict[str, str]) -> typing.Optional[dict[str, tuple[str, str]]]:
+    def formatTermHeaders(self, ths: dict[str, typing.Iterable[str]]) -> typing.Optional[dict[str, tuple[str, str]]]:
         formattedHeaders: dict[str, tuple[str, str]] = {}
 
         if not ths:
@@ -414,8 +425,10 @@ class MIDict(AnkiWebView):
             tooltip = ' title="Enable this option if this dictionary has the target word\'s header within the definition. Enabling this will prevent the addon from exporting duplicate header."'
         checked = ' '
         className = 'checkDict' + re.sub(r'\s', '' , dictName)
-        if dictName in (self.dupHeaders or {}):
-            num = self.dupHeaders[dictName]
+        duplicates = self.dupHeaders or {}
+
+        if dictName in duplicates:
+            num = duplicates.get(dictName)
             if num == 1:
                 checked = ' checked '
         return '<div class="dupHeadCB" data-dictname="' + dictName + '">Duplicate Header:<input ' + checked + tooltip + ' class="' + className + '" onclick="handleDupChange(this, \'' + className + '\')" type="checkbox"></div>'
@@ -687,7 +700,11 @@ class MIDict(AnkiWebView):
                 tFields, addType = result
 
             note = self.reviewer.card.note()
-            model = note.model()
+            model = note.note_type()
+
+            if not model:
+                raise RuntimeError(f'Note "{note}" has no Note Type.')
+
             fields = model['flds']
             changed = False
             for field in fields:
@@ -848,10 +865,12 @@ class MIDict(AnkiWebView):
         return fields
 
     def setCurrentEditor(self, editor: Editor, target: str = '') -> None:
-        if editor != self.currentEditor:
-            self.currentEditor = editor
-            self.reviewer = None
-            self.dictInt.currentTarget.setText(target)
+        if editor == self.currentEditor:
+            return
+
+        self.currentEditor = editor
+        self.reviewer = None
+        self.dictInt.currentTarget.setText(target)
 
     def setReviewer(self, reviewer: Reviewer) -> None:
         self.reviewer = reviewer
@@ -928,7 +947,11 @@ class ClipThread(QObject):
     def on_release(self, key: typing.Union[keyboard.Key, keyboard.KeyCode, None]) -> None:
         self.release.emit([key])
 
-    def darwinIntercept(self, event_type, event):
+    def darwinIntercept(
+        self,
+        event_type: typing.Union[typing.Literal[Quartz.kCGEventKeyDown], typing.Literal[Quartz.kCGEventKeyUp]],
+        event: _CGEventRef,
+    ) ->  typing.Optional[_CGEventRef]:
         # TODO: @ColinKennedy - cyclic import
         from . import keypress_tracker
 

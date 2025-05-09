@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import typing
 
+from collections import abc
 import sqlite3
 import os.path
 from aqt.utils import showInfo
@@ -275,7 +276,7 @@ class DictDB:
         self,
         term: str,
         selectedGroup,
-        conjugations: typing.Sequence[typer.Conjugation],
+        conjugations: abc.MutableMapping[str, typing.Sequence[typer.Conjugation]],
         sT: typer.SearchTerm,
         deinflect: bool,
         dictLimit: str,
