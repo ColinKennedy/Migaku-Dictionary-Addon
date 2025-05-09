@@ -1,5 +1,2 @@
 anki>=25.2.4,<26
 aqt>=25.2,<26
-mypy>=1.15.0,<2
-types-pynput>=1.8.1,<2
-types-requests>=2.23,<3
