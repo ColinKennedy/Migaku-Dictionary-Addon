@@ -15,6 +15,7 @@ addon_path = os.path.dirname(__file__)
 from aqt import mw
 
 
+_DictionaryHeader = tuple[typing.Literal["term"], typing.Literal["altterm"], typing.Literal["pronunication"]]
 _INSTANCE: typing.Optional[DictDB] = None
 
 
@@ -398,7 +399,12 @@ class DictDB:
         limit: str,
         rN: str,
     ) -> tuple[list[typer.DictionaryResult], int, str]:
-        duplicateHeader, termHeader = self.getDuplicateSetting(rN)
+        result = self.getDuplicateSetting(rN)
+
+        if not result:
+            raise RuntimeError(f'Cannot get duplicate settings from "{rN}" rN.')
+
+        duplicateHeader, termHeader = result
         results: list[typer.DictionaryResult] = []
         columns = ['term','altterm', 'pronunciation']
 
@@ -444,16 +450,16 @@ class DictDB:
         self.c.execute('UPDATE dictnames SET addtype = ? WHERE dictname=?', (addType, name))
         self.commitChanges()
 
-    def getFieldsSetting(self, name: str) -> list[str] | None:
+    def getFieldsSetting(self, name: str) -> typing.Optional[list[str]]:
         self.c.execute('SELECT fields FROM dictnames WHERE dictname=?', (name, ))
 
         # TODO: Remove try/except
         try:
             (fields,) = self.c.fetchone()
-
-            return json.loads(fields)
         except:
             return None
+
+        return typing.cast(list[str], json.loads(fields))
 
     def getAddTypeAndFields(self, dictName: str) -> typing.Optional[tuple[list[str], str]]:
         self.c.execute('SELECT fields, addtype FROM dictnames WHERE dictname=?', (dictName, ))
@@ -480,39 +486,42 @@ class DictDB:
         except:
             return None
 
+        return None
+
     def setDupHeader(self, duplicateHeader: str, name: str) -> None:
         self.c.execute('UPDATE dictnames SET duplicateHeader = ? WHERE dictname=?', (duplicateHeader, name))
         self.commitChanges()
 
-    # TODO: Make a more direct type for the return type
-    def getTermHeaders(self) -> typing.Optional[dict]:
+    def getTermHeaders(self) -> typing.Optional[dict[str, _DictionaryHeader]]:
         self.c.execute('SELECT dictname, termHeader FROM dictnames')
         # TODO: Remove try/except
         try:
             dictHeaders = self.c.fetchall()
             # TODO: Make a more direct type for this type
-            results = {}
+            results: dict[str, _DictionaryHeader] = {}
             if len(dictHeaders) > 0:
                 for r in dictHeaders:
-                    results[r[0]] = json.loads(r[1])
+                    results[r[0]] = typing.cast(_DictionaryHeader, tuple(*json.loads(r[1])))
                 return results
         except:
             return None
+
+        return None
 
     def getAddType(self, name: str) -> typing.Optional[typer.AddType]:
         self.c.execute('SELECT addtype FROM dictnames WHERE dictname=?', (name, ))
         # TODO: Remove try/except
         try:
             (addType,) = self.c.fetchone()
-            return addType
+
+            return typing.cast(typer.AddType, addType)
         except:
             return None
 
-    def getDictTermHeader(self, dictname: str):
+    def getDictTermHeader(self, dictname: str) -> str:
         self.c.execute('SELECT termHeader FROM dictnames WHERE dictname=?', (dictname, ))
-        # TODO: Check
-        print(f"DEBUGPRINT[1]: dictdb.py:450: self.c.fetchone()[0]={self.c.fetchone()[0]}")
-        return self.c.fetchone()[0]
+
+        return typing.cast(str, self.c.fetchone()[0])
 
     def setDictTermHeader(self, dictname: str, termheader: str) -> None:
         self.c.execute('UPDATE dictnames SET termHeader = ? WHERE dictname=?', (termheader, dictname))

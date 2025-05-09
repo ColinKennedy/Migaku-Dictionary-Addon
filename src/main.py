@@ -319,10 +319,22 @@ def window_loaded() -> None:
             dictDict['Forvo'] = 'Forvo'
             dictDict['None'] = 'None'
             ex =  QPushButton('Execute')
-            ex.clicked.connect(lambda: exportDefinitions(origin.currentText(), destination.currentText(), addType.currentText(),
-                [dictDict[dicts.currentText()], dictDict[dict2.currentText()] ,
-                dictDict[dict3.currentText()]], howMany.value(), notes, generateWidget,
-                [dicts.currentText(),dict2.currentText(), dict3.currentText()]))
+            ex.clicked.connect(
+                lambda: exportDefinitions(
+                    origin.currentText(),
+                    destination.currentText(),
+                    addType.currentText(),
+                    [
+                        dictDict[dicts.currentText()],
+                        dictDict[dict2.currentText()] ,
+                        dictDict[dict3.currentText()]
+                    ],
+                    howMany.value(),
+                    notes,
+                    generateWidget,
+                    [dicts.currentText(), dict2.currentText(), dict3.currentText()]
+                )
+            )
             destination = QComboBox()
             destination.addItems(fields)
             howMany = QSpinBox()
@@ -473,8 +485,8 @@ def window_loaded() -> None:
                     elif dictN == 'Forvo':
                         tresults.append(migaku_forvo.export_audio( term, howMany, lang))
                     elif dictN != 'None':
-                        dresults, dh, th = database.getDefForMassExp(term, dictN, str(howMany), rawNames[dCount])
-                        tresults.append(migaku_exporter.formatDefinitions(dresults, th, dh, fb, bb))
+                        dresults, dh, termHeader = database.getDefForMassExp(term, dictN, str(howMany), rawNames[dCount])
+                        tresults.append(migaku_exporter.formatDefinitions(dresults, termHeader, dh, fb, bb))
 
                     dCount+= 1
 

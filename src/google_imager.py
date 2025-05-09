@@ -62,11 +62,11 @@ def export_images(term: str, howMany: int) -> str:
 
     imgSeparator = ''
     imgs = []
-    urls = _INSTANCE.search(term, 80)
+    urls = _INSTANCE.search(term, 80) or []
 
     if len(urls) < 1:
         time.sleep(.1)
-        urls = _INSTANCE.search(term, 80, 'countryUS')
+        urls = _INSTANCE.search(term, 80, 'countryUS') or []
 
     for url in urls:
         time.sleep(.1)

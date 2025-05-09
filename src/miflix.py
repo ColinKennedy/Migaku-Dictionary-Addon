@@ -41,11 +41,6 @@ class _Field(typing.TypedDict):
     ord: str
 
 
-class _File(typing.TypedDict):
-    body: str
-
-
-# TODO: @ColinKennedy - not sure about the return type. Maybe revisit
 def getNextBatchOfCards(
     collection: Collection,
     start: _PseudoNumber,
@@ -56,7 +51,10 @@ def getNextBatchOfCards(
     if not database:
         raise RuntimeError(f'Collection "{collection}" has no database.')
 
-    return database.all("SELECT c.ivl, n.flds, c.ord, n.mid FROM cards AS c INNER JOIN notes AS n ON c.nid = n.id WHERE c.type != 0 ORDER BY c.ivl LIMIT %s, %s;"%(start, incrementor))
+    return typing.cast(
+        list[list[str]],
+        database.all("SELECT c.ivl, n.flds, c.ord, n.mid FROM cards AS c INNER JOIN notes AS n ON c.nid = n.id WHERE c.type != 0 ORDER BY c.ivl LIMIT %s, %s;"%(start, incrementor)),
+    )
 
 
 
@@ -265,6 +263,10 @@ class ImportHandler(MigakuHTTPHandler):
                     if "image" in self.request.files:
                         imageFile = self.request.files['image'][0]
                         imageFileName = imageFile["filename"]
+
+                        if not imageFileName:
+                            raise RuntimeError(f'Image File "{imageFile}" has no name.')
+
                         self.copyFileToTempDir(imageFile, imageFileName)
                     cardToExport: typer.Card = {
                         "primary" : primary,
@@ -282,7 +284,7 @@ class ImportHandler(MigakuHTTPHandler):
                 
     def handleAudioFileInRequestAndReturnFilename(
         self,
-        copyFileFunction: typing.Callable[[_File, str], None],
+        copyFileFunction: typing.Callable[[httputil.HTTPFile, str], None],
     ) -> typing.Optional[str]:
         if "audio" in self.request.files:
             audioFile = self.request.files['audio'][0]
@@ -299,13 +301,13 @@ class ImportHandler(MigakuHTTPHandler):
 
         return True
 
-    def copyFileToTempDir(self, handler: _File, filename: str) -> None:
+    def copyFileToTempDir(self, handler: httputil.HTTPFile, filename: str) -> None:
         filePath = join(self.tempDirectory, filename)
 
         with open(filePath, 'wb') as handler_:
             handler_.write(handler['body'].encode())
 
-    def copyFileToCondensedAudioDir(self, handler: _File, filename: str) -> None:
+    def copyFileToCondensedAudioDir(self, handler: httputil.HTTPFile, filename: str) -> None:
         timestamp_value = self.application.settings.get('previousBulkTimeStamp')
 
         if not timestamp_value:

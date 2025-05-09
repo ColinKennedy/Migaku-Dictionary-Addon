@@ -7,7 +7,7 @@ from aqt import mw
 from . import dictdb, google_imager, migaku_forvo, typer
 
 
-def _getTermHeaderText(th: str, entry: typer.DictionaryResult, fb: str, bb: str) -> str:
+def _getTermHeaderText(termHeader: str, entry: typer.DictionaryResult, fb: str, bb: str) -> str:
     term = entry['term']
     altterm = entry['altterm']
     if altterm == term:
@@ -17,7 +17,7 @@ def _getTermHeaderText(th: str, entry: typer.DictionaryResult, fb: str, bb: str)
         pron = ''
 
     termHeader = ''
-    for header in th:
+    for header in termHeader:
         if header == 'term':
             termHeader += fb + term + bb
         elif header == 'altterm':
@@ -64,8 +64,8 @@ def addDefinitionsToCardExporterNote(
             elif tableName == 'Forvo':
                 tresults.append(migaku_forvo.export_audio(term, limit, lang))
             elif tableName != 'None':
-                dresults, dh, th = database.getDefForMassExp(term, tableName, str(limit), dictName)
-                tresults.append(formatDefinitions(dresults, th, dh, fb, bb))
+                dresults, dh, termHeader = database.getDefForMassExp(term, tableName, str(limit), dictName)
+                tresults.append(formatDefinitions(dresults, termHeader, dh, fb, bb))
             results = '<br><br>'.join([i for i in tresults if i != ''])
             if results != "":
                 if note[targetField] == '' or note[targetField] == '<br>':
@@ -77,7 +77,7 @@ def addDefinitionsToCardExporterNote(
 
 def formatDefinitions(
     results: typing.Iterable[typer.DictionaryResult],
-    th: str,
+    termHeader: str,
     dh: int,
     fb: str,
     bb: str,
@@ -88,7 +88,7 @@ def formatDefinitions(
         text = ''
 
         if dh == 0:
-            text = _getTermHeaderText(th, r, fb, bb) + '<br>' + r['definition']
+            text = _getTermHeaderText(termHeader, r, fb, bb) + '<br>' + r['definition']
         else:
             stars = r['starCount']
             text =  r['definition']

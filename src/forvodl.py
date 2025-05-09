@@ -99,7 +99,7 @@ class Forvo(QRunnable):
         super().__init__()
 
         self.selLang = language
-        self.term = False
+        self.term: typing.Optional[str] = None
         self.signals = ForvoSignals()
         self.langShortCut = languages[self.selLang]
         self.GOOGLE_SEARCH_URL = "https://forvo.com/word/◳t/#" + self.langShortCut #◳r
@@ -155,16 +155,26 @@ class Forvo(QRunnable):
 
     # TODO: @ColinKennedy - Make a more specific type-hint instead of a hard-coded tuple
     def generateURLS(self, results: str) -> list[tuple[str, str, str, str]]:
-        audio = re.findall(r'var pronunciations = \[([\w\W\n]*?)\];', results)
-        if not audio:
+        matches = typing.cast(list[str], re.findall(r'var pronunciations = \[([\w\W\n]*?)\];', results))
+        if not matches:
             return []
-        audio = audio[0]
+        audio = matches[0]
         data = re.findall(self.selLang + r'.*?Pronunciation by (?:<a.*?>)?(\w+).*?class="lang_xx"\>(.*?)\<.*?,.*?,.*?,.*?,\'(.+?)\',.*?,.*?,.*?\'(.+?)\'', audio)     
         if not data:
             return []
 
-        server = re.search(r"var _SERVER_HOST=\'(.+?)\';", results).group(1)
-        audiohost = re.search(r'var _AUDIO_HTTP_HOST=\'(.+?)\';', results).group(1)
+        match = re.search(r"var _SERVER_HOST=\'(.+?)\';", results)
+
+        if not match:
+            raise RuntimeError(f'Results "{results}" has no server host.')
+
+        server = match.group(1)
+        match = re.search(r'var _AUDIO_HTTP_HOST=\'(.+?)\';', results)
+
+        if not match:
+            raise RuntimeError(f'Results "{results}" has no audio http host.')
+
+        audiohost = match.group(1)
         protocol = 'https:'
         urls: list[tuple[str, str, str, str]] = []
 

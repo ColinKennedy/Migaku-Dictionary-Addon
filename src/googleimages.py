@@ -295,7 +295,7 @@ class Google(QRunnable):
             self.signals.resultsFound.emit(resultList)
         self.signals.finished.emit()
 
-    def search(self, keyword: str, maximum: int, region: str = "") -> list[str]:
+    def search(self, keyword: str, maximum: int, region: str = "") -> typing.Optional[list[str]]:
         query = self.query_gen(keyword) 
 
         return self.image_search(query, maximum, region)
@@ -372,7 +372,7 @@ class Google(QRunnable):
 
     def image_search(
         self,
-        query_gen: typing.Iterable[str],
+        query_gen: typing.Iterator[str],
         maximum: int,
         region: str = "",
     ) -> typing.Optional[list[str]]:
@@ -447,5 +447,5 @@ def search(target: str, number: int) -> list[str]:
 
     google = Google()
 
-    results = google.search(target_name, maximum=number)
+    results = google.search(target_name, maximum=number) or []
     return results
