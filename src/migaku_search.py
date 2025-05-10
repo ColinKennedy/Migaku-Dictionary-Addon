@@ -19,11 +19,11 @@ def _selectedText(page: QWebEngineView) -> typing.Optional[str]:
 
 
 def getTarget(name: str) -> typing.Optional[str]:
-    if name == 'AddCards':
-        return 'Add'
+    if name == "AddCards":
+        return "Add"
     elif name == "EditCurrent" or name == "MigakuEditCurrent":
-        return 'Edit'
-    elif name == 'Browser':
+        return "Edit"
+    elif name == "Browser":
         return name
 
     return None
@@ -48,12 +48,19 @@ def performColSearch(text: str) -> None:
     browser.activateWindow()
 
     if not is_win:
-        browser.setWindowState(browser.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
+        browser.setWindowState(
+            browser.windowState() & ~Qt.WindowState.WindowMinimized
+            | Qt.WindowState.WindowActive
+        )
         browser.raise_()
     else:
-        browser.setWindowFlags(browser.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
+        browser.setWindowFlags(
+            browser.windowFlags() | Qt.WindowType.WindowStaysOnTopHint
+        )
         browser.show()
-        browser.setWindowFlags(browser.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint)
+        browser.setWindowFlags(
+            browser.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint
+        )
         browser.show()
 
 
@@ -70,7 +77,7 @@ def searchTerm(self: QWebEngineView) -> None:
     if not text:
         return
 
-    text = re.sub(r'\[[^\]]+?\]', '', text)
+    text = re.sub(r"\[[^\]]+?\]", "", text)
     text = text.strip()
 
     if not migaku_dictionary.get_visible_dictionary():
@@ -82,10 +89,10 @@ def searchTerm(self: QWebEngineView) -> None:
 
     title = self.title()
 
-    if title == 'main webview':
-        if mw.state == 'review':
+    if title == "main webview":
+        if mw.state == "review":
             dictionary.dict.setReviewer(mw.reviewer)
-    elif title == 'editor':
+    elif title == "editor":
         parent = migaku_widget_global.get_parent_editor()
         target = getTarget(type(parent.parentWindow).__name__)
         dictionary.dict.setCurrentEditor(parent, target=target or "")

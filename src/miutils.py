@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 
+#
 
 import typing
 from os.path import dirname, join
@@ -16,20 +16,20 @@ def _verify(item: typing.Optional[T]) -> T:
     if item is not None:
         return item
 
-    raise RuntimeError('Expected item to exist but got none.')
+    raise RuntimeError("Expected item to exist but got none.")
 
 
 def miInfo(
     text: str,
-    parent: typing.Optional[QWidget]=None,
-    level: str = 'msg',
+    parent: typing.Optional[QWidget] = None,
+    level: str = "msg",
     day: bool = True,
 ) -> int:
-    if level == 'wrn':
+    if level == "wrn":
         title = "Migaku Dictionary Warning"
-    elif level == 'not':
+    elif level == "not":
         title = "Migaku Dictionary Notice"
-    elif level == 'err':
+    elif level == "err":
         title = "Migaku Dictionary Error"
     else:
         title = "Migaku Dictionary"
@@ -37,7 +37,7 @@ def miInfo(
     if not parent:
         parent = aqt.mw.app.activeWindow() or aqt.mw
 
-    icon = QIcon(join(addon_path, 'icons', 'migaku.png'))
+    icon = QIcon(join(addon_path, "icons", "migaku.png"))
     mb = QMessageBox(parent)
     if not day:
         mb.setStyleSheet(" QMessageBox {background-color: #272828;}")
@@ -51,13 +51,18 @@ def miInfo(
     return mb.exec()
 
 
-def miAsk(text: str, parent: typing.Optional[QWidget]=None, day: bool=True, customText: typing.Sequence[str] = "") -> bool:
+def miAsk(
+    text: str,
+    parent: typing.Optional[QWidget] = None,
+    day: bool = True,
+    customText: typing.Sequence[str] = "",
+) -> bool:
     msg = QMessageBox(parent)
     msg.setWindowTitle("Migaku Dictionary")
     msg.setText(text)
-    icon = QIcon(join(addon_path, 'icons', 'migaku.png'))
+    icon = QIcon(join(addon_path, "icons", "migaku.png"))
     b = _verify(msg.addButton(QMessageBox.StandardButton.Yes))
-    
+
     b.setFixedSize(100, 30)
     b.setDefault(True)
     c = _verify(msg.addButton(QMessageBox.StandardButton.No))

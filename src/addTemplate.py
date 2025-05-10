@@ -60,12 +60,12 @@ class TemplateEditor(QDialog):
         self.otherDictsField = QComboBox()
         self.dictionaries = QComboBox()
         self.fields = QComboBox()
-        self.addDictField = QPushButton('Add')
+        self.addDictField = QPushButton("Add")
         self.dictFieldsTable = self.getDictFieldsTable()
         self.entrySeparator = QLineEdit()
         self.dictionaryNames = dictionaries
-        self.cancelButton = QPushButton('Cancel')
-        self.saveButton = QPushButton('Save')
+        self.cancelButton = QPushButton("Cancel")
+        self.saveButton = QPushButton("Save")
         self._main_layout = QVBoxLayout()
         self.notesFields = self.getNotesFields()
         self.setupLayout()
@@ -74,17 +74,29 @@ class TemplateEditor(QDialog):
         self.initTooltips()
 
     def initTooltips(self) -> None:
-        self.templateName.setToolTip('The name of the export template.')
-        self.noteType.setToolTip('The note type to export to.')
-        self.wordField.setToolTip('The destination field for your target word.')
-        self.sentenceField.setToolTip('The destination field for the sentence.')
-        self.imageField.setToolTip('The destination field for an image pasted from\nthe clipboard with Ctrl/⌘+shift+v.')
-        self.audioField.setToolTip('The destination field for an mp3 audio file pasted from\nthe clipboard with Ctrl/⌘+shift+v.')
-        self.otherDictsField.setToolTip('The destination field for any dictionary\nwithout a specific destination field set below.')
-        self.dictionaries.setToolTip('The dictionary to specify a particular field to.\nThe dictionaries will be prioritized and exported before\ndictionaries without a specified destination field.')
-        self.fields.setToolTip('The dictionary\'s destination field.')
-        self.addDictField.setToolTip('Add this dictionary/destination field combination.')
-        self.entrySeparator.setToolTip('The separator that will be used in the case multiple\nitems(the sentence/word/image/definitions) are exported to the same destination field.\nBy default two line breaks are used ("<br><br>").')
+        self.templateName.setToolTip("The name of the export template.")
+        self.noteType.setToolTip("The note type to export to.")
+        self.wordField.setToolTip("The destination field for your target word.")
+        self.sentenceField.setToolTip("The destination field for the sentence.")
+        self.imageField.setToolTip(
+            "The destination field for an image pasted from\nthe clipboard with Ctrl/⌘+shift+v."
+        )
+        self.audioField.setToolTip(
+            "The destination field for an mp3 audio file pasted from\nthe clipboard with Ctrl/⌘+shift+v."
+        )
+        self.otherDictsField.setToolTip(
+            "The destination field for any dictionary\nwithout a specific destination field set below."
+        )
+        self.dictionaries.setToolTip(
+            "The dictionary to specify a particular field to.\nThe dictionaries will be prioritized and exported before\ndictionaries without a specified destination field."
+        )
+        self.fields.setToolTip("The dictionary's destination field.")
+        self.addDictField.setToolTip(
+            "Add this dictionary/destination field combination."
+        )
+        self.entrySeparator.setToolTip(
+            'The separator that will be used in the case multiple\nitems(the sentence/word/image/definitions) are exported to the same destination field.\nBy default two line breaks are used ("<br><br>").'
+        )
 
     def clearTemplateEditor(self) -> None:
         self.templateName.clear()
@@ -103,7 +115,9 @@ class TemplateEditor(QDialog):
         self.dictFieldsTable.setRowCount(0)
         self.entrySeparator.clear()
 
-    def loadTemplateEditor(self, toEdit: typing.Optional[_Template] = None, tName: str = "") -> None:
+    def loadTemplateEditor(
+        self, toEdit: typing.Optional[_Template] = None, tName: str = ""
+    ) -> None:
         self.clearTemplateEditor()
 
         self.loadDictionaries()
@@ -116,21 +130,21 @@ class TemplateEditor(QDialog):
             self.initialNoteFieldsLoad(False)
             self.templateName.setText(tName)
             self.loadTemplateForEdit(toEdit)
-            self.loadTableForEdit(toEdit['specific'])
+            self.loadTableForEdit(toEdit["specific"])
 
     def loadTemplateForEdit(self, t: _Template) -> None:
         self.setWindowTitle("Edit Export Template")
         self.templateName.setEnabled(False)
-        self.noteType.setCurrentText(t['noteType'])
-        self.sentenceField.setCurrentText(t['sentence'])
-        self.secondaryField.setCurrentText(t.get('secondary', "Don't Export"))
-        self.notesField.setCurrentText(t.get('notes', "Don't Export"))
-        self.wordField.setCurrentText(t['word'])
-        self.imageField.setCurrentText(t['image'])
-        if 'audio' in t:
-            self.audioField.setCurrentText(t['audio'])
-        self.otherDictsField.setCurrentText(t['unspecified'])
-        self.entrySeparator.setText(t['separator'])
+        self.noteType.setCurrentText(t["noteType"])
+        self.sentenceField.setCurrentText(t["sentence"])
+        self.secondaryField.setCurrentText(t.get("secondary", "Don't Export"))
+        self.notesField.setCurrentText(t.get("notes", "Don't Export"))
+        self.wordField.setCurrentText(t["word"])
+        self.imageField.setCurrentText(t["image"])
+        if "audio" in t:
+            self.audioField.setCurrentText(t["audio"])
+        self.otherDictsField.setCurrentText(t["unspecified"])
+        self.entrySeparator.setText(t["separator"])
 
     def loadTableForEdit(self, fieldsDicts: dict[str, list[str]]) -> None:
         for field, dictList in fieldsDicts.items():
@@ -138,7 +152,9 @@ class TemplateEditor(QDialog):
                 self.addDictFieldRow(dictName, field)
 
     def getConfig(self) -> typer.Configuration:
-        return typing.cast(typer.Configuration, self.mw.addonManager.getConfig(__name__))
+        return typing.cast(
+            typer.Configuration, self.mw.addonManager.getConfig(__name__)
+        )
 
     def getSpecificDictFields(self) -> dict[str, list[str]]:
         dictFields: dict[str, list[str]] = {}
@@ -157,24 +173,24 @@ class TemplateEditor(QDialog):
     def saveExportTemplate(self) -> None:
         newConfig = self.getConfig()
         tn = self.templateName.text()
-        if tn  == '':
-            miInfo('The export template must have a name.', level='wrn')
+        if tn == "":
+            miInfo("The export template must have a name.", level="wrn")
             return
-        curGroups = newConfig['ExportTemplates']
+        curGroups = newConfig["ExportTemplates"]
         if self.new and tn in curGroups:
-            miInfo('A new export template must have a unique name.', level='wrn')
+            miInfo("A new export template must have a unique name.", level="wrn")
             return
         exportTemplate: typer.ExportTemplate = {
-            'noteType' : self.noteType.currentText(),
-            'sentence' : self.sentenceField.currentText(),
-            'secondary' : self.secondaryField.currentText(),
-            'notes' : self.notesField.currentText(),
-            'word' : self.wordField.currentText(),
-            'image' : self.imageField.currentText(),
-            'audio' :   self.audioField.currentText(),
-            'unspecified' : self.otherDictsField.currentText(),
-            'specific' : self.getSpecificDictFields(),
-            'separator' : self.entrySeparator.text()
+            "noteType": self.noteType.currentText(),
+            "sentence": self.sentenceField.currentText(),
+            "secondary": self.secondaryField.currentText(),
+            "notes": self.notesField.currentText(),
+            "word": self.wordField.currentText(),
+            "image": self.imageField.currentText(),
+            "audio": self.audioField.currentText(),
+            "unspecified": self.otherDictsField.currentText(),
+            "specific": self.getSpecificDictFields(),
+            "separator": self.entrySeparator.text(),
         }
         curGroups[tn] = exportTemplate
         self.mw.addonManager.writeConfig(
@@ -185,7 +201,7 @@ class TemplateEditor(QDialog):
         self.hide()
 
     def loadSepValue(self) -> None:
-        self.entrySeparator.setText('<br><br>')
+        self.entrySeparator.setText("<br><br>")
 
     def getDictFieldsTable(self) -> QTableWidget:
         dictFields = QTableWidget()
@@ -225,7 +241,7 @@ class TemplateEditor(QDialog):
             self.dictFieldsTable.setRowCount(rc + 1)
             self.dictFieldsTable.setItem(rc, 0, QTableWidgetItem(dictName))
             self.dictFieldsTable.setItem(rc, 1, QTableWidgetItem(fieldName))
-            deleteButton =  QPushButton("X");
+            deleteButton = QPushButton("X")
             deleteButton.setFixedWidth(40)
             deleteButton.clicked.connect(self.removeDictField)
             self.dictFieldsTable.setCellWidget(rc, 2, deleteButton)
@@ -251,15 +267,15 @@ class TemplateEditor(QDialog):
         notesFields: dict[str, list[str]] = {}
         models = self.mw.col.models.all()
         for model in models:
-            notesFields[model['name']] = []
-            for fld in model['flds']:
-                notesFields[model['name']].append(fld['name'])
+            notesFields[model["name"]] = []
+            for fld in model["flds"]:
+                notesFields[model["name"]].append(fld["name"])
         return notesFields
 
     def loadDictionaries(self) -> None:
         self.dictionaries.addItems(self.dictionaryNames or [])
-        self.dictionaries.addItem('Google Images')
-        self.dictionaries.addItem('Forvo')
+        self.dictionaries.addItem("Google Images")
+        self.dictionaries.addItem("Forvo")
 
     def initialNoteFieldsLoad(self, loadFields: bool = True) -> None:
         noteTypes = list(self.notesFields.keys())
@@ -297,47 +313,47 @@ class TemplateEditor(QDialog):
 
     def setupLayout(self) -> None:
         tempNameLay = QHBoxLayout()
-        tempNameLay.addWidget(QLabel('Name: '))
+        tempNameLay.addWidget(QLabel("Name: "))
         tempNameLay.addWidget(self.templateName)
         self._main_layout.addLayout(tempNameLay)
 
         noteTypeLay = QHBoxLayout()
-        noteTypeLay.addWidget(QLabel('Notetype: '))
+        noteTypeLay.addWidget(QLabel("Notetype: "))
         noteTypeLay.addWidget(self.noteType)
         self._main_layout.addLayout(noteTypeLay)
 
         sentenceLay = QHBoxLayout()
-        sentenceLay.addWidget(QLabel('Sentence Field:'))
+        sentenceLay.addWidget(QLabel("Sentence Field:"))
         sentenceLay.addWidget(self.sentenceField)
         self._main_layout.addLayout(sentenceLay)
 
         secondaryLay = QHBoxLayout()
-        secondaryLay.addWidget(QLabel('Secondary Field:'))
+        secondaryLay.addWidget(QLabel("Secondary Field:"))
         secondaryLay.addWidget(self.secondaryField)
         self._main_layout.addLayout(secondaryLay)
 
         wordLay = QHBoxLayout()
-        wordLay.addWidget(QLabel('Word Field:'))
+        wordLay.addWidget(QLabel("Word Field:"))
         wordLay.addWidget(self.wordField)
         self._main_layout.addLayout(wordLay)
 
         notesLay = QHBoxLayout()
-        notesLay.addWidget(QLabel('User Notes:'))
+        notesLay.addWidget(QLabel("User Notes:"))
         notesLay.addWidget(self.notesField)
         self._main_layout.addLayout(notesLay)
 
         imageLay = QHBoxLayout()
-        imageLay.addWidget(QLabel('Image Field:'))
+        imageLay.addWidget(QLabel("Image Field:"))
         imageLay.addWidget(self.imageField)
         self._main_layout.addLayout(imageLay)
 
         audioLay = QHBoxLayout()
-        audioLay.addWidget(QLabel('Audio Field:'))
+        audioLay.addWidget(QLabel("Audio Field:"))
         audioLay.addWidget(self.audioField)
         self._main_layout.addLayout(audioLay)
 
         otherDictsLay = QHBoxLayout()
-        otherDictsLay.addWidget(QLabel('Unspecified Dictionaries Field:'))
+        otherDictsLay.addWidget(QLabel("Unspecified Dictionaries Field:"))
         otherDictsLay.addWidget(self.otherDictsField)
         self._main_layout.addLayout(otherDictsLay)
 
@@ -350,7 +366,7 @@ class TemplateEditor(QDialog):
         self._main_layout.addWidget(self.dictFieldsTable)
 
         separatorLay = QHBoxLayout()
-        separatorLay.addWidget(QLabel('Entry Separator: '))
+        separatorLay.addWidget(QLabel("Entry Separator: "))
         separatorLay.addWidget(self.entrySeparator)
         separatorLay.addStretch()
         self._main_layout.addLayout(separatorLay)

@@ -22,7 +22,7 @@ from . import dictdb, typer
 from .dictionaryWebInstallWizard import DictionaryWebInstallWizard
 from .freqConjWebWindow import FreqConjWebWindow
 
-_DEFINITION_TABLE_SEPARATOR = ', '
+_DEFINITION_TABLE_SEPARATOR = ", "
 _NOT_SET_FREQUENCY = 999999  # NOTE: This means "not frequent or frequency is not known"
 _LOGGER = logging.getLogger(__name__)
 _FrequencyDict = dict[tuple[str, str], int]
@@ -36,7 +36,6 @@ class _FrequencyEntryValue(typing.TypedDict):
 class _FrequencyReadingEntryValue(typing.TypedDict):
     reading: str
     frequency: _FrequencyEntryValue
-
 
 
 class _FrequencyEntry(typing.NamedTuple):
@@ -123,7 +122,9 @@ class _FlatDictionary:
     def serialize(self) -> list[str]:
         term = getAdjustedTerm(self._term)
         reading = getAdjustedPronunciation(self.get_reading())
-        definition = getAdjustedDefinition(_DEFINITION_TABLE_SEPARATOR.join(self._definitions))
+        definition = getAdjustedDefinition(
+            _DEFINITION_TABLE_SEPARATOR.join(self._definitions)
+        )
 
         frequency: int
 
@@ -134,12 +135,12 @@ class _FlatDictionary:
 
         return [
             term,
-            '',
+            "",
             reading,
             self._pronunication,
             definition,
-            '',
-            '',
+            "",
+            "",
             str(frequency),
             self._star_count or "",
         ]
@@ -151,7 +152,7 @@ class _FlatDictionary:
 
 class DictionaryManagerWidget(QWidget):
 
-    def __init__(self, parent: typing.Optional[QWidget]=None) -> None:
+    def __init__(self, parent: typing.Optional[QWidget] = None) -> None:
         super().__init__(parent)
 
         lyt = QVBoxLayout()
@@ -161,7 +162,6 @@ class DictionaryManagerWidget(QWidget):
         splitter = QSplitter()
         splitter.setChildrenCollapsible(False)
         lyt.addWidget(splitter)
-
 
         left_side = QWidget()
         splitter.addWidget(left_side)
@@ -173,22 +173,20 @@ class DictionaryManagerWidget(QWidget):
         self.dict_tree.currentItemChanged.connect(self.on_current_item_change)
         left_lyt.addWidget(self.dict_tree)
 
-        add_lang_btn = QPushButton('Add a Language')
+        add_lang_btn = QPushButton("Add a Language")
         add_lang_btn.clicked.connect(self.add_lang)
         left_lyt.addWidget(add_lang_btn)
 
-        web_installer_btn = QPushButton('Install Languages in Wizard')
+        web_installer_btn = QPushButton("Install Languages in Wizard")
         web_installer_btn.clicked.connect(self.web_installer)
         left_lyt.addWidget(web_installer_btn)
-
 
         right_side = QWidget()
         splitter.addWidget(right_side)
         right_lyt = QVBoxLayout()
         right_side.setLayout(right_lyt)
 
-
-        self.lang_grp = QGroupBox('Language Options')
+        self.lang_grp = QGroupBox("Language Options")
         right_lyt.addWidget(self.lang_grp)
 
         lang_lyt = QVBoxLayout()
@@ -203,31 +201,31 @@ class DictionaryManagerWidget(QWidget):
         lang_lyt.addLayout(lang_lyt4)
         lang_lyt.addLayout(lang_lyt1)
 
-        remove_lang_btn = QPushButton('Remove Language')
+        remove_lang_btn = QPushButton("Remove Language")
         remove_lang_btn.clicked.connect(self.remove_lang)
         lang_lyt1.addWidget(remove_lang_btn)
 
-        web_installer_lang_btn = QPushButton('Install Dictionary in Wizard')
+        web_installer_lang_btn = QPushButton("Install Dictionary in Wizard")
         web_installer_lang_btn.clicked.connect(self.web_installer_lang)
         lang_lyt2.addWidget(web_installer_lang_btn)
 
-        import_dict_btn = QPushButton('Install Dictionary From File')
+        import_dict_btn = QPushButton("Install Dictionary From File")
         import_dict_btn.clicked.connect(self.import_dict)
         lang_lyt2.addWidget(import_dict_btn)
 
-        web_freq_data_btn = QPushButton('Install Frequency Data in Wizard')
+        web_freq_data_btn = QPushButton("Install Frequency Data in Wizard")
         web_freq_data_btn.clicked.connect(self.web_freq_data)
         lang_lyt3.addWidget(web_freq_data_btn)
 
-        set_freq_data_btn = QPushButton('Install Frequency Data From File')
+        set_freq_data_btn = QPushButton("Install Frequency Data From File")
         set_freq_data_btn.clicked.connect(self.set_freq_data)
         lang_lyt3.addWidget(set_freq_data_btn)
 
-        web_conj_data_btn = QPushButton('Install Conjugation Data in Wizard')
+        web_conj_data_btn = QPushButton("Install Conjugation Data in Wizard")
         web_conj_data_btn.clicked.connect(self.web_conj_data)
         lang_lyt4.addWidget(web_conj_data_btn)
 
-        set_conj_data_btn = QPushButton('Install Conjugation Data From File')
+        set_conj_data_btn = QPushButton("Install Conjugation Data From File")
         set_conj_data_btn.clicked.connect(self.set_conj_data)
         lang_lyt4.addWidget(set_conj_data_btn)
 
@@ -236,48 +234,45 @@ class DictionaryManagerWidget(QWidget):
         lang_lyt3.addStretch()
         lang_lyt4.addStretch()
 
-
-        self.dict_grp = QGroupBox('Dictionary Options')
+        self.dict_grp = QGroupBox("Dictionary Options")
         right_lyt.addWidget(self.dict_grp)
 
         dict_lyt = QHBoxLayout()
         self.dict_grp.setLayout(dict_lyt)
 
-        remove_dict_btn = QPushButton('Remove Dictionary')
+        remove_dict_btn = QPushButton("Remove Dictionary")
         remove_dict_btn.clicked.connect(self.remove_dict)
         dict_lyt.addWidget(remove_dict_btn)
 
-        set_term_headers_btn = QPushButton('Edit Definition Header')
+        set_term_headers_btn = QPushButton("Edit Definition Header")
         set_term_headers_btn.clicked.connect(self.set_term_header)
         dict_lyt.addWidget(set_term_headers_btn)
 
         dict_lyt.addStretch()
 
-
         right_lyt.addStretch()
-
 
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
-
 
         self.reload_tree_widget()
 
         self.on_current_item_change(None, None)
 
     def info(self, text: str) -> int:
-        return QMessageBox.information(self, 'Migaku Dictionary', text, QMessageBox.StandardButton.Ok)
+        return QMessageBox.information(
+            self, "Migaku Dictionary", text, QMessageBox.StandardButton.Ok
+        )
 
-    def get_string(self, text: str, default_text: str='') -> tuple[str, int]:
+    def get_string(self, text: str, default_text: str = "") -> tuple[str, int]:
         dlg = QInputDialog(self)
-        dlg.setWindowTitle('Migaku Dictionary')
-        dlg.setLabelText(text + ':')
+        dlg.setWindowTitle("Migaku Dictionary")
+        dlg.setLabelText(text + ":")
         dlg.setTextValue(default_text)
         dlg.resize(350, dlg.sizeHint().height())
         ok = dlg.exec()
         txt = dlg.textValue()
         return txt, ok
-
 
     def reload_tree_widget(self) -> None:
         db = dictdb.get()
@@ -286,31 +281,30 @@ class DictionaryManagerWidget(QWidget):
         dicts_by_langs: dict[str, list[str]] = {}
 
         for info in db.getAllDictsWithLang():
-            lang = info['lang']
+            lang = info["lang"]
 
             dict_list = dicts_by_langs.get(lang, [])
-            dict_list.append(info['dict'])
+            dict_list.append(info["dict"])
             dicts_by_langs[lang] = dict_list
 
         self.dict_tree.clear()
 
         for lang in langs:
             lang_item = QTreeWidgetItem([lang])
-            lang_item.setData(0, Qt.ItemDataRole.UserRole+0, lang)
-            lang_item.setData(0, Qt.ItemDataRole.UserRole+1, None)
+            lang_item.setData(0, Qt.ItemDataRole.UserRole + 0, lang)
+            lang_item.setData(0, Qt.ItemDataRole.UserRole + 1, None)
 
             self.dict_tree.addTopLevelItem(lang_item)
 
             for d in dicts_by_langs.get(lang, []):
                 dict_name = db.cleanDictName(d)
-                dict_name = dict_name.replace('_', ' ')
+                dict_name = dict_name.replace("_", " ")
                 dict_item = QTreeWidgetItem([dict_name])
-                dict_item.setData(0, Qt.ItemDataRole.UserRole+0, lang)
-                dict_item.setData(0, Qt.ItemDataRole.UserRole+1, d)
+                dict_item.setData(0, Qt.ItemDataRole.UserRole + 0, lang)
+                dict_item.setData(0, Qt.ItemDataRole.UserRole + 1, d)
                 lang_item.addChild(dict_item)
 
             lang_item.setExpanded(True)
-
 
     def on_current_item_change(self, *_: typing.Any) -> None:
 
@@ -319,8 +313,9 @@ class DictionaryManagerWidget(QWidget):
         self.lang_grp.setEnabled(lang is not None)
         self.dict_grp.setEnabled(dict_ is not None)
 
-
-    def get_current_lang_dict(self) -> tuple[typing.Optional[str], typing.Optional[str]]:
+    def get_current_lang_dict(
+        self,
+    ) -> tuple[typing.Optional[str], typing.Optional[str]]:
 
         curr_item = self.dict_tree.currentItem()
 
@@ -328,11 +323,10 @@ class DictionaryManagerWidget(QWidget):
         dict_ = None
 
         if curr_item:
-            lang = curr_item.data(0, Qt.ItemDataRole.UserRole+0)
-            dict_ = curr_item.data(0, Qt.ItemDataRole.UserRole+1)
+            lang = curr_item.data(0, Qt.ItemDataRole.UserRole + 0)
+            dict_ = curr_item.data(0, Qt.ItemDataRole.UserRole + 1)
 
         return lang, dict_
-
 
     def get_current_lang_item(self) -> typing.Optional[QTreeWidgetItem]:
         curr_item = self.dict_tree.currentItem()
@@ -343,7 +337,6 @@ class DictionaryManagerWidget(QWidget):
                 return curr_item_parent
 
         return curr_item
-
 
     def get_current_dict_item(self) -> typing.Optional[QTreeWidgetItem]:
 
@@ -356,38 +349,35 @@ class DictionaryManagerWidget(QWidget):
 
         return curr_item
 
-
     def web_installer(self) -> None:
 
         DictionaryWebInstallWizard.execute_modal()
         self.reload_tree_widget()
 
-
     def add_lang(self) -> None:
         db = dictdb.get()
 
-        text, ok = self.get_string('Select name of new language')
+        text, ok = self.get_string("Select name of new language")
         if not ok:
             return
 
         name = text.strip()
         if not name:
-            self.info('Language names may not be empty.')
+            self.info("Language names may not be empty.")
             return
 
         try:
             db.addLanguages([name])
         except Exception as e:
-            self.info('Adding language failed.')
+            self.info("Adding language failed.")
             return
 
         lang_item = QTreeWidgetItem([name])
-        lang_item.setData(0, Qt.ItemDataRole.UserRole+0, name)
-        lang_item.setData(0, Qt.ItemDataRole.UserRole+1, None)
+        lang_item.setData(0, Qt.ItemDataRole.UserRole + 0, name)
+        lang_item.setData(0, Qt.ItemDataRole.UserRole + 1, None)
 
         self.dict_tree.addTopLevelItem(lang_item)
         self.dict_tree.setCurrentItem(lang_item)
-
 
     def remove_lang(self) -> None:
         db = dictdb.get()
@@ -395,13 +385,15 @@ class DictionaryManagerWidget(QWidget):
         lang_item = self.get_current_lang_item()
         if lang_item is None:
             return
-        lang_name = lang_item.data(0, Qt.ItemDataRole.UserRole+0)
+        lang_name = lang_item.data(0, Qt.ItemDataRole.UserRole + 0)
 
         r = QMessageBox.question(
-            self, 'Migaku Dictioanry',
+            self,
+            "Migaku Dictioanry",
             f'Do you really want to remove the language "{lang_name}"?\n\n'
-            'All settings and dictionaries for it will be removed.',
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            "All settings and dictionaries for it will be removed.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
 
         if r != QMessageBox.StandardButton.Yes:
             return
@@ -411,14 +403,18 @@ class DictionaryManagerWidget(QWidget):
 
         # Remove frequency data
         try:
-            path = os.path.join(addon_path, 'user_files', 'db', 'frequency', '%s.json' % lang_name)
+            path = os.path.join(
+                addon_path, "user_files", "db", "frequency", "%s.json" % lang_name
+            )
             os.remove(path)
         except OSError:
             pass
 
         # Remove conjugation data
         try:
-            path = os.path.join(addon_path, 'user_files', 'db', 'conjugation', '%s.json' % lang_name)
+            path = os.path.join(
+                addon_path, "user_files", "db", "conjugation", "%s.json" % lang_name
+            )
             os.remove(path)
         except OSError:
             pass
@@ -428,78 +424,91 @@ class DictionaryManagerWidget(QWidget):
         if lang_name is None:
             return
 
-        path = QFileDialog.getOpenFileName(self, 'Select the frequency list you want to import', os.path.expanduser('~'), 'JSON Files (*.json);;All Files (*.*)')[0]
+        path = QFileDialog.getOpenFileName(
+            self,
+            "Select the frequency list you want to import",
+            os.path.expanduser("~"),
+            "JSON Files (*.json);;All Files (*.*)",
+        )[0]
         if not path:
             return
 
-        freq_path = os.path.join(addon_path, 'user_files', 'db', 'frequency')
+        freq_path = os.path.join(addon_path, "user_files", "db", "frequency")
         os.makedirs(freq_path, exist_ok=True)
 
-        dst_path = os.path.join(freq_path, '%s.json' % lang_name)
+        dst_path = os.path.join(freq_path, "%s.json" % lang_name)
 
         try:
             shutil.copy(path, dst_path)
         except shutil.Error:
-            self.info('Importing frequency data failed.')
+            self.info("Importing frequency data failed.")
             return
 
-        self.info('Imported frequency data for "%s".\n\nNote that the frequency data is only applied to newly imported dictionaries for this language.' % lang_name)
-
+        self.info(
+            'Imported frequency data for "%s".\n\nNote that the frequency data is only applied to newly imported dictionaries for this language.'
+            % lang_name
+        )
 
     def web_freq_data(self) -> None:
         lang_item = self.get_current_lang_item()
         if lang_item is None:
             return
-        lang_name = lang_item.data(0, Qt.ItemDataRole.UserRole+0)
+        lang_name = lang_item.data(0, Qt.ItemDataRole.UserRole + 0)
 
         FreqConjWebWindow.execute_modal(lang_name, FreqConjWebWindow.Mode.Freq)
-
 
     def set_conj_data(self) -> None:
         lang_name = self.get_current_lang_dict()[0]
         if lang_name is None:
             return
 
-        path = QFileDialog.getOpenFileName(self, 'Select the conjugation data you want to import', os.path.expanduser('~'), 'JSON Files (*.json);;All Files (*.*)')[0]
+        path = QFileDialog.getOpenFileName(
+            self,
+            "Select the conjugation data you want to import",
+            os.path.expanduser("~"),
+            "JSON Files (*.json);;All Files (*.*)",
+        )[0]
         if not path:
             return
 
-        conj_path = os.path.join(addon_path, 'user_files', 'db', 'conjugation')
+        conj_path = os.path.join(addon_path, "user_files", "db", "conjugation")
         os.makedirs(conj_path, exist_ok=True)
 
-        dst_path = os.path.join(conj_path, '%s.json' % lang_name)
+        dst_path = os.path.join(conj_path, "%s.json" % lang_name)
 
         try:
             shutil.copy(path, dst_path)
         except shutil.Error:
-            self.info('Importing conjugation data failed.')
+            self.info("Importing conjugation data failed.")
             return
 
         self.info('Imported conjugation data for "%s".' % lang_name)
-
 
     def web_conj_data(self) -> None:
         lang_item = self.get_current_lang_item()
         if lang_item is None:
             return
-        lang_name = lang_item.data(0, Qt.ItemDataRole.UserRole+0)
+        lang_name = lang_item.data(0, Qt.ItemDataRole.UserRole + 0)
 
         FreqConjWebWindow.execute_modal(lang_name, FreqConjWebWindow.Mode.Conj)
-
 
     def import_dict(self) -> None:
         lang_item = self.get_current_lang_item()
         if lang_item is None:
             return
-        lang_name = lang_item.data(0, Qt.ItemDataRole.UserRole+0)
+        lang_name = lang_item.data(0, Qt.ItemDataRole.UserRole + 0)
 
-        path = QFileDialog.getOpenFileName(self, 'Select the dictionary you want to import',
-                                           os.path.expanduser('~'), 'ZIP Files (*.zip);;All Files (*.*)')[0]
+        path = QFileDialog.getOpenFileName(
+            self,
+            "Select the dictionary you want to import",
+            os.path.expanduser("~"),
+            "ZIP Files (*.zip);;All Files (*.*)",
+        )[0]
         if not path:
             return
 
         dict_name = os.path.splitext(os.path.basename(path))[0]
-        dict_name, ok = self.get_string('Set name of dictionary', dict_name)
+        dict_name, ok = self.get_string("Set name of dictionary", dict_name)
 
         try:
             importDict(lang_name, path, dict_name)
@@ -507,23 +516,21 @@ class DictionaryManagerWidget(QWidget):
             self.info(str(e))
             return
 
-        dict_item = QTreeWidgetItem([dict_name.replace('_', ' ')])
-        dict_item.setData(0, Qt.ItemDataRole.UserRole+0, lang_name)
-        dict_item.setData(0, Qt.ItemDataRole.UserRole+1, dict_name)
+        dict_item = QTreeWidgetItem([dict_name.replace("_", " ")])
+        dict_item.setData(0, Qt.ItemDataRole.UserRole + 0, lang_name)
+        dict_item.setData(0, Qt.ItemDataRole.UserRole + 1, dict_name)
 
         lang_item.addChild(dict_item)
         self.dict_tree.setCurrentItem(dict_item)
-
 
     def web_installer_lang(self) -> None:
         lang_item = self.get_current_lang_item()
         if lang_item is None:
             return
-        lang_name = lang_item.data(0, Qt.ItemDataRole.UserRole+0)
+        lang_name = lang_item.data(0, Qt.ItemDataRole.UserRole + 0)
 
         DictionaryWebInstallWizard.execute_modal(lang_name)
         self.reload_tree_widget()
-
 
     def remove_dict(self) -> None:
         db = dictdb.get()
@@ -531,15 +538,15 @@ class DictionaryManagerWidget(QWidget):
         dict_item = self.get_current_dict_item()
         if dict_item is None:
             return
-        dict_name = dict_item.data(0, Qt.ItemDataRole.UserRole+1)
+        dict_name = dict_item.data(0, Qt.ItemDataRole.UserRole + 1)
         dict_display = dict_item.data(0, Qt.ItemDataRole.DisplayRole)
 
         dlg = QMessageBox(
             QMessageBox.Icon.Question,
-            'Migaku Dictionary',
+            "Migaku Dictionary",
             f'Do you really want to remove the dictionary "{dict_display}"?',
             buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            parent=self
+            parent=self,
         )
 
         r = dlg.exec()
@@ -558,16 +565,19 @@ class DictionaryManagerWidget(QWidget):
 
         dict_clean = db.cleanDictName(dict_name)
 
-        term_txt = ', '.join(json.loads(db.getDictTermHeader(dict_clean)))
+        term_txt = ", ".join(json.loads(db.getDictTermHeader(dict_clean)))
 
-        term_txt, ok = self.get_string('Set term header for dictionary "%s"' % dict_clean.replace('_', ' '), term_txt)
+        term_txt, ok = self.get_string(
+            'Set term header for dictionary "%s"' % dict_clean.replace("_", " "),
+            term_txt,
+        )
 
         if not ok:
             return
 
-        parts_txt = term_txt.split(',')
+        parts_txt = term_txt.split(",")
         parts = []
-        valid_parts = ['term', 'altterm', 'pronunciation']
+        valid_parts = ["term", "altterm", "pronunciation"]
 
         for part_txt in parts_txt:
             part = part_txt.strip().lower()
@@ -577,8 +587,6 @@ class DictionaryManagerWidget(QWidget):
             parts.append(part)
 
         db.setDictTermHeader(dict_clean, json.dumps(parts))
-
-
 
 
 addon_path = os.path.dirname(__file__)
@@ -603,21 +611,25 @@ def _get_frequency_entry(data: dict[typing.Any, typing.Any]) -> _FrequencyEntryV
     )
 
 
-def _import_dictionary(table_name: str, jsonDict: typing.Iterable[_FlatDictionary]) -> None:
+def _import_dictionary(
+    table_name: str, jsonDict: typing.Iterable[_FlatDictionary]
+) -> None:
     database = dictdb.get()
     database.importToDict(table_name, [entry.serialize() for entry in jsonDict])
     database.commitChanges()
 
 
-def _read_language_dictionary(zfile: zipfile.ZipFile) -> tuple[list[_FlatDictionary], bool]:
-    is_yomichan = any(name.startswith('term_bank_') for name in zfile.namelist())
+def _read_language_dictionary(
+    zfile: zipfile.ZipFile,
+) -> tuple[list[_FlatDictionary], bool]:
+    is_yomichan = any(name.startswith("term_bank_") for name in zfile.namelist())
     dict_files: list[str] = []
 
     for name in zfile.namelist():
-        if not name.endswith('.json'):
+        if not name.endswith(".json"):
             continue
 
-        if is_yomichan and not name.startswith('term_bank_'):
+        if is_yomichan and not name.startswith("term_bank_"):
             continue
 
         dict_files.append(name)
@@ -626,20 +638,20 @@ def _read_language_dictionary(zfile: zipfile.ZipFile) -> tuple[list[_FlatDiction
     jsonDict: list[_FlatDictionary] = []
 
     for filename in dict_files:
-        with zfile.open(filename, 'r') as jsonDictFile:
+        with zfile.open(filename, "r") as jsonDictFile:
             all_data = json.loads(jsonDictFile.read())
 
             if not isinstance(all_data, abc.MutableSequence):
                 raise NotImplementedError(
                     f'Data "{type(all_data)}" is not supported yet. '
-                    'Please ask the maintainer to add it!',
+                    "Please ask the maintainer to add it!",
                 )
 
             for entry in all_data:
                 if not _FlatDictionary.is_valid(entry):
                     raise NotImplementedError(
                         f'Entry "{entry}" is not supported yet. '
-                        'Please ask the maintainer to add it!',
+                        "Please ask the maintainer to add it!",
                     )
 
                 jsonDict.append(_FlatDictionary.deserialize(entry))
@@ -648,7 +660,7 @@ def _read_language_dictionary(zfile: zipfile.ZipFile) -> tuple[list[_FlatDiction
 
 
 def _recommend_table_name(lang: str, dictName: str) -> str:
-    return 'l' + str(dictdb.get().getLangId(lang)) + 'name' + dictName
+    return "l" + str(dictdb.get().getLangId(lang)) + "name" + dictName
 
 
 def importDict(
@@ -669,16 +681,16 @@ def importDict(
     except RuntimeError:
         _LOGGER.info('Unable to get a frequency list for "%s" language.', lang_name)
 
-    dict_name = dict_name.replace(' ', '_')
-    term_header = json.dumps(['term', 'altterm', 'pronunciation'])
+    dict_name = dict_name.replace(" ", "_")
+    term_header = json.dumps(["term", "altterm", "pronunciation"])
 
     try:
         db.addDict(dict_name, lang_name, term_header)
     except Exception:
         raise ValueError(
-            'Creating dictionary failed. '
-            'Make sure that no other dictionary with the same name exists. '
-            'Several special characters are also no supported in dictionary names.'
+            "Creating dictionary failed. "
+            "Make sure that no other dictionary with the same name exists. "
+            "Several special characters are also no supported in dictionary names."
         )
 
     table = _recommend_table_name(lang_name, dict_name)
@@ -707,7 +719,7 @@ def natural_sort(l: typing.Iterable[str]) -> list[str]:
 
         return text
 
-    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
+    alphanum_key = lambda key: [convert(c) for c in re.split("([0-9]+)", key)]
 
     return sorted(l, key=alphanum_key)
 
@@ -744,29 +756,31 @@ def loadDictYomi(
             readingHyouki=is_hyouki,
         )
 
-        jsonDict = sorted(jsonDict, key=lambda item: item.get_frequency() or _NOT_SET_FREQUENCY)
+        jsonDict = sorted(
+            jsonDict, key=lambda item: item.get_frequency() or _NOT_SET_FREQUENCY
+        )
 
     _import_dictionary(table, jsonDict)
 
 
 def getAdjustedTerm(term: str) -> str:
-    term = term.replace('\n', '')
+    term = term.replace("\n", "")
 
     if len(term) > 1:
-        term = term.replace('=', '')
+        term = term.replace("=", "")
 
     return term
 
 
 def getAdjustedPronunciation(pronunciation: str) -> str:
-    return pronunciation.replace('\n', '')
+    return pronunciation.replace("\n", "")
 
 
 def getAdjustedDefinition(definition: str) -> str:
-    definition = definition.replace('<br>','◟')
-    definition = definition.replace('<', '&lt;').replace('>', '&gt;')
-    definition = definition.replace('◟','<br>').replace('\n', '<br>')
-    return re.sub(r'<br>$', '', definition)
+    definition = definition.replace("<br>", "◟")
+    definition = definition.replace("<", "&lt;").replace(">", "&gt;")
+    definition = definition.replace("◟", "<br>").replace("\n", "<br>")
+    return re.sub(r"<br>$", "", definition)
 
 
 # def handleMigakuDictEntry(
@@ -801,14 +815,18 @@ def getAdjustedDefinition(definition: str) -> str:
 
 
 def kaner(to_translate: str, hiraganer: bool = False) -> str:
-    hiragana = u"がぎぐげござじずぜぞだぢづでどばびぶべぼぱぴぷぺぽ" \
-               u"あいうえおかきくけこさしすせそたちつてと" \
-               u"なにぬねのはひふへほまみむめもやゆよらりるれろ" \
-               u"わをんぁぃぅぇぉゃゅょっゐゑ"
-    katakana = u"ガギグゲゴザジズゼゾダヂヅデドバビブベボパピプペポ" \
-               u"アイウエオカキクケコサシスセソタチツテト" \
-               u"ナニヌネノハヒフヘホマミムメモヤユヨラリルレロ" \
-               u"ワヲンァィゥェォャュョッヰヱ"
+    hiragana = (
+        "がぎぐげござじずぜぞだぢづでどばびぶべぼぱぴぷぺぽ"
+        "あいうえおかきくけこさしすせそたちつてと"
+        "なにぬねのはひふへほまみむめもやゆよらりるれろ"
+        "わをんぁぃぅぇぉゃゅょっゐゑ"
+    )
+    katakana = (
+        "ガギグゲゴザジズゼゾダヂヅデドバビブベボパピプペポ"
+        "アイウエオカキクケコサシスセソタチツテト"
+        "ナニヌネノハヒフヘホマミムメモヤユヨラリルレロ"
+        "ワヲンァィゥェォャュョッヰヱ"
+    )
 
     if hiraganer:
         katakana_as_int = [ord(char) for char in katakana]
@@ -879,28 +897,32 @@ def computeYomiDictionaryByFrequency(
 
 def getStarCount(freq: int) -> str:
     if freq < 1501:
-        return '★★★★★'
+        return "★★★★★"
     if freq < 5001:
-        return '★★★★'
+        return "★★★★"
     if freq < 15001:
-        return '★★★'
+        return "★★★"
     if freq < 30001:
-        return '★★'
+        return "★★"
     if freq < 60001:
-        return '★'
+        return "★"
 
-    return ''
+    return ""
 
 
 def getFrequencyDict(lang: str) -> tuple[_FrequencyDict, bool]:
-    filePath = os.path.join(addon_path, 'user_files', 'db', 'frequency', '%s.json' % lang)
+    filePath = os.path.join(
+        addon_path, "user_files", "db", "frequency", "%s.json" % lang
+    )
 
     if not os.path.exists(filePath):
         raise RuntimeError(f'Path "{filePath}" does not exist.')
 
-    with open(filePath, 'r', encoding='utf-8-sig') as handler:
+    with open(filePath, "r", encoding="utf-8-sig") as handler:
         data = typing.cast(
-            typing.Union[dict[typing.Any, typing.Any], list[list[typing.Union[int, str]]]],
+            typing.Union[
+                dict[typing.Any, typing.Any], list[list[typing.Union[int, str]]]
+            ],
             json.load(handler),
         )
 
@@ -910,7 +932,7 @@ def getFrequencyDict(lang: str) -> tuple[_FrequencyDict, bool]:
     if not isinstance(data, list):
         raise RuntimeError(
             f'Unable to read from frequency file "{filePath}" '
-            'because it is not a known layout.'
+            "because it is not a known layout."
         )
 
     frequencyDict: _FrequencyDict = {}
@@ -920,7 +942,11 @@ def getFrequencyDict(lang: str) -> tuple[_FrequencyDict, bool]:
         # ["の","freq",{"value":1,"displayValue":"1㋕"}]
         # ["其","freq",{"reading":"それ","frequency":{"value":17,"displayValue":"17㋕"}}]
 
-        if len(item) != 3 or not isinstance(item[0], str) or not isinstance(item[1], str):
+        if (
+            len(item) != 3
+            or not isinstance(item[0], str)
+            or not isinstance(item[1], str)
+        ):
             raise RuntimeError(
                 f'Unable to read "{item}" frequency item. Its structure is unknown.'
             )
@@ -928,7 +954,9 @@ def getFrequencyDict(lang: str) -> tuple[_FrequencyDict, bool]:
         frequency_ = item[2]
 
         if not isinstance(frequency_, abc.MutableMapping):
-            raise RuntimeError(f'Unable to read "{item}" frequency item. Its data is not a dict.')
+            raise RuntimeError(
+                f'Unable to read "{item}" frequency item. Its data is not a dict.'
+            )
 
         frequency: typing.Union[_FrequencyEntryValue, _FrequencyReadingEntryValue]
         term = item[0]

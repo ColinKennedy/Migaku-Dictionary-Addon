@@ -15,6 +15,6 @@ def initialize(thread: midict.ClipThread) -> midict.ClipThread:
 
 def get() -> midict.ClipThread:
     if not _THREAD:
-        raise RuntimeError('No clip thread was initialized.')
+        raise RuntimeError("No clip thread was initialized.")
 
     return _THREAD

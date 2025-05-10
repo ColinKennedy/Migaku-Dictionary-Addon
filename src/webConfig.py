@@ -7,23 +7,25 @@ from anki.httpclient import HttpClient
 
 from . import typer
 
-DEFAULT_SERVER = 'dicts.migaku.io'
+DEFAULT_SERVER = "dicts.migaku.io"
 
 
 def normalize_url(url: str) -> str:
-    if not url.startswith('http'):
-        url = 'http://' + url
+    if not url.startswith("http"):
+        url = "http://" + url
 
-    while url.endswith('/'):
+    while url.endswith("/"):
         url = url[:-1]
 
     return url
 
 
-def download_index(server_url: str=DEFAULT_SERVER) -> typing.Optional[typer.DictionaryLanguageIndex2Pack]:
+def download_index(
+    server_url: str = DEFAULT_SERVER,
+) -> typing.Optional[typer.DictionaryLanguageIndex2Pack]:
     server_url = normalize_url(server_url)
 
-    index_url = server_url + '/index.json'
+    index_url = server_url + "/index.json"
 
     client = HttpClient()
     resp = client.get(index_url)

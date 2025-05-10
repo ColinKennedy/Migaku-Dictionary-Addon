@@ -12,7 +12,7 @@ T = typing.TypeVar("T", bound="MiWizard", covariant=True)
 # TODO: @ColinKennedy - What is all this? An abstract class without using ``abc``?
 class MiWizardPage(typing.Generic[T], QWidget):
 
-    def __init__(self, parent: typing.Optional[QWidget]=None) -> None:
+    def __init__(self, parent: typing.Optional[QWidget] = None) -> None:
         super().__init__(parent)
 
         self.wizard: typing.Optional[T] = None
@@ -20,15 +20,15 @@ class MiWizardPage(typing.Generic[T], QWidget):
         self.subtitle: typing.Optional[str] = None
         self.pixmap: typing.Optional[QPixmap] = None
 
-        self.back_text = '< Back'
+        self.back_text = "< Back"
         self.back_enabled = True
         self.back_visible = True
 
-        self.next_text = 'Next >'
+        self.next_text = "Next >"
         self.next_enabled = True
         self.next_visible = True
-        
-        self.cancel_text = 'Cancel'
+
+        self.cancel_text = "Cancel"
         self.cancel_enabled = True
         self.cancel_visible = True
 
@@ -54,19 +54,25 @@ class MiWizardPage(typing.Generic[T], QWidget):
 
 class MiWizard(QDialog):
 
-    def __init__(self, parent: typing.Optional[QWidget]=None) -> None:
+    def __init__(self, parent: typing.Optional[QWidget] = None) -> None:
         super(MiWizard, self).__init__(parent)
 
         self._current_page: typing.Optional[MiWizardPage[MiWizard]] = None
-        self._page_back: dict[MiWizardPage[MiWizard], typing.Optional[MiWizardPage[MiWizard]]] = {}
-        self._page_next: dict[MiWizardPage[MiWizard], typing.Optional[MiWizardPage[MiWizard]]] = {}
+        self._page_back: dict[
+            MiWizardPage[MiWizard], typing.Optional[MiWizardPage[MiWizard]]
+        ] = {}
+        self._page_next: dict[
+            MiWizardPage[MiWizard], typing.Optional[MiWizardPage[MiWizard]]
+        ] = {}
 
         lyt = QVBoxLayout()
         lyt.setContentsMargins(0, 0, 0, 0)
         self.setLayout(lyt)
 
         page_frame = QFrame()
-        page_frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        page_frame.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
         page_frame.setBackgroundRole(QPalette.ColorRole.Base)
         page_frame.setAutoFillBackground(True)
         lyt.addWidget(page_frame)
@@ -77,7 +83,9 @@ class MiWizard(QDialog):
         page_hlyt.addLayout(pixmap_lyt)
 
         self._pixmap_lbl = QLabel()
-        self._pixmap_lbl.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self._pixmap_lbl.setSizePolicy(
+            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
+        )
         pixmap_lyt.addWidget(self._pixmap_lbl)
         pixmap_lyt.addStretch()
 
@@ -102,7 +110,7 @@ class MiWizard(QDialog):
             style.pixelMetric(QStyle.PixelMetric.PM_LayoutLeftMargin),
             style.pixelMetric(QStyle.PixelMetric.PM_LayoutTopMargin),
             style.pixelMetric(QStyle.PixelMetric.PM_LayoutRightMargin),
-            style.pixelMetric(QStyle.PixelMetric.PM_LayoutBottomMargin)
+            style.pixelMetric(QStyle.PixelMetric.PM_LayoutBottomMargin),
         )
         btn_lyt.setContentsMargins(*margins)
 
@@ -123,13 +131,12 @@ class MiWizard(QDialog):
         self._btn_cancel.clicked.connect(self.cancel)
         btn_lyt.addWidget(self._btn_cancel)
 
-
     def add_page(
         self,
         page: MiWizardPage[MiWizard],
-        back_page: typing.Optional[MiWizardPage[MiWizard]]=None,
-        next_page: typing.Optional[MiWizardPage[MiWizard]]=None,
-        back_populate: bool=True,
+        back_page: typing.Optional[MiWizardPage[MiWizard]] = None,
+        next_page: typing.Optional[MiWizardPage[MiWizard]] = None,
+        back_populate: bool = True,
     ) -> MiWizardPage[MiWizard]:
         page.wizard = self
         page.hide()
@@ -146,29 +153,29 @@ class MiWizard(QDialog):
 
         return page
 
-
     def set_page_back(
         self,
         page: MiWizardPage[MiWizard],
         back_page: typing.Optional[MiWizardPage[MiWizard]],
-        back_populate: bool=True,
+        back_populate: bool = True,
     ) -> None:
         self._page_back[page] = back_page
         if back_populate and back_page:
             self.set_page_next(back_page, page, back_populate=False)
 
-
     def set_page_next(
         self,
         page: MiWizardPage[MiWizard],
         next_page: typing.Optional[MiWizardPage[MiWizard]],
-        back_populate: bool=True,
+        back_populate: bool = True,
     ) -> None:
         self._page_next[page] = next_page
         if back_populate and next_page:
             self.set_page_back(next_page, page, back_populate=False)
 
-    def set_current_page(self, page: MiWizardPage[MiWizard], is_next: bool=False, is_back: bool=False) -> None:
+    def set_current_page(
+        self, page: MiWizardPage[MiWizard], is_next: bool = False, is_back: bool = False
+    ) -> None:
         if self._current_page:
             self._current_page.on_hide(is_next, is_back)
             self._current_page.hide()
@@ -179,7 +186,6 @@ class MiWizard(QDialog):
         self.refresh_states()
 
         page.show()
-
 
     def back(self) -> None:
         if not self._current_page:
@@ -192,7 +198,6 @@ class MiWizard(QDialog):
 
         if back_page:
             self.set_current_page(back_page, is_back=True)
-
 
     def next(self) -> None:
         if not self._current_page:
@@ -208,7 +213,6 @@ class MiWizard(QDialog):
         else:
             self.accept()
 
-
     def cancel(self) -> None:
         if self._current_page:
             if not self._current_page.on_cancel():
@@ -219,22 +223,20 @@ class MiWizard(QDialog):
 
         self.reject()
 
-
     def on_cancel(self) -> bool:
         return True
 
-
     def refresh_states(self) -> None:
         if self._current_page:
-            header_text = ''
+            header_text = ""
 
             title = self._current_page.title
             if title:
-                header_text += '<h2>%s</h2>' % title
+                header_text += "<h2>%s</h2>" % title
 
             subtitle = self._current_page.subtitle
             if subtitle:
-                header_text += '<h4>%s</h4>' % subtitle
+                header_text += "<h4>%s</h4>" % subtitle
 
             if header_text:
                 self._header_lbl.setText(header_text)
@@ -259,7 +261,6 @@ class MiWizard(QDialog):
             self._btn_cancel.setText(self._current_page.cancel_text)
             self._btn_cancel.setEnabled(self._current_page.cancel_enabled)
             self._btn_cancel.setVisible(self._current_page.cancel_visible)
-
 
     def closeEvent(self, event: typing.Optional[QCloseEvent]) -> None:
         self.cancel()

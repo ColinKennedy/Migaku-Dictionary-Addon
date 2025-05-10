@@ -18,14 +18,16 @@ def shutdownDB(
     ids: typing.Sequence[int],
     on_done: typing.Callable[[list[addons.DownloadLogEntry]], None],
     client: typing.Optional[HttpClient] = None,
-    force_enable: bool=True,
+    force_enable: bool = True,
 ) -> None:
     global dledIds
 
     dledIds = list(ids)
 
     if addonId in dledIds:
-        miInfo('The Migaku Dictionary database will be diconnected so that the update may proceed. The add-on will not function properly until Anki is restarted after the update.')
+        miInfo(
+            "The Migaku Dictionary database will be diconnected so that the update may proceed. The add-on will not function properly until Anki is restarted after the update."
+        )
         dictdb.get().closeConnection()
         dictdb.clear()
         migaku_dictionary.get().db.closeConnection()
@@ -37,12 +39,16 @@ def restartDB(*args: typing.Any) -> None:
     if addonId in dledIds:
         dictdb.initialize(dictdb.DictDB())
         migaku_dictionary.get().db = dictdb.DictDB()
-        miInfo('The Migaku Dictionary has been updated, please restart Anki to start using the new version now!')
+        miInfo(
+            "The Migaku Dictionary has been updated, please restart Anki to start using the new version now!"
+        )
+
 
 def wrapOnDone(self: addons.DownloaderInstaller, *_: typing.Any) -> None:
     self.mgr.mw.progress.timer(50, lambda: restartDB(), False)
 
-addons.download_addons = wrap(addons.download_addons, shutdownDB, 'before')
+
+addons.download_addons = wrap(addons.download_addons, shutdownDB, "before")
 addons.DownloaderInstaller._download_done = wrap(  # type: ignore[method-assign]
     addons.DownloaderInstaller._download_done,
     wrapOnDone,

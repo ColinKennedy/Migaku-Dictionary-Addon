@@ -54,9 +54,11 @@ def getNextBatchOfCards(
 
     return typing.cast(
         list[list[str]],
-        database.all("SELECT c.ivl, n.flds, c.ord, n.mid FROM cards AS c INNER JOIN notes AS n ON c.nid = n.id WHERE c.type != 0 ORDER BY c.ivl LIMIT %s, %s;"%(start, incrementor)),
+        database.all(
+            "SELECT c.ivl, n.flds, c.ord, n.mid FROM cards AS c INNER JOIN notes AS n ON c.nid = n.id WHERE c.type != 0 ORDER BY c.ivl LIMIT %s, %s;"
+            % (start, incrementor)
+        ),
     )
-
 
 
 class MigakuHTTPHandler(tornado.web.RequestHandler):
@@ -65,7 +67,7 @@ class MigakuHTTPHandler(tornado.web.RequestHandler):
         self,
         application: MigakuHTTPServer,
         request: httputil.HTTPServerRequest,
-        **kwargs: typing.Any
+        **kwargs: typing.Any,
     ) -> None:
         super().__init__(application, request, **kwargs)
         self.application: MigakuHTTPServer
@@ -73,19 +75,25 @@ class MigakuHTTPHandler(tornado.web.RequestHandler):
     def set_default_headers(self) -> None:
         self.set_header("Access-Control-Allow-Origin", "*")
         self.set_header("Access-Control-Allow-Headers", "x-requested-with")
-        self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+        self.set_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
 
     def initialize(self) -> None:
-        self.mw = typing.cast(main.AnkiQt, self.application.settings.get('mw'))
+        self.mw = typing.cast(main.AnkiQt, self.application.settings.get("mw"))
         self.addonDirectory = dirname(__file__)
         self.tempDirectory = join(self.addonDirectory, "temp")
         self.alert = self.application.alert
-        self.addCondensedAudioInProgressMessage = self.application.addCondensedAudioInProgressMessage
-        self.removeCondensedAudioInProgressMessage  = self.application.removeCondensedAudioInProgressMessage
-        suffix = ''     
+        self.addCondensedAudioInProgressMessage = (
+            self.application.addCondensedAudioInProgressMessage
+        )
+        self.removeCondensedAudioInProgressMessage = (
+            self.application.removeCondensedAudioInProgressMessage
+        )
+        suffix = ""
         if is_win:
-            suffix = '.exe' 
-        self.ffmpeg = join(self.addonDirectory, 'user_files', 'ffmpeg', 'ffmpeg' + suffix)
+            suffix = ".exe"
+        self.ffmpeg = join(
+            self.addonDirectory, "user_files", "ffmpeg", "ffmpeg" + suffix
+        )
 
     # TODO: @ColinKennedy not sure if this return value is right
     def checkVersion(self) -> bool:
@@ -100,7 +108,9 @@ class MigakuHTTPHandler(tornado.web.RequestHandler):
         return self.application.checkVersion(version)
 
     def getConfig(self) -> typer.Configuration:
-        return typing.cast(typer.Configuration, self.mw.addonManager.getConfig(__name__))
+        return typing.cast(
+            typer.Configuration, self.mw.addonManager.getConfig(__name__)
+        )
 
 
 class ImportHandler(MigakuHTTPHandler):
@@ -113,13 +123,13 @@ class ImportHandler(MigakuHTTPHandler):
 
     def removeTempFiles(self) -> None:
         tmpdir = self.tempDirectory
-        filelist = [ f for f in os.listdir(tmpdir)]
+        filelist = [f for f in os.listdir(tmpdir)]
         for f in filelist:
             path = os.path.join(tmpdir, f)
             try:
                 os.remove(path)
             except:
-                innerDirFiles = [ df for df in os.listdir(path)]
+                innerDirFiles = [df for df in os.listdir(path)]
                 for df in innerDirFiles:
                     innerPath = os.path.join(path, df)
                     os.remove(innerPath)
@@ -134,24 +144,39 @@ class ImportHandler(MigakuHTTPHandler):
         wavDir = join(self.tempDirectory, timestamp)
         if exists(wavDir):
             config = self.getConfig()
-            mp3dir = config.get('condensedAudioDirectory')
+            mp3dir = config.get("condensedAudioDirectory")
 
             if not mp3dir:
                 raise RuntimeError(f'Configuration "{config}" has no audio directory.')
 
-            wavs = [ f for f in os.listdir(wavDir)]
+            wavs = [f for f in os.listdir(wavDir)]
             wavs.sort()
             wavListFilePath = join(wavDir, "list.txt")
-            wavListFile = open(wavListFilePath,"w+")
-            filename = self.cleanFilename(filename+ "\n") + "-condensed.mp3"
+            wavListFile = open(wavListFilePath, "w+")
+            filename = self.cleanFilename(filename + "\n") + "-condensed.mp3"
             mp3path = join(mp3dir, filename)
             for wav in wavs:
                 wavListFile.write("file '{}'\n".format(join(wavDir, wav)))
             wavListFile.close()
             import subprocess
-            subprocess.call([self.ffmpeg, '-y', '-f', 'concat', '-safe', '0', '-i', wavListFilePath, '-write_xing', '0', mp3path])
+
+            subprocess.call(
+                [
+                    self.ffmpeg,
+                    "-y",
+                    "-f",
+                    "concat",
+                    "-safe",
+                    "0",
+                    "-i",
+                    wavListFilePath,
+                    "-write_xing",
+                    "0",
+                    mp3path,
+                ]
+            )
             self.removeTempFiles()
-            if not config.get('disableCondensed', False):
+            if not config.get("disableCondensed", False):
                 self.alert(
                     textwrap.dedent(
                         f"""\
@@ -164,7 +189,7 @@ class ImportHandler(MigakuHTTPHandler):
                 )
 
     def cleanFilename(self, filename: str) -> str:
-        return re.sub(r"[\n:'\":/\|?*><!]","", filename).strip()
+        return re.sub(r"[\n:'\":/\|?*><!]", "", filename).strip()
 
     def post(self) -> None:
         # TODO: @ColinKennedy - dedent this
@@ -172,9 +197,15 @@ class ImportHandler(MigakuHTTPHandler):
             thread = threader.get()
 
             config = self.getConfig()
-            previousBulkTimeStamp = self.application.settings.get('previousBulkTimeStamp')
+            previousBulkTimeStamp = self.application.settings.get(
+                "previousBulkTimeStamp"
+            )
 
-            if self.parseBoolean(self.get_body_argument("pageRefreshCancelBulkMediaExporting", default=None)):
+            if self.parseBoolean(
+                self.get_body_argument(
+                    "pageRefreshCancelBulkMediaExporting", default=None
+                )
+            ):
                 thread.handlePageRefreshDuringBulkMediaImport()
                 self.removeCondensedAudioInProgressMessage()
                 self.finish("Cancelled through browser.")
@@ -182,14 +213,19 @@ class ImportHandler(MigakuHTTPHandler):
                 return
 
             bulk = self.parseBoolean(self.get_body_argument("bulk", default=None))
-            bulkExportWasCancelled = self.parseBoolean(self.get_body_argument("bulkExportWasCancelled", default=None))
+            bulkExportWasCancelled = self.parseBoolean(
+                self.get_body_argument("bulkExportWasCancelled", default=None)
+            )
             timestamp = self.get_body_argument("timestamp", default=0)
 
             if not timestamp:
                 raise RuntimeError("No timestamp was found in the body.")
 
             if bulkExportWasCancelled:
-                if global_state.IS_BULK_MEDIA_EXPORT_CANCELLED and previousBulkTimeStamp == timestamp:
+                if (
+                    global_state.IS_BULK_MEDIA_EXPORT_CANCELLED
+                    and previousBulkTimeStamp == timestamp
+                ):
                     self.finish("yes")
                 else:
                     self.finish("no")
@@ -198,8 +234,8 @@ class ImportHandler(MigakuHTTPHandler):
 
             requestType = self.get_body_argument("type", default=None)
 
-            if requestType == 'finishedRecordingCondensedAudio':
-                filename = self.get_body_argument('filename', default="audio");
+            if requestType == "finishedRecordingCondensedAudio":
+                filename = self.get_body_argument("filename", default="audio")
 
                 if not filename:
                     raise RuntimeError("No audio filename could be found.")
@@ -210,14 +246,17 @@ class ImportHandler(MigakuHTTPHandler):
                 return
 
             if bulk and requestType == "text":
-                    raw_cards = self.get_body_argument("cards", default="[]") or "[]"
-                    cards = json.loads(raw_cards)
-                    thread.handleBulkTextExport(cards)
-                    self.finish("Bulk Text Export")
-                    return
+                raw_cards = self.get_body_argument("cards", default="[]") or "[]"
+                cards = json.loads(raw_cards)
+                thread.handleBulkTextExport(cards)
+                self.finish("Bulk Text Export")
+                return
 
             else:
-                if global_state.IS_BULK_MEDIA_EXPORT_CANCELLED and previousBulkTimeStamp == timestamp:
+                if (
+                    global_state.IS_BULK_MEDIA_EXPORT_CANCELLED
+                    and previousBulkTimeStamp == timestamp
+                ):
                     self.removeCondensedAudioInProgressMessage()
                     self.finish("Exporting was cancelled.")
                     return
@@ -225,31 +264,41 @@ class ImportHandler(MigakuHTTPHandler):
                     self.application.settings["previousBulkTimeStamp"] = timestamp
                     self.removeCondensedAudioInProgressMessage()
                     global_state.IS_BULK_MEDIA_EXPORT_CANCELLED = False
-                condensedAudio = self.parseBoolean(self.get_body_argument("condensedAudio", default=None))
+                condensedAudio = self.parseBoolean(
+                    self.get_body_argument("condensedAudio", default=None)
+                )
                 raw_total = self.get_body_argument("totalToRecord", default="1") or "1"
                 total = int(raw_total)
                 _LOGGER.debug('TOTAL "%s" records.', total)
 
                 if condensedAudio:
-                    mp3dir = config.get('condensedAudioDirectory', False)
+                    mp3dir = config.get("condensedAudioDirectory", False)
                     if not mp3dir:
-                        self.alert("You must specify a Condensed Audio Save Location.\n\nYou can do this by:\n1. Navigating to Migaku->Dictionary Settings in Anki's menu bar.\n2. Clicking \"Choose Directory\" for the \"Condensed Audio Save Location\"  in the bottom right of the settings window.")
+                        self.alert(
+                            'You must specify a Condensed Audio Save Location.\n\nYou can do this by:\n1. Navigating to Migaku->Dictionary Settings in Anki\'s menu bar.\n2. Clicking "Choose Directory" for the "Condensed Audio Save Location"  in the bottom right of the settings window.'
+                        )
                         global_state.IS_BULK_MEDIA_EXPORT_CANCELLED = True
                         self.removeCondensedAudioInProgressMessage()
                         self.finish("Save location not set.")
                     elif self.ffmpegExists():
-                        self.handleAudioFileInRequestAndReturnFilename(self.copyFileToCondensedAudioDir)
+                        self.handleAudioFileInRequestAndReturnFilename(
+                            self.copyFileToCondensedAudioDir
+                        )
                         _LOGGER.info("File saved in temp dir")
                         self.addCondensedAudioInProgressMessage()
                         self.finish("Exporting Condensed Audio")
                     else:
-                        self.alert("The FFMPEG media encoder must be installed in order to export condensedAudio.\n\nIn order to install FFMPEG please enable MP3 Conversion in the Dictionary Settings window and click \"Apply\".\nFFMPEG will then be downloaded and installed automatically.")
+                        self.alert(
+                            'The FFMPEG media encoder must be installed in order to export condensedAudio.\n\nIn order to install FFMPEG please enable MP3 Conversion in the Dictionary Settings window and click "Apply".\nFFMPEG will then be downloaded and installed automatically.'
+                        )
                         global_state.IS_BULK_MEDIA_EXPORT_CANCELLED = True
                         self.removeCondensedAudioInProgressMessage()
                         self.finish("FFMPEG not installed.")
                     return
-                else: 
-                    audioFileName = self.handleAudioFileInRequestAndReturnFilename(self.copyFileToTempDir)
+                else:
+                    audioFileName = self.handleAudioFileInRequestAndReturnFilename(
+                        self.copyFileToTempDir
+                    )
 
                     if not audioFileName:
                         self.finish("No audioFileName was found. Cannot continue.")
@@ -258,11 +307,13 @@ class ImportHandler(MigakuHTTPHandler):
 
                     primary = self.get_body_argument("primary", default="") or ""
                     secondary = self.get_body_argument("secondary", default="") or ""
-                    raw_unknown_words = self.get_body_argument("unknown", default="[]") or "[]"
+                    raw_unknown_words = (
+                        self.get_body_argument("unknown", default="[]") or "[]"
+                    )
                     unknownWords = json.loads(raw_unknown_words)
                     imageFileName: typing.Optional[str] = None
                     if "image" in self.request.files:
-                        imageFile = self.request.files['image'][0]
+                        imageFile = self.request.files["image"][0]
                         imageFileName = imageFile["filename"]
 
                         if not imageFileName:
@@ -270,25 +321,25 @@ class ImportHandler(MigakuHTTPHandler):
 
                         self.copyFileToTempDir(imageFile, imageFileName)
                     cardToExport: typer.Card = {
-                        "primary" : primary,
-                        "secondary" : secondary,
-                        "unknownWords" : unknownWords,
-                        "bulk" : bulk,
-                        "audio" : audioFileName,
-                        "image" : imageFileName,
-                        "total" : total,
+                        "primary": primary,
+                        "secondary": secondary,
+                        "unknownWords": unknownWords,
+                        "bulk": bulk,
+                        "audio": audioFileName,
+                        "image": imageFileName,
+                        "total": total,
                     }
                     thread.handleExtensionCardExport(cardToExport)
                     self.finish("Card Exported")
                     return
         self.finish("Invalid Request")
-                
+
     def handleAudioFileInRequestAndReturnFilename(
         self,
         copyFileFunction: typing.Callable[[httputil.HTTPFile, str], None],
     ) -> typing.Optional[str]:
         if "audio" in self.request.files:
-            audioFile = self.request.files['audio'][0]
+            audioFile = self.request.files["audio"][0]
             audioFileName: str = audioFile["filename"]
             copyFileFunction(audioFile, audioFileName)
 
@@ -305,11 +356,13 @@ class ImportHandler(MigakuHTTPHandler):
     def copyFileToTempDir(self, handler: httputil.HTTPFile, filename: str) -> None:
         filePath = join(self.tempDirectory, filename)
 
-        with open(filePath, 'wb') as handler_:
-            handler_.write(handler['body'].encode())
+        with open(filePath, "wb") as handler_:
+            handler_.write(handler["body"].encode())
 
-    def copyFileToCondensedAudioDir(self, handler: httputil.HTTPFile, filename: str) -> None:
-        timestamp_value = self.application.settings.get('previousBulkTimeStamp')
+    def copyFileToCondensedAudioDir(
+        self, handler: httputil.HTTPFile, filename: str
+    ) -> None:
+        timestamp_value = self.application.settings.get("previousBulkTimeStamp")
 
         if not timestamp_value:
             timestamp = "0"
@@ -323,14 +376,15 @@ class ImportHandler(MigakuHTTPHandler):
 
         filePath = join(directoryPath, filename)
 
-        with open(filePath, 'wb') as handler_:
-            handler_.write(handler['body'].encode())
+        with open(filePath, "wb") as handler_:
+            handler_.write(handler["body"].encode())
+
 
 class LearningStatusHandler(MigakuHTTPHandler):
 
     def get(self) -> None:
         self.finish("LearningStatusHandler")
-   
+
     def post(self) -> None:
         if not self.checkVersion():
             self.finish("Invalid Request")
@@ -348,7 +402,7 @@ class LearningStatusHandler(MigakuHTTPHandler):
             incrementor = self.get_body_argument("incrementor", default=None)
 
             if not incrementor:
-                raise RuntimeError('No incrementor was found.')
+                raise RuntimeError("No incrementor was found.")
 
             self.finish(self.getCards(start, incrementor))
 
@@ -365,65 +419,71 @@ class LearningStatusHandler(MigakuHTTPHandler):
         templateSide: str,
         fieldOrdinatesDict: dict[str, str],
     ) -> typing.Optional[list[str]]:
-        pattern = r"{{([^#^\/][^}]*?)}}";
-        matches = re.findall(pattern, templateSide);
-        fields = self.getCleanedFieldArray(matches);
-        fieldsOrdinates = self.getFieldOrdinates(fields, fieldOrdinatesDict);
-        return fieldsOrdinates;
+        pattern = r"{{([^#^\/][^}]*?)}}"
+        matches = re.findall(pattern, templateSide)
+        fields = self.getCleanedFieldArray(matches)
+        fieldsOrdinates = self.getFieldOrdinates(fields, fieldOrdinatesDict)
+        return fieldsOrdinates
 
     def getFieldOrdinates(
         self,
         fields: typing.Iterable[str],
         fieldOrdinates: dict[str, str],
     ) -> list[str]:
-        ordinates: list[str] = [];
+        ordinates: list[str] = []
         for field in fields:
             if field in fieldOrdinates:
-                ordinates.append(fieldOrdinates[field]);
-        return ordinates;
-  
+                ordinates.append(fieldOrdinates[field])
+        return ordinates
 
     def getCleanedFieldArray(self, fields: typing.Iterable[str]) -> list[str]:
-        noDupes: list[str] = [];
+        noDupes: list[str] = []
         for field in fields:
-          fieldName = self.getCleanedFieldName(field).strip();
-          if not fieldName in noDupes and fieldName not in ["FrontSide", "Tags", "Subdeck", "Type", "Deck", "Card"]:
-                noDupes.append(fieldName);
-        return noDupes;
+            fieldName = self.getCleanedFieldName(field).strip()
+            if not fieldName in noDupes and fieldName not in [
+                "FrontSide",
+                "Tags",
+                "Subdeck",
+                "Type",
+                "Deck",
+                "Card",
+            ]:
+                noDupes.append(fieldName)
+        return noDupes
 
     def getCleanedFieldName(self, field: str) -> str:
         if ":" in field:
-          split = field.split(":");
-          return split[len(split) - 1];
-        return field;
-  
+            split = field.split(":")
+            return split[len(split) - 1]
+        return field
 
     def fetchModelsAndTemplates(self) -> str:
         modelData = {}
         models = self.mw.col.models.all()
         for idx, model in enumerate(models):
-            mid = str(model["id"]);
-            templates = model["tmpls"];
-            templateArray = [];
-            fieldOrdinates = self.getFieldOrdinateDictionary(model["flds"]);
+            mid = str(model["id"])
+            templates = model["tmpls"]
+            templateArray = []
+            fieldOrdinates = self.getFieldOrdinateDictionary(model["flds"])
             for template in templates:
-              frontFields = self.getFields(template["qfmt"], fieldOrdinates);
-              name = template["name"];
-              backFields = self.getFields(template["afmt"], fieldOrdinates);
-              
-              templateArray.append({
-                "frontFields": frontFields,
-                "backFields": backFields,
-                "name": name,
-              });
-            if mid not in modelData:
-              modelData[mid] = {
-                "templates": templateArray,
-                "fields": fieldOrdinates,
-                "name": model["name"],
-              };
-        return json.dumps(modelData)
+                frontFields = self.getFields(template["qfmt"], fieldOrdinates)
+                name = template["name"]
+                backFields = self.getFields(template["afmt"], fieldOrdinates)
 
+                templateArray.append(
+                    {
+                        "frontFields": frontFields,
+                        "backFields": backFields,
+                        "name": name,
+                    }
+                )
+            if mid not in modelData:
+                modelData[mid] = {
+                    "templates": templateArray,
+                    "fields": fieldOrdinates,
+                    "name": model["name"],
+                }
+        return json.dumps(modelData)
 
     def getCards(self, start: _PseudoNumber, incrementor: _PseudoNumber) -> str:
         cards = getNextBatchOfCards(self.mw.col, start, incrementor)
@@ -431,6 +491,7 @@ class LearningStatusHandler(MigakuHTTPHandler):
         for card in cards:
             card[1] = re.sub(bracketPattern, "", card[1])
         return json.dumps(cards)
+
 
 class SearchHandler(MigakuHTTPHandler):
 
@@ -449,6 +510,7 @@ class SearchHandler(MigakuHTTPHandler):
 
         self.finish("Invalid Request")
 
+
 class MigakuHTTPServer(tornado.web.Application):
 
     PROTOCOL_VERSION = 2
@@ -457,19 +519,21 @@ class MigakuHTTPServer(tornado.web.Application):
         self.mw = mw
         self.previousBulkTimeStamp = 0
         self.thread = thread
-        handlers: typing.Sequence[tuple[str, typing.Type[tornado.web.RequestHandler]]] = [
+        handlers: typing.Sequence[
+            tuple[str, typing.Type[tornado.web.RequestHandler]]
+        ] = [
             (r"/import", ImportHandler),
             (r"/learning-statuses", LearningStatusHandler),
             (r"/search", SearchHandler),
         ]
 
-        settings: dict[str, typing.Any] = {'mw' : mw}
+        settings: dict[str, typing.Any] = {"mw": mw}
         # TODO: @ColinKennedy - This type is complicated and probably fine to ignore for
         # the long-term. Come back to it later
         #
         super().__init__(handlers, **settings)  # type: ignore[arg-type]
 
-    def run(self, port: int=12345) -> None:
+    def run(self, port: int = 12345) -> None:
         self.listen(port)
         tornado.ioloop.IOLoop.instance().start()
 
@@ -484,12 +548,17 @@ class MigakuHTTPServer(tornado.web.Application):
 
     def checkVersion(self, version: typing.Optional[int]) -> bool:
         if version is None or version < self.PROTOCOL_VERSION:
-            self.alert("Your Migaku Dictionary Version is newer than and incompatible with your Immerse with Migaku Browser Extension installation. Please ensure you are using the latest version of the add-on and extension to resolve this issue.")
+            self.alert(
+                "Your Migaku Dictionary Version is newer than and incompatible with your Immerse with Migaku Browser Extension installation. Please ensure you are using the latest version of the add-on and extension to resolve this issue."
+            )
             return False
         elif version > self.PROTOCOL_VERSION:
-            self.alert("Your Immerse with Migaku Browser Extension Version is newer than and incompatible with this Migaku Dictionary installation. Please ensure you are using the latest version of the add-on and extension to resolve this issue.")
+            self.alert(
+                "Your Immerse with Migaku Browser Extension Version is newer than and incompatible with this Migaku Dictionary installation. Please ensure you are using the latest version of the add-on and extension to resolve this issue."
+            )
             return False
         return True
+
 
 class MigakuServerThread(QThread):
 
@@ -510,14 +579,11 @@ class MigakuServerThread(QThread):
     def alert(self, message: str) -> None:
         self.alertUser.emit(message)
 
-
     def addCondensedAudioInProgressMessage(self) -> None:
         self.exportingCondensed.emit()
 
     def removeCondensedAudioInProgressMessage(self) -> None:
         self.notExportingCondensed.emit()
-
-
 
 
 def addCondensedAudioInProgressMessage() -> None:
@@ -526,12 +592,12 @@ def addCondensedAudioInProgressMessage() -> None:
     if msg not in title:
         mw_.setWindowTitle(title + msg)
 
+
 def removeCondensedAudioInProgressMessage() -> None:
     title = mw_.windowTitle()
     msg = " (Condensed Audio Exporting in Progress)"
     if msg in title:
         mw_.setWindowTitle(title.replace(msg, ""))
-
 
 
 serverThread = MigakuServerThread(mw_)

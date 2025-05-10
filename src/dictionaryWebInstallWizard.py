@@ -33,20 +33,22 @@ class DictionaryWebInstallWizard(migaku_wizard.MiWizard):
 
     def __init__(
         self,
-        force_lang: typing.Optional[str]=None,
-        parent: typing.Optional[QWidget]=None,
+        force_lang: typing.Optional[str] = None,
+        parent: typing.Optional[QWidget] = None,
     ) -> None:
         super().__init__(parent)
 
-        self.dictionary_index: typing.Optional[typer.DictionaryLanguageIndex2Pack] = None
+        self.dictionary_index: typing.Optional[typer.DictionaryLanguageIndex2Pack] = (
+            None
+        )
         self.dictionary_install_index: list[typer.DictionaryLanguageIndex] = []
         self.dictionary_install_frequency = False
         self.dictionary_install_conjugation = False
         self.dictionary_force_lang = force_lang
         self.dictionary_server_root: typing.Optional[str] = None
 
-        self.setWindowTitle('Migaku Dictionary - Web Installer')
-        self.setWindowIcon(QIcon(os.path.join(addon_path, 'icons', 'migaku.png')))
+        self.setWindowTitle("Migaku Dictionary - Web Installer")
+        self.setWindowIcon(QIcon(os.path.join(addon_path, "icons", "migaku.png")))
 
         server_add_page = self.add_page(ServerAskPage(self))
         dict_select_page = self.add_page(DictionarySelectPage(self), server_add_page)
@@ -55,12 +57,10 @@ class DictionaryWebInstallWizard(migaku_wizard.MiWizard):
 
         self.resize(*self.INITIAL_SIZE)
 
-
     @classmethod
-    def execute_modal(cls, force_lang: typing.Optional[str]=None) -> int:
+    def execute_modal(cls, force_lang: typing.Optional[str] = None) -> int:
         wizard = cls(force_lang)
         return wizard.exec()
-
 
 
 class ServerAskPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard]):
@@ -68,27 +68,28 @@ class ServerAskPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard]):
     def __init__(self, wizard: DictionaryWebInstallWizard) -> None:
         super(ServerAskPage, self).__init__(wizard)
 
-        self.title = 'Select Dictionary Server'
+        self.title = "Select Dictionary Server"
 
         lyt = QVBoxLayout()
         self.setLayout(lyt)
 
         lyt.addStretch()
 
-        lbl = QLabel('Our dictionary server contains several free, open source dictionaries.\n\n'\
-                     'You can also select a custom server to install other 3rd party dictionaries.\n')
+        lbl = QLabel(
+            "Our dictionary server contains several free, open source dictionaries.\n\n"
+            "You can also select a custom server to install other 3rd party dictionaries.\n"
+        )
         lbl.setWordWrap(True)
         lyt.addWidget(lbl)
 
         server_lyt = QHBoxLayout()
         lyt.addLayout(server_lyt)
 
-
         self.server_line = NoAutoSelectLineEdit()
-        self.server_line.setPlaceholderText('Insert Dictionary Server Address')
+        self.server_line.setPlaceholderText("Insert Dictionary Server Address")
         server_lyt.addWidget(self.server_line)
 
-        self.server_reset_btn = QPushButton('Default')
+        self.server_reset_btn = QPushButton("Default")
         server_lyt.addWidget(self.server_reset_btn)
 
         lyt.addStretch()
@@ -97,10 +98,8 @@ class ServerAskPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard]):
 
         self.server_reset_btn.clicked.connect(self.reset_server_line)
 
-
     def reset_server_line(self) -> None:
         self.server_line.setText(webConfig.DEFAULT_SERVER)
-
 
     def on_next(self) -> bool:
         if not self.wizard:
@@ -112,9 +111,13 @@ class ServerAskPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard]):
         index_data = webConfig.download_index(server_url)
 
         if index_data is None:
-            QMessageBox.information(self, 'Migaku Dictioanry',
-                                    'The server "%s" is not reachable.\n\n'\
-                                    'Make sure you are connected to the internet and the url you entered is valid.' % server_url_usr)
+            QMessageBox.information(
+                self,
+                "Migaku Dictioanry",
+                'The server "%s" is not reachable.\n\n'
+                "Make sure you are connected to the internet and the url you entered is valid."
+                % server_url_usr,
+            )
             return False
 
         self.wizard.dictionary_index = index_data
@@ -123,13 +126,12 @@ class ServerAskPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard]):
         return True
 
 
-
 class DictionarySelectPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard]):
 
     def __init__(self, wizard: DictionaryWebInstallWizard) -> None:
         super(DictionarySelectPage, self).__init__(wizard)
 
-        self.title = 'Select the dictionaries you want to install'
+        self.title = "Select the dictionaries you want to install"
 
         lyt = QVBoxLayout()
         self.setLayout(lyt)
@@ -141,21 +143,19 @@ class DictionarySelectPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard
         options_lyt = QHBoxLayout()
         lyt.addLayout(options_lyt)
 
-        self.install_freq = QCheckBox('Install Language Frequency Data')
+        self.install_freq = QCheckBox("Install Language Frequency Data")
         self.install_freq.setChecked(True)
         options_lyt.addWidget(self.install_freq)
 
-        self.install_conj = QCheckBox('Install Language Conjugation Data')
+        self.install_conj = QCheckBox("Install Language Conjugation Data")
         self.install_conj.setChecked(True)
         options_lyt.addWidget(self.install_conj)
 
         options_lyt.addStretch()
 
-
     def on_show(self, is_next: bool) -> None:
         if is_next:
             self.setup_entries()
-
 
     def on_next(self) -> bool:
 
@@ -167,7 +167,7 @@ class DictionarySelectPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard
             lang_item = _verify(dict_root.child(li))
             language = typing.cast(
                 typing.Optional[typer.DictionaryLanguageIndex],
-                lang_item.data(0, Qt.ItemDataRole.UserRole+0),
+                lang_item.data(0, Qt.ItemDataRole.UserRole + 0),
             )
             if not language:
                 raise RuntimeError(f'Language "{lang_item}" has no language index.')
@@ -179,7 +179,7 @@ class DictionarySelectPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard
                     dict_item = _verify(item.child(di))
                     dictionary = typing.cast(
                         typing.Optional[typer.IndexDictionary],
-                        dict_item.data(0, Qt.ItemDataRole.UserRole+1),
+                        dict_item.data(0, Qt.ItemDataRole.UserRole + 1),
                     )
 
                     if dictionary:
@@ -192,7 +192,7 @@ class DictionarySelectPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard
 
             if len(dictionaries) > 0:
                 lang_w_enabled_dicts = language.copy()
-                lang_w_enabled_dicts['dictionaries'] = dictionaries
+                lang_w_enabled_dicts["dictionaries"] = dictionaries
                 dictionaries_to_install.append(lang_w_enabled_dicts)
 
         if not self.wizard:
@@ -204,7 +204,6 @@ class DictionarySelectPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard
 
         return True
 
-
     # TODO: Add whitelist functionality so only limited amount is displayed based on user target language, native language, etc
     def setup_entries(self) -> None:
         if not self.wizard:
@@ -215,22 +214,22 @@ class DictionarySelectPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard
         dictionary_index = self.wizard.dictionary_index
 
         if not dictionary_index:
-            raise RuntimeError(f'Wizard {self.wizard} has no dictionary index defined.')
+            raise RuntimeError(f"Wizard {self.wizard} has no dictionary index defined.")
 
-        for language in dictionary_index.get('languages') or []:
-            name_en = language.get('name_en')
-            name_native = language.get('name_native')
+        for language in dictionary_index.get("languages") or []:
+            name_en = language.get("name_en")
+            name_native = language.get("name_native")
 
             if not name_en:
                 continue
 
             text = name_en
             if name_native:
-                text += ' (' + name_native + ')'
+                text += " (" + name_native + ")"
 
             lang_item = QTreeWidgetItem([text])
-            lang_item.setData(0, Qt.ItemDataRole.UserRole+0, language)
-            lang_item.setData(0, Qt.ItemDataRole.UserRole+1, None)
+            lang_item.setData(0, Qt.ItemDataRole.UserRole + 0, language)
+            lang_item.setData(0, Qt.ItemDataRole.UserRole + 1, None)
 
             self.dict_tree.addTopLevelItem(lang_item)
 
@@ -245,38 +244,38 @@ class DictionarySelectPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard
 
                     dictionary_text = dictionary_name
 
-                    dictionary_description = dictionary['description']
+                    dictionary_description = dictionary["description"]
                     if dictionary_description:
-                        dictionary_text += ' - ' + dictionary_description
+                        dictionary_text += " - " + dictionary_description
 
                     dict_item = QTreeWidgetItem([dictionary_text])
                     dict_item.setCheckState(0, Qt.CheckState.Unchecked)
-                    dict_item.setData(0, Qt.ItemDataRole.UserRole+0, None)
-                    dict_item.setData(0, Qt.ItemDataRole.UserRole+1, dictionary)
+                    dict_item.setData(0, Qt.ItemDataRole.UserRole + 0, None)
+                    dict_item.setData(0, Qt.ItemDataRole.UserRole + 1, dictionary)
 
                     parent_item.addChild(dict_item)
 
-            for to_language in language.get('to_languages') or []:
-                to_name_en = to_language.get('name_en')
-                to_name_native = to_language.get('name_native')
+            for to_language in language.get("to_languages") or []:
+                to_name_en = to_language.get("name_en")
+                to_name_native = to_language.get("name_native")
 
                 if not to_name_en:
                     continue
 
                 text = to_name_en
                 if to_name_native:
-                    text += ' (' + to_name_native + ')'
+                    text += " (" + to_name_native + ")"
 
                 to_lang_item = QTreeWidgetItem([text])
-                to_lang_item.setData(0, Qt.ItemDataRole.UserRole+0, None)
-                to_lang_item.setData(0, Qt.ItemDataRole.UserRole+1, None)
+                to_lang_item.setData(0, Qt.ItemDataRole.UserRole + 0, None)
+                to_lang_item.setData(0, Qt.ItemDataRole.UserRole + 1, None)
 
                 lang_item.addChild(to_lang_item)
 
-                dictionaries = to_language.get('dictionaries', [])
+                dictionaries = to_language.get("dictionaries", [])
                 load_dict_list(dictionaries, to_lang_item)
 
-            dictionaries = language.get('dictionaries', [])
+            dictionaries = language.get("dictionaries", [])
             load_dict_list(dictionaries, lang_item)
 
 
@@ -285,16 +284,16 @@ class DictionaryConfirmPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizar
     def __init__(
         self,
         wizard: DictionaryWebInstallWizard,
-        can_select_none: bool=False,
+        can_select_none: bool = False,
     ) -> None:
         super(DictionaryConfirmPage, self).__init__(wizard)
 
         self.can_select_none = can_select_none
 
-        self.title = 'Confirm selected dictionaries'
+        self.title = "Confirm selected dictionaries"
         self.back_enabled = True
         self.next_enabled = True
-        self.next_text = 'Confirm'
+        self.next_text = "Confirm"
 
         lyt = QVBoxLayout()
         self.setLayout(lyt)
@@ -302,7 +301,6 @@ class DictionaryConfirmPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizar
         self.box = QTextEdit()
         self.box.setReadOnly(True)
         lyt.addWidget(self.box)
-
 
     def on_show(self, is_next: bool) -> None:
         if not self.wizard:
@@ -320,61 +318,68 @@ class DictionaryConfirmPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizar
 
         if not has_selection:
             if self.can_select_none:
-                self.box.setText('No dictionaries selected.<br><br>Are you sure that you want to continue?')
+                self.box.setText(
+                    "No dictionaries selected.<br><br>Are you sure that you want to continue?"
+                )
                 can_continue = True
             else:
-                self.box.setText('No dictionaries selected.<br><br>Please go back to the previous page and select the dictionaries that you want to install.')
+                self.box.setText(
+                    "No dictionaries selected.<br><br>Please go back to the previous page and select the dictionaries that you want to install."
+                )
         elif has_multiple_langs and force_lang:
-            self.box.setText('You can only install dictionaries from a single language when adding dictionaries to an exisintg language.<br><br>'
-                             'Please go back to the previous page and make sure only dictionaries from a single language are selected.')
+            self.box.setText(
+                "You can only install dictionaries from a single language when adding dictionaries to an exisintg language.<br><br>"
+                "Please go back to the previous page and make sure only dictionaries from a single language are selected."
+            )
         else:
-            txt = ''
+            txt = ""
             for language in install_index:
-                txt += '<b>'
-                txt += language['name_en']
-                if 'name_native' in language:
-                    txt += ' (' + language['name_native'] + ')'
+                txt += "<b>"
+                txt += language["name_en"]
+                if "name_native" in language:
+                    txt += " (" + language["name_native"] + ")"
                 if force_lang:
-                    txt += ' into ' + force_lang
-                txt += '</b><ul>'
+                    txt += " into " + force_lang
+                txt += "</b><ul>"
 
                 if install_freq:
-                    if 'frequency_url' in language:
-                        txt += '<li>Installing frequency data</li>'
+                    if "frequency_url" in language:
+                        txt += "<li>Installing frequency data</li>"
                     else:
-                        txt += '<li><b>No frequency data available</b></li>'
+                        txt += "<li><b>No frequency data available</b></li>"
                 if install_conj:
-                    if 'conjugation_url' in language:
-                        txt += '<li>Installing conjugation data</li>'
+                    if "conjugation_url" in language:
+                        txt += "<li>Installing conjugation data</li>"
                     else:
-                        txt += '<li><b>No conjugation data available</b></li>'
+                        txt += "<li><b>No conjugation data available</b></li>"
 
-                for dictionary in language.get('dictionaries', []):
-                    txt += '<li>'
-                    txt += dictionary['name']
-                    txt += '</li>'
+                for dictionary in language.get("dictionaries", []):
+                    txt += "<li>"
+                    txt += dictionary["name"]
+                    txt += "</li>"
 
-                txt += '</ul>'
+                txt += "</ul>"
 
             self.box.setText(txt)
             can_continue = True
-
 
         self.next_enabled = can_continue
         self.refresh_wizard_states()
 
 
 class DictionaryInstallPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard]):
-    def __init__(self, wizard: DictionaryWebInstallWizard, is_last_page: bool=True) -> None:
+    def __init__(
+        self, wizard: DictionaryWebInstallWizard, is_last_page: bool = True
+    ) -> None:
         super().__init__(wizard)
         self.is_last_page = is_last_page
 
-        self.title = 'Installing selected dictionaries...'
+        self.title = "Installing selected dictionaries..."
         self.back_enabled = False
         self.next_enabled = False
 
         if self.is_last_page:
-            self.next_text = 'Finish'
+            self.next_text = "Finish"
 
         lyt = QVBoxLayout()
         self.setLayout(lyt)
@@ -392,7 +397,6 @@ class DictionaryInstallPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizar
         self.is_complete = False
         self.install_thread: typing.Optional[InstallThread] = None
 
-
     def on_show(self, is_next: bool) -> None:
         if not is_next:
             _LOGGER.warn("Nothing to show next.")
@@ -405,12 +409,14 @@ class DictionaryInstallPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizar
         self.log_box.clear()
         self.start_thread()
 
-
     def on_cancel(self) -> bool:
         if self.install_thread and self.install_thread.isRunning():
-            r = QMessageBox.question(self, 'Migaku Dictioanry',
-                              'Do you really want to cancel the import process?',
-                              QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            r = QMessageBox.question(
+                self,
+                "Migaku Dictioanry",
+                "Do you really want to cancel the import process?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
 
             if r != QMessageBox.StandardButton.Yes:
                 return False
@@ -420,21 +426,18 @@ class DictionaryInstallPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizar
 
         return True
 
-
     def add_log(self, txt: str) -> None:
         self.log_box.moveCursor(QTextCursor.MoveOperation.End)
 
         if not _verify(self.log_box.document()).isEmpty():
-            self.log_box.insertPlainText('\n')
+            self.log_box.insertPlainText("\n")
 
         self.log_box.insertPlainText(txt)
         bar = _verify(self.log_box.verticalScrollBar())
         bar.setValue(bar.maximum())
 
-
     def update_progress(self, val: int) -> None:
         self.progress_bar.setValue(val)
-
 
     def start_thread(self) -> None:
         if self.install_thread:
@@ -455,12 +458,13 @@ class DictionaryInstallPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizar
         install_conj = self.wizard.dictionary_install_conjugation
         force_lang = self.wizard.dictionary_force_lang
 
-        self.install_thread = InstallThread(server_root, install_index, install_freq, install_conj, force_lang)
+        self.install_thread = InstallThread(
+            server_root, install_index, install_freq, install_conj, force_lang
+        )
         self.install_thread.finished.connect(self.on_thread_finish)
         self.install_thread.progress_update.connect(self.update_progress)
         self.install_thread.log_update.connect(self.add_log)
         self.install_thread.start()
-
 
     def on_thread_finish(self) -> None:
         self.progress_bar.setValue(100)
@@ -483,8 +487,8 @@ class InstallThread(QThread):
         install_index: typing.Sequence[typer.DictionaryLanguageIndex],
         install_freq: bool,
         install_conj: bool,
-        force_lang: typing.Optional[str]=None,
-        parent: typing.Optional[QObject]=None,
+        force_lang: typing.Optional[str] = None,
+        parent: typing.Optional[QObject] = None,
     ) -> None:
         super().__init__(parent)
 
@@ -496,7 +500,7 @@ class InstallThread(QThread):
         self.cancel_requested = False
 
     def construct_url(self, url: str) -> str:
-        if not url.startswith('http'):
+        if not url.startswith("http"):
             return self.server_root + url
         return url
 
@@ -517,14 +521,14 @@ class InstallThread(QThread):
             self.progress_update.emit(progress_percent)
 
         for l in self.install_index:
-            num_dicts += len(l.get('dictionaries', []))
+            num_dicts += len(l.get("dictionaries", []))
 
-        self.log_update.emit('Installing %d dictionaries...' % num_dicts)
+        self.log_update.emit("Installing %d dictionaries..." % num_dicts)
 
-        freq_path = os.path.join(addon_path, 'user_files', 'db', 'frequency')
+        freq_path = os.path.join(addon_path, "user_files", "db", "frequency")
         os.makedirs(freq_path, exist_ok=True)
 
-        conj_path = os.path.join(addon_path, 'user_files', 'db', 'conjugation')
+        conj_path = os.path.join(addon_path, "user_files", "db", "conjugation")
         os.makedirs(conj_path, exist_ok=True)
 
         for l in self.install_index:
@@ -533,7 +537,7 @@ class InstallThread(QThread):
 
             lname = self.force_lang
             if not lname:
-                lname = l.get('name_en')
+                lname = l.get("name_en")
             if not lname:
                 continue
 
@@ -546,57 +550,63 @@ class InstallThread(QThread):
 
             # Install frequency data
             if self.install_freq:
-                furl = l.get('frequency_url')
+                furl = l.get("frequency_url")
                 if furl:
-                    self.log_update.emit('Installing %s frequency data...' % lname)
+                    self.log_update.emit("Installing %s frequency data..." % lname)
                     furl = self.construct_url(furl)
                     dl_resp = client.get(furl)
                     if dl_resp.status_code == 200:
                         fdata = client.stream_content(dl_resp)
-                        dst_path = os.path.join(freq_path, '%s.json' % lname)
-                        with open(dst_path, 'wb') as f:
+                        dst_path = os.path.join(freq_path, "%s.json" % lname)
+                        with open(dst_path, "wb") as f:
                             f.write(fdata)
                     else:
-                        self.log_update.emit(' ERROR: Download failed (%d).' % dl_resp.status_code)
+                        self.log_update.emit(
+                            " ERROR: Download failed (%d)." % dl_resp.status_code
+                        )
 
             # Install conjugation data
             if self.install_conj:
-                curl = l.get('conjugation_url')
+                curl = l.get("conjugation_url")
                 if curl:
-                    self.log_update.emit('Installing %s conjugation data...' % lname)
+                    self.log_update.emit("Installing %s conjugation data..." % lname)
                     curl = self.construct_url(curl)
                     dl_resp = client.get(curl)
                     if dl_resp.status_code == 200:
                         cdata = client.stream_content(dl_resp)
-                        dst_path = os.path.join(conj_path, '%s.json' % lname)
-                        with open(dst_path, 'wb') as f:
+                        dst_path = os.path.join(conj_path, "%s.json" % lname)
+                        with open(dst_path, "wb") as f:
                             f.write(cdata)
                     else:
-                        self.log_update.emit(' ERROR: Download failed (%d).' % dl_resp.status_code)
+                        self.log_update.emit(
+                            " ERROR: Download failed (%d)." % dl_resp.status_code
+                        )
 
             # Install dictionaries
-            for d in l.get('dictionaries', []):
+            for d in l.get("dictionaries", []):
                 if self.cancel_requested:
                     return
 
-                dname = d['name']
-                durl = self.construct_url(d['url'])
+                dname = d["name"]
+                durl = self.construct_url(d["url"])
 
-                self.log_update.emit('Installing %s...' % dname)
+                self.log_update.emit("Installing %s..." % dname)
 
-                self.log_update.emit(' Downloading %s...' % durl)
+                self.log_update.emit(" Downloading %s..." % durl)
                 dl_resp = client.get(durl)
 
                 if dl_resp.status_code == 200:
                     update_dict_progress(0.5)
-                    self.log_update.emit(' Importing...')
+                    self.log_update.emit(" Importing...")
                     ddata = client.stream_content(dl_resp)
                     try:
                         importDict(lname, io.BytesIO(ddata), dname)
                     except ValueError as e:
-                        self.log_update.emit(' ERROR: %s' % str(e))
+                        self.log_update.emit(" ERROR: %s" % str(e))
                 else:
-                    self.log_update.emit(' ERROR: Download failed (%d).' % dl_resp.status_code)
+                    self.log_update.emit(
+                        " ERROR: Download failed (%d)." % dl_resp.status_code
+                    )
 
                 update_dict_progress(1.0)
                 num_installed += 1
@@ -607,11 +617,11 @@ class InstallThread(QThread):
                 break
 
         self.progress_update.emit(100)
-        self.log_update.emit('All done.')
+        self.log_update.emit("All done.")
 
 
 def _verify(value: typing.Optional[T]) -> T:
     if value is not None:
         return value
 
-    raise RuntimeError('Expected a value but got None.')
+    raise RuntimeError("Expected a value but got None.")
