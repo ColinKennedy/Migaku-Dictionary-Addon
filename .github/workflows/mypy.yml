@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - fix_type_hints
   pull_request:
     branches:
       - main
