@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 
+#
 import argparse
 import base64
 import json
@@ -14,78 +14,80 @@ from aqt.utils import showInfo
 
 from bs4 import BeautifulSoup
 
-languages = {"German" : "de",
- "Tatar" : "tt",
- "Russian" : "ru",
- "English" : "en",
- "Spanish" : "es",
- "Japanese" : "ja",
- "French" : "fr",
- "Portuguese" : "pt",
- "Polish" : "pl",
- "Dutch" : "nl",
- "Italian" : "it",
- "Mandarin Chinese" : "zh",
- "Ancient Greek" : "grc",
- "Swedish" : "sv",
- "Turkish" : "tr",
- "Arabic" : "ar",
- "Hungarian" : "hu",
- "Korean" : "ko",
- "Luxembourgish" : "lb",
- "Czech" : "cs",
- "Ukrainian" : "uk",
- "Greek" : "el",
- "Catalan" : "ca",
- "Hebrew" : "he",
- "Persian" : "fa",
- "Mari" : "chm",
- "Finnish" : "fi",
- "Cantonese" : "yue",
- "Urdu" : "ur",
- "Esperanto" : "eo",
- "Danish" : "da",
- "Bulgarian" : "bg",
- "Latin" : "la",
- "Lithuanian" : "lt",
- "Romanian" : "ro",
- "Min Nan" : "nan",
- "Norwegian Bokmål" : "no",
- "Vietnamese" : "vi",
- "Icelandic" : "is",
- "Croatian" : "hr",
- "Irish" : "ga",
- "Basque" : "eu",
- "Wu Chinese" : "wuu",
- "Belarusian" : "be",
- "Latvian" : "lv",
- "Bashkir" : "ba",
- "Kabardian" : "kbd",
- "Hindi" : "hi",
- "Slovak" : "sk",
- "Punjabi" : "pa",
- "Low German" : "nds",
- "Serbian" : "sr",
- "Hakka" : "hak",
- "Uyghur" : "ug",
- "Azerbaijani" : "az",
- "Thai" : "th",
- "Indonesian" : "ind",
- "Estonian" : "et",
- "Slovenian" : "sl",
- "Tagalog" : "tl",
- "Venetian" : "vec",
- "Northern Sami" : "sme",
- "Yiddish" : "yi",
- "Galician" : "gl",
- "Bengali" : "bn",
- "Afrikaans" : "af",
- "Welsh" : "cy",
- "Interlingua" : "ia",
- "Armenian" : "hy",
- "Chuvash" : "cv",
- "Kurdish" : "ku"}
- 
+languages = {
+    "German": "de",
+    "Tatar": "tt",
+    "Russian": "ru",
+    "English": "en",
+    "Spanish": "es",
+    "Japanese": "ja",
+    "French": "fr",
+    "Portuguese": "pt",
+    "Polish": "pl",
+    "Dutch": "nl",
+    "Italian": "it",
+    "Mandarin Chinese": "zh",
+    "Ancient Greek": "grc",
+    "Swedish": "sv",
+    "Turkish": "tr",
+    "Arabic": "ar",
+    "Hungarian": "hu",
+    "Korean": "ko",
+    "Luxembourgish": "lb",
+    "Czech": "cs",
+    "Ukrainian": "uk",
+    "Greek": "el",
+    "Catalan": "ca",
+    "Hebrew": "he",
+    "Persian": "fa",
+    "Mari": "chm",
+    "Finnish": "fi",
+    "Cantonese": "yue",
+    "Urdu": "ur",
+    "Esperanto": "eo",
+    "Danish": "da",
+    "Bulgarian": "bg",
+    "Latin": "la",
+    "Lithuanian": "lt",
+    "Romanian": "ro",
+    "Min Nan": "nan",
+    "Norwegian Bokmål": "no",
+    "Vietnamese": "vi",
+    "Icelandic": "is",
+    "Croatian": "hr",
+    "Irish": "ga",
+    "Basque": "eu",
+    "Wu Chinese": "wuu",
+    "Belarusian": "be",
+    "Latvian": "lv",
+    "Bashkir": "ba",
+    "Kabardian": "kbd",
+    "Hindi": "hi",
+    "Slovak": "sk",
+    "Punjabi": "pa",
+    "Low German": "nds",
+    "Serbian": "sr",
+    "Hakka": "hak",
+    "Uyghur": "ug",
+    "Azerbaijani": "az",
+    "Thai": "th",
+    "Indonesian": "ind",
+    "Estonian": "et",
+    "Slovenian": "sl",
+    "Tagalog": "tl",
+    "Venetian": "vec",
+    "Northern Sami": "sme",
+    "Yiddish": "yi",
+    "Galician": "gl",
+    "Bengali": "bn",
+    "Afrikaans": "af",
+    "Welsh": "cy",
+    "Interlingua": "ia",
+    "Armenian": "hy",
+    "Chuvash": "cv",
+    "Kurdish": "ku",
+}
+
 
 class ForvoSignals(QObject):
     resultsFound = pyqtSignal(list)
@@ -104,7 +106,7 @@ class Forvo(QRunnable):
         self.term: typing.Optional[str] = None
         self.signals = ForvoSignals()
         self.langShortCut = languages[self.selLang]
-        self.GOOGLE_SEARCH_URL = "https://forvo.com/word/◳t/#" + self.langShortCut #◳r
+        self.GOOGLE_SEARCH_URL = "https://forvo.com/word/◳t/#" + self.langShortCut  # ◳r
         self.session = requests.session()
         self.session.headers.update(
             {
@@ -132,7 +134,9 @@ class Forvo(QRunnable):
             self.selLang = lang
             self.langShortCut = languages[self.selLang]
             self.GOOGLE_SEARCH_URL = "https://forvo.com/word/◳t/#" + self.langShortCut
-        query = self.GOOGLE_SEARCH_URL.replace('◳t', re.sub(r'[\/\'".,&*@!#()\[\]\{\}]', '', term))
+        query = self.GOOGLE_SEARCH_URL.replace(
+            "◳t", re.sub(r'[\/\'".,&*@!#()\[\]\{\}]', "", term)
+        )
         return self.forvo_search(query)
 
     def decodeURL(
@@ -143,11 +147,19 @@ class Forvo(QRunnable):
         audiohost: str,
         server: str,
     ) -> tuple[str, str]:
-        url2 = protocol + "//" + server + "/player-mp3-highHandler.php?path=" + url2;
-        url1 = protocol + "//" + audiohost + "/mp3/" + base64.b64decode(url1).decode("utf-8", "strict")
+        url2 = protocol + "//" + server + "/player-mp3-highHandler.php?path=" + url2
+        url1 = (
+            protocol
+            + "//"
+            + audiohost
+            + "/mp3/"
+            + base64.b64decode(url1).decode("utf-8", "strict")
+        )
         return url1, url2
 
-    def attemptFetchForvoLinks(self, term: str) -> typing.Union[str, typing.Literal[False]]:
+    def attemptFetchForvoLinks(
+        self, term: str
+    ) -> typing.Union[str, typing.Literal[False]]:
         urls = self.search(term)
         if len(urls) > 0:
             return json.dumps(urls)
@@ -157,11 +169,17 @@ class Forvo(QRunnable):
 
     # TODO: @ColinKennedy - Make a more specific type-hint instead of a hard-coded tuple
     def generateURLS(self, results: str) -> list[tuple[str, str, str, str]]:
-        matches = typing.cast(list[str], re.findall(r'var pronunciations = \[([\w\W\n]*?)\];', results))
+        matches = typing.cast(
+            list[str], re.findall(r"var pronunciations = \[([\w\W\n]*?)\];", results)
+        )
         if not matches:
             return []
         audio = matches[0]
-        data = re.findall(self.selLang + r'.*?Pronunciation by (?:<a.*?>)?(\w+).*?class="lang_xx"\>(.*?)\<.*?,.*?,.*?,.*?,\'(.+?)\',.*?,.*?,.*?\'(.+?)\'', audio)     
+        data = re.findall(
+            self.selLang
+            + r'.*?Pronunciation by (?:<a.*?>)?(\w+).*?class="lang_xx"\>(.*?)\<.*?,.*?,.*?,.*?,\'(.+?)\',.*?,.*?,.*?\'(.+?)\'',
+            audio,
+        )
         if not data:
             return []
 
@@ -171,18 +189,18 @@ class Forvo(QRunnable):
             raise RuntimeError(f'Results "{results}" has no server host.')
 
         server = match.group(1)
-        match = re.search(r'var _AUDIO_HTTP_HOST=\'(.+?)\';', results)
+        match = re.search(r"var _AUDIO_HTTP_HOST=\'(.+?)\';", results)
 
         if not match:
             raise RuntimeError(f'Results "{results}" has no audio http host.')
 
         audiohost = match.group(1)
-        protocol = 'https:'
+        protocol = "https:"
         urls: list[tuple[str, str, str, str]] = []
 
         for datum in data:
-            url1, url2 = self.decodeURL(datum[2],datum[3],protocol, audiohost, server)
-            urls.append((datum[0],datum[1], url1, url2))
+            url1, url2 = self.decodeURL(datum[2], datum[3], protocol, audiohost, server)
+            urls.append((datum[0], datum[1], url1, url2))
 
         return urls
 
@@ -193,8 +211,10 @@ class Forvo(QRunnable):
         try:
             html = self.session.get(query_gen).text
         except:
-            self.signals.noResults.emit('The Forvo Dictionary could not be loaded, please confirm that your are connected to the internet and try again. ')
+            self.signals.noResults.emit(
+                "The Forvo Dictionary could not be loaded, please confirm that your are connected to the internet and try again. "
+            )
             return []
         results = html
-            
+
         return self.generateURLS(results)

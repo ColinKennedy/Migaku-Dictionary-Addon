@@ -1,0 +1,27 @@
+[tool.black]
+exclude = '''
+(
+    src/Pyperclip.py
+    |src/bs4/.*
+    |src/keyboardMac/.*
+    |src/linux/.*
+    |src/pynput/.*
+    |src/requests/.*
+    |src/six.py
+    |src/tornado/.*
+    |src/urllib3/.*
+)
+'''
+
+[tool.isort]
+skip = [
+    "src/Pyperclip.py",
+    "src/bs4",
+    "src/keyboardMac",
+    "src/linux",
+    "src/pynput",
+    "src/requests",
+    "src/six.py",
+    "src/tornado",
+    "src/urllib3",
+]

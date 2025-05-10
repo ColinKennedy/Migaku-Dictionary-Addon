@@ -10,8 +10,18 @@ AddType = typing.Union[
     typing.Literal["overwrite"],
 ]
 
-GroupName = typing.Union[typing.Literal["All"], typing.Literal["Google Images"], typing.Literal["Forvo"]]
-SearchMode = typing.Union[typing.Literal["Forward"], typing.Literal["Backward"], typing.Literal["Exact"], typing.Literal["Anywhere"], typing.Literal["Definition"], typing.Literal["Example"], typing.Literal["Pronunciation"]]
+GroupName = typing.Union[
+    typing.Literal["All"], typing.Literal["Google Images"], typing.Literal["Forvo"]
+]
+SearchMode = typing.Union[
+    typing.Literal["Forward"],
+    typing.Literal["Backward"],
+    typing.Literal["Exact"],
+    typing.Literal["Anywhere"],
+    typing.Literal["Definition"],
+    typing.Literal["Example"],
+    typing.Literal["Pronunciation"],
+]
 SearchTerm = typing.Union[
     typing.Literal["Forward"],
     typing.Literal["Pronunciation"],
@@ -216,6 +226,6 @@ class IndexDictionary(typing.TypedDict):
 
 def check_t(item: typing.Optional[T]) -> T:
     if item is None:
-        raise RuntimeError('Item was not defined as expected.')
+        raise RuntimeError("Item was not defined as expected.")
 
     return item

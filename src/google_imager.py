@@ -20,7 +20,7 @@ def _initialize() -> None:
     if not config:
         raise RuntimeError(f'Namespace "{__name__}" has no configuration.')
 
-    _INSTANCE.setSearchRegion(config['googleSearchRegion'])
+    _INSTANCE.setSearchRegion(config["googleSearchRegion"])
     _INSTANCE.setSafeSearch(config["safeSearch"])
 
 
@@ -31,12 +31,21 @@ def _download_image(
     maxH: int,
 ) -> typing.Union[str, typing.Literal[False]]:
     try:
-        filename = str(time.time()).replace('.', '') + '.png'
-        req = Request(url , headers={'User-Agent':  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'})
+        filename = str(time.time()).replace(".", "") + ".png"
+        req = Request(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36"
+            },
+        )
         file = urlopen(req).read()
         image = aqt.QImage()
         image.loadFromData(file)
-        image = image.scaled(aqt.QSize(maxW,maxH), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        image = image.scaled(
+            aqt.QSize(maxW, maxH),
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
         image.save(filename)
         return '<img src="' + filename + '">'
     except:
@@ -51,24 +60,24 @@ def export_images(term: str, howMany: int) -> str:
     if not config:
         raise RuntimeError(f'Namespace "{__name__}" has no configuration.')
 
-    maxW = config['maxWidth']
-    maxH = config['maxHeight']
+    maxW = config["maxWidth"]
+    maxH = config["maxHeight"]
 
     if not _INSTANCE:
         _initialize()
 
     _INSTANCE = typing.cast(googleimages.Google, _INSTANCE)
 
-    imgSeparator = ''
+    imgSeparator = ""
     imgs = []
     urls = _INSTANCE.search(term, 80) or []
 
     if len(urls) < 1:
-        time.sleep(.1)
-        urls = _INSTANCE.search(term, 80, 'countryUS') or []
+        time.sleep(0.1)
+        urls = _INSTANCE.search(term, 80, "countryUS") or []
 
     for url in urls:
-        time.sleep(.1)
+        time.sleep(0.1)
 
         if img := _download_image(url, maxW, maxH):
             imgs.append(img)

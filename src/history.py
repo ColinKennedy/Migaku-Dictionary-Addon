@@ -31,16 +31,16 @@ class HistoryModel(QAbstractTableModel):
         self.dictInt = parent
         self.justTerms = [item[0] for item in history]
 
-    def rowCount(self, index: QModelIndex=QModelIndex()) -> int:
+    def rowCount(self, index: QModelIndex = QModelIndex()) -> int:
         return len(self.history)
 
-    def columnCount(self, index: QModelIndex=QModelIndex()) -> int:
+    def columnCount(self, index: QModelIndex = QModelIndex()) -> int:
         return 2
 
     def data(
         self,
         index: QModelIndex,
-        role: int=Qt.ItemDataRole.DisplayRole,
+        role: int = Qt.ItemDataRole.DisplayRole,
     ) -> typing.Optional[str]:
         if not index.isValid():
             # TODO: @ColinKennedy this check is not necessary
@@ -64,7 +64,7 @@ class HistoryModel(QAbstractTableModel):
         self,
         section: int,
         orientation: Qt.Orientation,
-        role: int=Qt.ItemDataRole.DisplayRole,
+        role: int = Qt.ItemDataRole.DisplayRole,
     ) -> typing.Optional[str]:
         if role != Qt.ItemDataRole.DisplayRole:
             return None
@@ -76,9 +76,9 @@ class HistoryModel(QAbstractTableModel):
 
     def insertRows(
         self,
-        position: typing.Optional[int]=None,
-        rows: int=1,
-        index: QModelIndex=QModelIndex(),
+        position: typing.Optional[int] = None,
+        rows: int = 1,
+        index: QModelIndex = QModelIndex(),
         term: str = "",
         date: str = "",
     ) -> bool:
@@ -113,16 +113,17 @@ class HistoryModel(QAbstractTableModel):
     def removeRows(
         self,
         position: int,
-        rows: int=1,
-        index: QModelIndex=QModelIndex(),
+        rows: int = 1,
+        index: QModelIndex = QModelIndex(),
     ) -> bool:
         # TODO: @ColinKennedy add range-check here
         # TODO: @ColinKennedy this code probably doesn't work. Fix?
         self.beginRemoveRows(QModelIndex(), position, position + rows - 1)
-        del self.history[position:position+rows]
+        del self.history[position : position + rows]
         self.endRemoveRows()
         self.dictInt.saveHistory()
         return True
+
 
 class HistoryBrowser(QWidget):
     def __init__(
@@ -138,7 +139,7 @@ class HistoryBrowser(QWidget):
         self.model = historyModel
         self.dictInt = parent
         self.tableView.setModel(self.model)
-        self.clearHistory = QPushButton('Clear History')
+        self.clearHistory = QPushButton("Clear History")
         self.clearHistory.clicked.connect(self.deleteHistory)
         self.tableView.doubleClicked.connect(self.searchAgain)
         self.setupTable()
@@ -155,7 +156,9 @@ class HistoryBrowser(QWidget):
 
         tableHeader.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         tableHeader.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        self.tableView.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.tableView.setSelectionBehavior(
+            QAbstractItemView.SelectionBehavior.SelectRows
+        )
         tableHeader.hide()
 
     def searchAgain(self) -> None:
@@ -167,8 +170,8 @@ class HistoryBrowser(QWidget):
                 f'Cannot search again. "{self.tableView}" has no selection model.'
             )
 
-        term = self.model.index(model.currentIndex().row(),0).data()
-        self.model.insertRows(term = term, date = date)
+        term = self.model.index(model.currentIndex().row(), 0).data()
+        self.model.insertRows(term=term, date=date)
         self.dictInt.initSearch(term)
 
     def setColors(self) -> None:
@@ -176,14 +179,16 @@ class HistoryBrowser(QWidget):
             if is_mac:
                 self.tableView.setStyleSheet(self.dictInt.getMacTableStyle())
             else:
-                self.tableView.setStyleSheet('')
+                self.tableView.setStyleSheet("")
             self.setPalette(self.dictInt.ogPalette)
         else:
             self.setPalette(self.dictInt.nightPalette)
             self.tableView.setStyleSheet(self.dictInt.getTableStyle())
 
     def deleteHistory(self) -> None:
-        if not miAsk('Clearing your history cannot be undone. Would you like to proceed?', self):
+        if not miAsk(
+            "Clearing your history cannot be undone. Would you like to proceed?", self
+        ):
             return
 
         self.model.removeRows(0, len(self.model.history))

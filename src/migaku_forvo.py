@@ -20,7 +20,7 @@ def _initialize() -> None:
     if not configuration:
         raise RuntimeError(f'Configuration "{__name__}" is not defined.')
 
-    _INSTANCE = Forvo(configuration['ForvoLanguage'])
+    _INSTANCE = Forvo(configuration["ForvoLanguage"])
 
 
 def _download_audio(urls: list[tuple[str, str, str, str]], count: int) -> list[str]:
@@ -34,13 +34,13 @@ def _download_audio(urls: list[tuple[str, str, str, str]], count: int) -> list[s
             req = Request(
                 url[3],
                 headers={
-                    'User-Agent':  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36',
+                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36",
                 },
             )
             file = urlopen(req).read()
-            filename = str(time.time()) + '.mp3'
-            open(join(mw.col.media.dir(), filename), 'wb').write(file)
-            tags.append('[sound:' + filename + ']')
+            filename = str(time.time()) + ".mp3"
+            open(join(mw.col.media.dir(), filename), "wb").write(file)
+            tags.append("[sound:" + filename + "]")
             success = True
         except:
             _LOGGER.exception('Unable to read "%s" url.', url)
@@ -51,11 +51,16 @@ def _download_audio(urls: list[tuple[str, str, str, str]], count: int) -> list[s
             continue
 
         try:
-            req = Request(url[2] , headers={'User-Agent':  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'})
+            req = Request(
+                url[2],
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36"
+                },
+            )
             file = urlopen(req).read()
-            filename = str(time.time()) + '.mp3'
-            open(join(mw.col.media.dir(), filename), 'wb').write(file)
-            tags.append('[sound:' + filename + ']')
+            filename = str(time.time()) + ".mp3"
+            open(join(mw.col.media.dir(), filename), "wb").write(file)
+            tags.append("[sound:" + filename + "]")
         except:
             continue
 
@@ -70,11 +75,11 @@ def export_audio(term: str, count: int, lang: str) -> str:
 
     _INSTANCE = typing.cast(Forvo, _INSTANCE)
 
-    audioSeparator = ''
+    audioSeparator = ""
     urls = _INSTANCE.search(term, lang)
 
     if len(urls) < 1:
-        time.sleep(.1)
+        time.sleep(0.1)
         urls = _INSTANCE.search(term)
 
     tags = _download_audio(urls, count)

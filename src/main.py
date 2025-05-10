@@ -75,7 +75,7 @@ def _verify(item: typing.Optional[T]) -> T:
     if item is not None:
         return item
 
-    raise RuntimeError('Expected item to exist but got none.')
+    raise RuntimeError("Expected item to exist but got none.")
 
 
 def window_loaded() -> None:
@@ -89,17 +89,17 @@ def window_loaded() -> None:
     currentField = False
     currentKey = False
     wrapperDict = False
-    tmpdir = join(addon_path, 'temp')
+    tmpdir = join(addon_path, "temp")
     global_state.IS_BULK_MEDIA_EXPORT_CANCELLED = False
 
     def removeTempFiles() -> None:
-        filelist = [ f for f in os.listdir(tmpdir)]
+        filelist = [f for f in os.listdir(tmpdir)]
         for f in filelist:
             path = os.path.join(tmpdir, f)
             try:
                 os.remove(path)
             except:
-                innerDirFiles = [ df for df in os.listdir(path)]
+                innerDirFiles = [df for df in os.listdir(path)]
                 for df in innerDirFiles:
                     innerPath = os.path.join(path, df)
                     os.remove(innerPath)
@@ -112,7 +112,6 @@ def window_loaded() -> None:
     # assert js_file.open(QIODevice.OpenModeFlag.ReadOnly)
     # js = js_file.readAll().data().decode('utf-8')
 
-
     def exportSentence(sentence: str) -> None:
         if dictionary := migaku_dictionary.get_visible_dictionary():
             dictionary.dict.exportSentence(sentence)
@@ -120,7 +119,7 @@ def window_loaded() -> None:
 
     def exportImage(img: typing.Sequence[str]) -> None:
         if dictionary := migaku_dictionary.get_visible_dictionary():
-            if img[1].startswith('[sound:'):
+            if img[1].startswith("[sound:"):
                 # TODO: @ColinKennedy - check these type-hints later
                 img = typing.cast(tuple[str, str, str], img)
                 dictionary.dict.exportAudio(img)
@@ -147,7 +146,6 @@ def window_loaded() -> None:
         if dictionary := migaku_dictionary.get_visible_dictionary():
             dictionary.dict.cancelBulkMediaExport()
 
-
     def extensionCardExport(card: typer.Card) -> None:
         primary = card["primary"]
         secondary = card["secondary"]
@@ -168,10 +166,12 @@ def window_loaded() -> None:
             dictionary.dict.exportWord(unknownWords[0])
         else:
             dictionary = _initialize_dictionary_if_needed()
-            dictionary.dict.exportWord('')
+            dictionary.dict.exportWord("")
 
         if audio:
-            dictionary.dict.exportAudio((join(mw.col.media.dir(), audio), '[sound:' + audio +']', audio))
+            dictionary.dict.exportAudio(
+                (join(mw.col.media.dir(), audio), "[sound:" + audio + "]", audio)
+            )
 
         if image:
             dictionary.dict.exportImage((join(mw.col.media.dir(), image), image))
@@ -186,21 +186,31 @@ def window_loaded() -> None:
         cardWindow = adder.scrollArea
 
         if not is_win:
-            cardWindow.setWindowState(cardWindow.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
+            cardWindow.setWindowState(
+                cardWindow.windowState() & ~Qt.WindowState.WindowMinimized
+                | Qt.WindowState.WindowActive
+            )
             cardWindow.raise_()
         else:
-            cardWindow.setWindowFlags(cardWindow.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
+            cardWindow.setWindowFlags(
+                cardWindow.windowFlags() | Qt.WindowType.WindowStaysOnTopHint
+            )
             cardWindow.show()
 
             if not adder.alwaysOnTop:
-                cardWindow.setWindowFlags(cardWindow.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint)
+                cardWindow.setWindowFlags(
+                    cardWindow.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint
+                )
                 cardWindow.show()
 
     def trySearch(term: str) -> None:
         if dictionary := migaku_dictionary.get_visible_dictionary():
             dictionary.initSearch(term)
             midict.showAfterGlobalSearch()
-        elif migaku_configuration.get()['openOnGlobal'] and not migaku_dictionary.get_visible_dictionary():
+        elif (
+            migaku_configuration.get()["openOnGlobal"]
+            and not migaku_dictionary.get_visible_dictionary()
+        ):
             midict.dictionaryInit([term])
 
     def attemptAddCard(*_: typing.Any, **__: typing.Any) -> None:
@@ -213,7 +223,9 @@ def window_loaded() -> None:
 
     def openDictionarySettings() -> None:
         if not migaku_settings.get_unsafe():
-            migaku_settings.initialize(SettingsGui(mw, addon_path, openDictionarySettings))
+            migaku_settings.initialize(
+                SettingsGui(mw, addon_path, openDictionarySettings)
+            )
 
         settings = migaku_settings.get()
         settings.show()
@@ -225,17 +237,16 @@ def window_loaded() -> None:
         settings.activateWindow()
 
     def initialize_menu() -> None:
-        menu = QMenu('Migaku',  mw)
+        menu = QMenu("Migaku", mw)
 
         settings_action = QAction("Dictionary Settings", mw)
         settings_action.triggered.connect(openDictionarySettings)
         menu.addAction(settings_action)
 
-
-        shortcut = '(Ctrl+W)'
+        shortcut = "(Ctrl+W)"
 
         if is_mac:
-            shortcut = '⌘W'
+            shortcut = "⌘W"
 
         open_dictionary_action = QAction(f"Open Dictionary {shortcut}", mw)
         open_dictionary_action.triggered.connect(midict.dictionaryInit)
@@ -263,7 +274,9 @@ def window_loaded() -> None:
         midict.showAfterGlobalSearch()
 
     def extensionFileNotFound() -> None:
-        miInfo("The media files were not found in your \"Download Directory\", please make sure you have selected the correct directory.")
+        miInfo(
+            'The media files were not found in your "Download Directory", please make sure you have selected the correct directory.'
+        )
 
     def initGlobalHotkeys() -> None:
         thread = threader.initialize(midict.ClipThread(mw, addon_path))
@@ -282,7 +295,7 @@ def window_loaded() -> None:
         thread.extensionFileNotFound.connect(extensionFileNotFound)
         thread.run()
 
-    if _get_configuration()['globalHotkeys']:
+    if _get_configuration()["globalHotkeys"]:
         initGlobalHotkeys()
 
     hotkey = QShortcut(QKeySequence("Ctrl+W"), mw)
@@ -318,7 +331,7 @@ def window_loaded() -> None:
             origin = QComboBox()
             origin.addItems(fields)
             addType = QComboBox()
-            addType.addItems(['Add','Overwrite', 'If Empty'])
+            addType.addItems(["Add", "Overwrite", "If Empty"])
             dicts = QComboBox()
             dict2 = QComboBox()
             dict3 = QComboBox()
@@ -328,19 +341,19 @@ def window_loaded() -> None:
 
             for d in database.getAllDicts():
                 dictName = database.cleanDictName(d)
-                dictDict[dictName] = d;
+                dictDict[dictName] = d
                 tempdicts.append(dictName)
-            tempdicts.append('Google Images')
-            tempdicts.append('Forvo')
+            tempdicts.append("Google Images")
+            tempdicts.append("Forvo")
             dicts.addItems(sorted(tempdicts))
-            dict2.addItem('None')
+            dict2.addItem("None")
             dict2.addItems(sorted(tempdicts))
-            dict3.addItem('None')
+            dict3.addItem("None")
             dict3.addItems(sorted(tempdicts))
-            dictDict['Google Images'] = 'Google Images'
-            dictDict['Forvo'] = 'Forvo'
-            dictDict['None'] = 'None'
-            ex =  QPushButton('Execute')
+            dictDict["Google Images"] = "Google Images"
+            dictDict["Forvo"] = "Forvo"
+            dictDict["None"] = "None"
+            ex = QPushButton("Execute")
             ex.clicked.connect(
                 lambda: exportDefinitions(
                     origin.currentText(),
@@ -348,13 +361,13 @@ def window_loaded() -> None:
                     addType.currentText(),
                     [
                         dictDict[dicts.currentText()],
-                        dictDict[dict2.currentText()] ,
-                        dictDict[dict3.currentText()]
+                        dictDict[dict2.currentText()],
+                        dictDict[dict3.currentText()],
                     ],
                     howMany.value(),
                     notes,
                     generateWidget,
-                    [dicts.currentText(), dict2.currentText(), dict3.currentText()]
+                    [dicts.currentText(), dict2.currentText(), dict3.currentText()],
                 )
             )
             destination = QComboBox()
@@ -366,43 +379,46 @@ def window_loaded() -> None:
             oLayout = QVBoxLayout()
             oh1 = QHBoxLayout()
             oh2 = QHBoxLayout()
-            oh1.addWidget(QLabel('Input Field:'))
+            oh1.addWidget(QLabel("Input Field:"))
             oh1.addWidget(origin)
-            oh2.addWidget(QLabel('Output Field:'))
+            oh2.addWidget(QLabel("Output Field:"))
             oh2.addWidget(destination)
             oLayout.addStretch()
             oLayout.addLayout(oh1)
             oLayout.addLayout(oh2)
             oLayout.addStretch()
-            oLayout.setContentsMargins(6,0, 6, 0)
+            oLayout.setContentsMargins(6, 0, 6, 0)
             layout.addLayout(oLayout)
             dlay = QHBoxLayout()
-            dlay.addWidget(QLabel('Dictionaries:'))
+            dlay.addWidget(QLabel("Dictionaries:"))
             dictLay = QVBoxLayout()
             dictLay.addWidget(dicts)
             dictLay.addWidget(dict2)
             dictLay.addWidget(dict3)
             dlay.addLayout(dictLay)
-            dlay.setContentsMargins(6,0, 6, 0)
+            dlay.setContentsMargins(6, 0, 6, 0)
             layout.addLayout(dlay)
             bLayout = QVBoxLayout()
             bh1 = QHBoxLayout()
             bh2 = QHBoxLayout()
-            bh1.addWidget(QLabel('Output Mode:'))
+            bh1.addWidget(QLabel("Output Mode:"))
             bh1.addWidget(addType)
-            bh2.addWidget(QLabel('Max Per Dict:'))
+            bh2.addWidget(QLabel("Max Per Dict:"))
             bh2.addWidget(howMany)
             bLayout.addStretch()
             bLayout.addLayout(bh1)
             bLayout.addLayout(bh2)
             bLayout.addStretch()
-            bLayout.setContentsMargins(6,0, 6, 0)
+            bLayout.setContentsMargins(6, 0, 6, 0)
             layout.addLayout(bLayout)
             layout.addWidget(ex)
-            layout.setContentsMargins(10,6, 10, 6)
-            generateWidget.setWindowFlags(generateWidget.windowFlags() | Qt.WindowType.MSWindowsFixedSizeDialogHint)
+            layout.setContentsMargins(10, 6, 10, 6)
+            generateWidget.setWindowFlags(
+                generateWidget.windowFlags()
+                | Qt.WindowType.MSWindowsFixedSizeDialogHint
+            )
             generateWidget.setWindowTitle("Migaku Dictionary: Export Definitions")
-            generateWidget.setWindowIcon(QIcon(join(addon_path, 'icons', 'migaku.png')))
+            generateWidget.setWindowIcon(QIcon(join(addon_path, "icons", "migaku.png")))
             generateWidget.setLayout(layout)
             config = _get_configuration()
             savedPreferences = config.get("massGenerationPreferences")
@@ -415,18 +431,21 @@ def window_loaded() -> None:
                     dict3.setCurrentText(savedPreferences["dict3"])
                 if origin.findText(savedPreferences["origin"]) != -1:
                     origin.setCurrentText(savedPreferences["origin"])
-                if destination.findText(savedPreferences["destination"])  != -1:
+                if destination.findText(savedPreferences["destination"]) != -1:
                     destination.setCurrentText(savedPreferences["destination"])
                 addType.setCurrentText(savedPreferences["addType"])
                 howMany.setValue(savedPreferences["limit"])
             generateWidget.exec()
         else:
-            miInfo('Please select some cards before attempting to export definitions.', level='not')
+            miInfo(
+                "Please select some cards before attempting to export definitions.",
+                level="not",
+            )
 
     def getProgressWidgetDefs() -> QProgressBar:
         progressWidget = _ExporterBaseWidget(None)
         progressWidget.setFixedSize(400, 70)
-        progressWidget.setWindowIcon(QIcon(join(addon_path, 'icons', 'migaku.png')))
+        progressWidget.setWindowIcon(QIcon(join(addon_path, "icons", "migaku.png")))
         progressWidget.setWindowTitle("Generating Definitions...")
         progressWidget.setWindowModality(Qt.WindowModality.ApplicationModal)
         bar = QProgressBar(progressWidget)
@@ -434,7 +453,7 @@ def window_loaded() -> None:
             bar.setFixedSize(380, 50)
         else:
             bar.setFixedSize(390, 50)
-        bar.move(10,10)
+        bar.move(10, 10)
         per = QLabel(bar)
         per.setAlignment(Qt.AlignmentFlag.AlignCenter)
         progressWidget.show()
@@ -452,31 +471,36 @@ def window_loaded() -> None:
     ) -> None:
         config = _get_configuration()
         config["massGenerationPreferences"] = {
-            "dict1" : rawNames[0],
-            "dict2" : rawNames[1],
-            "dict3" : rawNames[2],
-            "origin" : og,
-            "destination" : dest,
-            "addType" : addType,
-            "limit" : howMany
+            "dict1": rawNames[0],
+            "dict2": rawNames[1],
+            "dict3": rawNames[2],
+            "origin": og,
+            "destination": dest,
+            "addType": addType,
+            "limit": howMany,
         }
         mw.addonManager.writeConfig(
             __name__,
             typing.cast(dict[typing.Any, typing.Any], config),
         )
-        mw.checkpoint('Definition Export')
+        mw.checkpoint("Definition Export")
 
-        if not miAsk('Are you sure you want to export definitions for the "'+ og + '" field into the "' + dest +'" field?'):
+        if not miAsk(
+            'Are you sure you want to export definitions for the "'
+            + og
+            + '" field into the "'
+            + dest
+            + '" field?'
+        ):
             return
-
 
         bar = getProgressWidgetDefs()
         bar.setMinimum(0)
         bar.setMaximum(len(notes))
-        val = 0;
-        fb = config['frontBracket']
-        bb = config['backBracket']
-        lang = config['ForvoLanguage']
+        val = 0
+        fb = config["frontBracket"]
+        bb = config["backBracket"]
+        lang = config["ForvoLanguage"]
         _IS_EXPORTING_DEFINITIONS = True
         database = dictdb.get()
 
@@ -493,8 +517,8 @@ def window_loaded() -> None:
             fields = mw.col.models.field_names(note_type)
 
             if og in fields and dest in fields:
-                term = re.sub(r'<[^>]+>', '', note[og])
-                term = re.sub(r'\[[^\]]+?\]', '', term)
+                term = re.sub(r"<[^>]+>", "", note[og])
+                term = re.sub(r"\[[^\]]+?\]", "", term)
 
                 if not term:
                     continue
@@ -502,32 +526,38 @@ def window_loaded() -> None:
                 tresults: list[str] = []
                 dCount = 0
                 for dictN in dictNs:
-                    if dictN == 'Google Images':
+                    if dictN == "Google Images":
                         tresults.append(google_imager.export_images(term, howMany))
-                    elif dictN == 'Forvo':
-                        tresults.append(migaku_forvo.export_audio( term, howMany, lang))
-                    elif dictN != 'None':
-                        dresults, dh, termHeader = database.getDefForMassExp(term, dictN, str(howMany), rawNames[dCount])
-                        tresults.append(migaku_exporter.formatDefinitions(dresults, termHeader, dh, fb, bb))
+                    elif dictN == "Forvo":
+                        tresults.append(migaku_forvo.export_audio(term, howMany, lang))
+                    elif dictN != "None":
+                        dresults, dh, termHeader = database.getDefForMassExp(
+                            term, dictN, str(howMany), rawNames[dCount]
+                        )
+                        tresults.append(
+                            migaku_exporter.formatDefinitions(
+                                dresults, termHeader, dh, fb, bb
+                            )
+                        )
 
-                    dCount+= 1
+                    dCount += 1
 
-                results = '<br><br>'.join([i for i in tresults if i != ''])
+                results = "<br><br>".join([i for i in tresults if i != ""])
 
-                if addType == 'If Empty':
-                    if note[dest] == '':
+                if addType == "If Empty":
+                    if note[dest] == "":
                         note[dest] = results
-                elif addType == 'Add':
-                    if note[dest] == '':
+                elif addType == "Add":
+                    if note[dest] == "":
                         note[dest] = results
                     else:
-                        note[dest] += '<br><br>' + results
+                        note[dest] += "<br><br>" + results
                 else:
                     note[dest] = results
 
                 note.flush()
 
-            val+=1;
+            val += 1
             bar.setValue(val)
             mw.app.processEvents()
 
@@ -539,7 +569,7 @@ def window_loaded() -> None:
     def dictOnStart() -> None:
         configuration = _get_configuration()
 
-        if configuration['dictOnStart']:
+        if configuration["dictOnStart"]:
             midict.dictionaryInit()
 
     def setupMenu(browser: browser_.Browser) -> None:
@@ -552,7 +582,6 @@ def window_loaded() -> None:
         if dictionary := migaku_dictionary.get_visible_dictionary():
             dictionary.saveSizeAndPos()
             dictionary.hide()
-
 
     addHook("unloadProfile", closeDictionary)
     addHook("EditorWebView.contextMenuEvent", addToContextMenu)
@@ -572,13 +601,13 @@ def window_loaded() -> None:
 
             widget = type(self.widget.parentWidget()).__name__
 
-            if widget == 'QWidget':
-                widget = 'Browser'
+            if widget == "QWidget":
+                widget = "Browser"
 
             target = migaku_search.getTarget(widget)
 
             if not target:
-                raise RuntimeError(f'Widget has no target.')
+                raise RuntimeError(f"Widget has no target.")
 
             dictionary.dict.setCurrentEditor(self, target)
 
@@ -592,15 +621,15 @@ def window_loaded() -> None:
                 if self.note:
                     widget = type(self.widget.parentWidget()).__name__
 
-                    if widget == 'QWidget':
-                        widget = 'Browser'
+                    if widget == "QWidget":
+                        widget = "Browser"
 
                     target = migaku_search.getTarget(widget)
 
                     if not target:
                         raise RuntimeError(
                             f'No target was found for "{widget}" widget. '
-                            'Cannot set the current editor to it.',
+                            "Cannot set the current editor to it.",
                         )
 
                     dictionary.dict.setCurrentEditor(self, target)
@@ -628,7 +657,7 @@ def window_loaded() -> None:
         dictionary = migaku_dictionary.get_visible_dictionary()
 
         if not dictionary:
-            raise RuntimeError('No visible dictionary found. Cannot edit activated.')
+            raise RuntimeError("No visible dictionary found. Cannot edit activated.")
 
         widget = type(self).__name__
         target = migaku_search.getTarget(widget)
@@ -636,14 +665,14 @@ def window_loaded() -> None:
         if not target:
             raise RuntimeError(
                 f'No target found for "{widget}". '
-                'Cannot set the current dictionary editor to it.',
+                "Cannot set the current dictionary editor to it.",
             )
 
         dictionary.dict.setCurrentEditor(self.editor, target)
 
-    bodyClick = '''document.addEventListener("click", function (ev) {
+    bodyClick = """document.addEventListener("click", function (ev) {
             pycmd("bodyClick")
-        }, false);'''
+        }, false);"""
 
     def addBodyClick(self: editor_.Editor) -> None:
         self.web.eval(bodyClick)
@@ -680,7 +709,9 @@ def window_loaded() -> None:
     def gt(obj: typing.Any) -> str:
         return type(obj).__name__
 
-    def announceParent(self: TagEdit, event: typing.Optional[QFocusEvent] = None) -> None:
+    def announceParent(
+        self: TagEdit, event: typing.Optional[QFocusEvent] = None
+    ) -> None:
         dictionary = migaku_dictionary.get_visible_dictionary()
 
         if not dictionary:
@@ -690,8 +721,8 @@ def window_loaded() -> None:
         parent = typing.cast(browser_.Browser, get(get(self)))
         pName = gt(parent)
 
-        if gt(parent) not in ['AddCards', 'EditCurrent']:
-            parent =  typing.cast(
+        if gt(parent) not in ["AddCards", "EditCurrent"]:
+            parent = typing.cast(
                 browser_.Browser,
                 aqt.DialogManager._dialogs["Browser"][1],
             )
@@ -699,12 +730,14 @@ def window_loaded() -> None:
             if not parent:
                 return
 
-            pName = 'Browser'
+            pName = "Browser"
 
         if not parent.editor:
             return
 
-        dictionary.dict.setCurrentEditor(parent.editor, target=migaku_search.getTarget(pName) or "")
+        dictionary.dict.setCurrentEditor(
+            parent.editor, target=migaku_search.getTarget(pName) or ""
+        )
 
     TagEdit.focusInEvent = wrap(TagEdit.focusInEvent, announceParent)  # type: ignore[method-assign]
     editor_.Editor.setupWeb = wrap(editor_.Editor.setupWeb, addEditorFunctionality)  # type: ignore[method-assign]
@@ -721,5 +754,6 @@ def window_loaded() -> None:
     ogLinks = Reviewer._linkHandler
     Reviewer._linkHandler = miLinks  # type: ignore
     Reviewer.show = wrap(Reviewer.show, addBodyClick)  # type: ignore
+
 
 gui_hooks.main_window_did_init.append(window_loaded)
