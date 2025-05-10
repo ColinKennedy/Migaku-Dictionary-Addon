@@ -1,15 +1,25 @@
+from __future__ import annotations
+
+import typing
+
 from aqt.qt import *
+from PyQt6.QtWidgets import QSizePolicy, QLayout
+from PyQt6.QtGui import QPalette, QPixmap
 
 
-class MiWizardPage(QWidget):
+T = typing.TypeVar("T", bound="MiWizard", covariant=True)
 
-    def __init__(self, parent=None):
-        super(MiWizardPage, self).__init__(parent)
 
-        self.wizard = None
-        self.title = None
-        self.subtitle = None
-        self.pixmap = None
+# TODO: @ColinKennedy - What is all this? An abstract class without using ``abc``?
+class MiWizardPage(typing.Generic[T], QWidget):
+
+    def __init__(self, parent: typing.Optional[QWidget]=None) -> None:
+        super().__init__(parent)
+
+        self.wizard: typing.Optional[T] = None
+        self.title: typing.Optional[str] = None
+        self.subtitle: typing.Optional[str] = None
+        self.pixmap: typing.Optional[QPixmap] = None
 
         self.back_text = '< Back'
         self.back_enabled = True
@@ -23,42 +33,42 @@ class MiWizardPage(QWidget):
         self.cancel_enabled = True
         self.cancel_visible = True
 
-    def on_show(self, is_next, is_back):
+    def on_show(self, is_next: bool) -> None:
         pass
 
-    def on_hide(self, is_next, is_back):
+    def on_hide(self, is_next: bool, is_back: bool) -> None:
         pass
 
-    def on_back(self):
+    def on_back(self) -> bool:
         return True
 
-    def on_next(self):
+    def on_next(self) -> bool:
         return True
 
-    def on_cancel(self):
+    def on_cancel(self) -> bool:
         return True
 
-    def refresh_wizard_states(self):
+    def refresh_wizard_states(self) -> None:
         if self.wizard:
             self.wizard.refresh_states()
 
 
 class MiWizard(QDialog):
-    
-    def __init__(self, parent=None):
+
+    def __init__(self, parent: typing.Optional[QWidget]=None) -> None:
         super(MiWizard, self).__init__(parent)
 
-        self._current_page = None
-        self._page_back = {}
-        self._page_next = {}
+        self._current_page: typing.Optional[MiWizardPage[MiWizard]] = None
+        self._page_back: dict[MiWizardPage[MiWizard], typing.Optional[MiWizardPage[MiWizard]]] = {}
+        self._page_next: dict[MiWizardPage[MiWizard], typing.Optional[MiWizardPage[MiWizard]]] = {}
 
         lyt = QVBoxLayout()
         lyt.setContentsMargins(0, 0, 0, 0)
         self.setLayout(lyt)
 
         page_frame = QFrame()
-        page_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        page_frame.setBackgroundRole(QPalette.Base)
+        page_frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        page_frame.setBackgroundRole(QPalette.ColorRole.Base)
         page_frame.setAutoFillBackground(True)
         lyt.addWidget(page_frame)
 
@@ -68,9 +78,9 @@ class MiWizard(QDialog):
         page_hlyt.addLayout(pixmap_lyt)
 
         self._pixmap_lbl = QLabel()
-        self._pixmap_lbl.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self._pixmap_lbl.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         pixmap_lyt.addWidget(self._pixmap_lbl)
-        pixmap_lyt.addStretch()        
+        pixmap_lyt.addStretch()
 
         page_vlyt = QVBoxLayout()
         page_hlyt.addLayout(page_vlyt)
@@ -79,41 +89,55 @@ class MiWizard(QDialog):
         page_vlyt.addWidget(self._header_lbl)
 
         self._pages_lyt = QHBoxLayout()
-        self._pages_lyt.setSizeConstraint(QLayout.SetMaximumSize)
+        self._pages_lyt.setSizeConstraint(QLayout.SizeConstraint.SetMaximumSize)
         page_vlyt.addLayout(self._pages_lyt)
 
         btn_lyt = QHBoxLayout()
         lyt.addLayout(btn_lyt)
         style = self.style()
-        margins = (style.pixelMetric(QStyle.PM_LayoutLeftMargin), style.pixelMetric(QStyle.PM_LayoutTopMargin),
-                   style.pixelMetric(QStyle.PM_LayoutRightMargin), style.pixelMetric(QStyle.PM_LayoutBottomMargin))
+
+        if not style:
+            raise RuntimeError("MiWizard has no style.")
+
+        margins = (
+            style.pixelMetric(QStyle.PixelMetric.PM_LayoutLeftMargin),
+            style.pixelMetric(QStyle.PixelMetric.PM_LayoutTopMargin),
+            style.pixelMetric(QStyle.PixelMetric.PM_LayoutRightMargin),
+            style.pixelMetric(QStyle.PixelMetric.PM_LayoutBottomMargin)
+        )
         btn_lyt.setContentsMargins(*margins)
 
         btn_lyt.addStretch()
 
         self._btn_back = QPushButton()
-        self._btn_back.setFocusPolicy(Qt.NoFocus)
+        self._btn_back.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._btn_back.clicked.connect(self.back)
         btn_lyt.addWidget(self._btn_back)
 
         self._btn_next = QPushButton()
-        self._btn_next.setFocusPolicy(Qt.NoFocus)
+        self._btn_next.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._btn_next.clicked.connect(self.next)
         btn_lyt.addWidget(self._btn_next)
 
         self._btn_cancel = QPushButton()
-        self._btn_cancel.setFocusPolicy(Qt.NoFocus)
+        self._btn_cancel.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._btn_cancel.clicked.connect(self.cancel)
         btn_lyt.addWidget(self._btn_cancel)
 
 
-    def add_page(self, page, back_page=None, next_page=None, back_populate=True):
+    def add_page(
+        self,
+        page: MiWizardPage[MiWizard],
+        back_page: typing.Optional[MiWizardPage[MiWizard]]=None,
+        next_page: typing.Optional[MiWizardPage[MiWizard]]=None,
+        back_populate: bool=True,
+    ) -> MiWizardPage[MiWizard]:
         page.wizard = self
         page.hide()
         page_lyt = page.layout()
         if page_lyt:
             page_lyt.setContentsMargins(0, 0, 0, 0)
-        page.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        page.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._pages_lyt.addWidget(page)
         self.set_page_back(page, back_page)
         self.set_page_next(page, next_page)
@@ -124,54 +148,69 @@ class MiWizard(QDialog):
         return page
 
 
-    def set_page_back(self, page, back_page, back_populate=True):
+    def set_page_back(
+        self,
+        page: MiWizardPage[MiWizard],
+        back_page: typing.Optional[MiWizardPage[MiWizard]],
+        back_populate: bool=True,
+    ) -> None:
         self._page_back[page] = back_page
         if back_populate and back_page:
             self.set_page_next(back_page, page, back_populate=False)
 
 
-    def set_page_next(self, page, next_page, back_populate=True):
+    def set_page_next(
+        self,
+        page: MiWizardPage[MiWizard],
+        next_page: typing.Optional[MiWizardPage[MiWizard]],
+        back_populate: bool=True,
+    ) -> None:
         self._page_next[page] = next_page
         if back_populate and next_page:
             self.set_page_back(next_page, page, back_populate=False)
 
-
-    def set_current_page(self, page, is_next=False, is_back=False):
+    def set_current_page(self, page: MiWizardPage[MiWizard], is_next: bool=False, is_back: bool=False) -> None:
         if self._current_page:
             self._current_page.on_hide(is_next, is_back)
             self._current_page.hide()
         self._current_page = page
 
-        page.on_show(is_next, is_back)
+        page.on_show(is_next)
 
         self.refresh_states()
 
         page.show()
 
 
-    def back(self):
-        if self._current_page:
-            if not self._current_page.on_back():
-                return
+    def back(self) -> None:
+        if not self._current_page:
+            return
+
+        if not self._current_page.on_back():
+            return
 
         back_page = self._page_back.get(self._current_page)
+
         if back_page:
             self.set_current_page(back_page, is_back=True)
 
 
-    def next(self):
-        if self._current_page:
-            if not self._current_page.on_next():
-                return
+    def next(self) -> None:
+        if not self._current_page:
+            return
+
+        if not self._current_page.on_next():
+            return
 
         next_page = self._page_next.get(self._current_page)
+
         if next_page:
             self.set_current_page(next_page, is_next=True)
         else:
             self.accept()
 
 
-    def cancel(self):
+    def cancel(self) -> None:
         if self._current_page:
             if not self._current_page.on_cancel():
                 return
@@ -182,11 +221,11 @@ class MiWizard(QDialog):
         self.reject()
 
 
-    def on_cancel(self):
+    def on_cancel(self) -> bool:
         return True
 
 
-    def refresh_states(self):
+    def refresh_states(self) -> None:
         if self._current_page:
             header_text = ''
 
@@ -223,6 +262,8 @@ class MiWizard(QDialog):
             self._btn_cancel.setVisible(self._current_page.cancel_visible)
 
 
-    def closeEvent(self, e):
+    def closeEvent(self, event: typing.Optional[QCloseEvent]) -> None:
         self.cancel()
-        e.ignore()
+
+        if event:
+            event.ignore()

@@ -1,41 +1,62 @@
+import logging
 import os
-import stat
 import requests
-from anki.utils import isMac, isWin, isLin
+import stat
+import typing
+
+import aqt
+from aqt import main
+from anki.utils import is_mac, is_win, is_lin
 from anki.hooks import addHook
 from os.path import join, exists, dirname
 from .miutils import miInfo
 from aqt.qt import *
-from aqt import mw
+from aqt import mw as mw_, gui_hooks
 import zipfile
+
+from . import typer
+
+
+_LOGGER = logging.getLogger(__name__)
+
 
 class FFMPEGInstaller:
 
-    def __init__(self, mw):
+    def __init__(self, mw: main.AnkiQt) -> None:
+        super().__init__()
+
         self.mw = mw
-        self.config = self.mw.addonManager.getConfig(__name__)
         self.addonPath = dirname(__file__)
         self.ffmpegDir = join(self.addonPath, 'user_files', 'ffmpeg')
         self.ffmpegFilename = "ffmpeg"
-        if isWin:
+        # TODO: @ColinKennedy download these sources elsewhere
+        if is_win:
             self.ffmpegFilename += ".exe"
             self.downloadURL = "http://dicts.migaku.io/ffmpeg/windows"
-        elif isLin:
+        elif is_lin:
             self.downloadURL = "http://dicts.migaku.io/ffmpeg/linux"
-        elif isMac:
+        elif is_mac:
             self.downloadURL = "http://dicts.migaku.io/ffmpeg/macos"
         self.ffmpegPath = join(self.ffmpegDir, self.ffmpegFilename)
         self.tempPath = join(self.addonPath, 'temp', 'ffmpeg')
 
+    def _get_configuration(self) -> typer.Configuration:
+        return typing.cast(typer.Configuration, self.mw.addonManager.getConfig(__name__))
+    def _write_configuration(self, configuration: typer.Configuration) -> None:
+        self.mw.addonManager.writeConfig(__name__, typing.cast(dict[str, typing.Any], configuration))
 
-    def getFFMPEGProgressBar(self, title, initialText):
+    def getFFMPEGProgressBar(
+        self,
+        title: str,
+        initialText: str,
+    ) -> tuple[QWidget, QProgressBar, QLabel]:
         progressWidget = QWidget(None)
         textDisplay = QLabel()
         progressWidget.setWindowIcon(QIcon(join(self.addonPath, 'icons', 'migaku.png')))
         progressWidget.setWindowTitle(title)
         textDisplay.setText(initialText)
         progressWidget.setFixedSize(500, 100)
-        progressWidget.setWindowModality(Qt.ApplicationModal)
+        progressWidget.setWindowModality(Qt.WindowModality.ApplicationModal)
         bar = QProgressBar(progressWidget)
         layout = QVBoxLayout()
         layout.addWidget(textDisplay)
@@ -43,27 +64,28 @@ class FFMPEGInstaller:
         progressWidget.setLayout(layout) 
         bar.move(10,10)
         per = QLabel(bar)
-        per.setAlignment(Qt.AlignCenter)
+        per.setAlignment(Qt.AlignmentFlag.AlignCenter)
         progressWidget.show()
         progressWidget.setFocus()
+
         return progressWidget, bar, textDisplay;
 
-    def toggleMP3Conversion(self, enable):
-        config = self.mw.addonManager.getConfig(__name__)
+    def toggleMP3Conversion(self, enable: bool) -> None:
+        config = self._get_configuration()
         config["mp3Convert"] = enable
-        self.mw.addonManager.writeConfig(__name__, config)
+        self._write_configuration(config)
 
-    def toggleFailedInstallation(self, failedInstallation):
-        config = self.mw.addonManager.getConfig(__name__)
+    def toggleFailedInstallation(self, failedInstallation: bool) -> None:
+        config = self._get_configuration()
         config["failedFFMPEGInstallation"] = failedInstallation
-        self.mw.addonManager.writeConfig(__name__, config)
-    
-    def roundToKb(self, value):
+        self._write_configuration(config)
+
+    def roundToKb(self, value: typing.Union[float, int]) -> float:
         return round(value / 1000)
 
        
-    def downloadFFMPEG(self):
-        progressWidget = False
+    def downloadFFMPEG(self) -> bool:
+        progressWidget: typing.Optional[QWidget] = None
         try:
             with requests.get(self.downloadURL, stream=True) as ffmpegRequest:
                 ffmpegRequest.raise_for_status()
@@ -74,7 +96,7 @@ class FFMPEGInstaller:
                     downloadedSoFar = 0
                     progressWidget, bar, textDisplay = self.getFFMPEGProgressBar("Migaku Dictionary - FFMPEG Download", downloadingText.format( self.roundToKb(downloadedSoFar), roundedTotal))
                     bar.setMaximum(total)
-                    lastUpdated = 0
+                    lastUpdated: typing.Union[float, int] = 0
                     for chunk in ffmpegRequest.iter_content(chunk_size=8192):
                         if chunk: 
                             downloadedSoFar += len(chunk)
@@ -89,18 +111,18 @@ class FFMPEGInstaller:
                 self.closeProgressBar(progressWidget)
             return True
         except Exception as error:
-            print(error)
-            self.closeProgressBar(progressWidget)
+            _LOGGER.exception('Unabled to download FFMPEG.')
+            if progressWidget:
+                self.closeProgressBar(progressWidget)
             return False
 
-        
-    def closeProgressBar(self, progressBar):
-        if progressBar:
-            progressBar.close()
-            progressBar.deleteLater()
+    def closeProgressBar(self, progressBar: QWidget) -> None:
+        progressBar.close()
+        progressBar.deleteLater()
 
-    def makeExecutable(self):
-        if not isWin:
+    def makeExecutable(self) -> bool:
+        if not is_win:
+            # TODO: @ColinKennedy - remove try/except later
             try:
                 st = os.stat(self.ffmpegPath)
                 os.chmod(self.ffmpegPath, st.st_mode | stat.S_IEXEC)
@@ -108,23 +130,22 @@ class FFMPEGInstaller:
                 return False
         return True
         
-    def removeFailedInstallation(self):
+    def removeFailedInstallation(self) -> None:
         os.remove(self.ffmpegPath)
 
-
-    def unzipFFMPEG(self):
+    def unzipFFMPEG(self) -> None:
         with zipfile.ZipFile(self.tempPath) as zf:
             zf.extractall(self.ffmpegDir)
 
-    def couldNotInstall(self):
+    def couldNotInstall(self) -> None:
         self.toggleMP3Conversion(False)
         self.toggleFailedInstallation(True)
         miInfo("FFMPEG could not be installed. MP3 Conversion has been disabled. You will not be able to convert audio files imported from the Immerse with Migaku Browser Extension to MP3 format until it is installed. Migaku Dictionary will attempt to install it again on the next profile load.")
     
 
         
-    def installFFMPEG(self):
-        config = self.mw.addonManager.getConfig(__name__)
+    def installFFMPEG(self) -> None:
+        config = self._get_configuration()
         if (config["mp3Convert"] or config["failedFFMPEGInstallation"]) and not exists(self.ffmpegPath):
             currentStep = 1
             totalSteps = 3
@@ -163,7 +184,7 @@ class FFMPEGInstaller:
         else:
             print("FFMPEG already installed or conversion disabled.")
 
-
-ffmpegInstaller = FFMPEGInstaller(mw)
-
-addHook("profileLoaded", ffmpegInstaller.installFFMPEG)
+def window_loaded() -> None:
+    ffmpegInstaller = FFMPEGInstaller(mw_)
+    addHook("profileLoaded", ffmpegInstaller.installFFMPEG)
+gui_hooks.main_window_did_init.append(window_loaded)

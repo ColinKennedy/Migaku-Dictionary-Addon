@@ -379,8 +379,11 @@ class ListenerMixin(object):
         except NotImplementedError:
             self._handle(code, msg, lpdata)
 
-        if self.suppress and converted[1] == 32 and 'Key.ctrl_l' in self.migaku.currentlyPressed and "'c'" in self.migaku.currentlyPressed:
-            self.suppress_event()
+        # TODO: @ColinKennedy - not sure what this code is doing. Come back to it later. Maybe.
+        # from ... import keypress_tracker
+        # pressed = keypress_tracker.get()
+        # if self.suppress and converted[1] == 32 and 'Key.ctrl_l' in pressed and "'c'" in pressed:
+        #     self.suppress_event()
 
     def _convert(self, code, msg, lpdata):
         """The device specific callback handler.

@@ -1,15 +1,31 @@
 # -*- coding: utf-8 -*-
 # 
 
+import typing
+
 import aqt
 from aqt.qt import *
 from os.path import dirname, join
 from aqt.webview import AnkiWebView
 
 
+T = typing.TypeVar("T")
 addon_path = dirname(__file__)
 
-def miInfo(text, parent=False, level = 'msg', day = True):
+
+def _verify(item: typing.Optional[T]) -> T:
+    if item is not None:
+        return item
+
+    raise RuntimeError('Expected item to exist but got none.')
+
+
+def miInfo(
+    text: str,
+    parent: typing.Optional[QWidget]=None,
+    level: str = 'msg',
+    day: bool = True,
+) -> int:
     if level == 'wrn':
         title = "Migaku Dictionary Warning"
     elif level == 'not':
@@ -18,8 +34,10 @@ def miInfo(text, parent=False, level = 'msg', day = True):
         title = "Migaku Dictionary Error"
     else:
         title = "Migaku Dictionary"
-    if parent is False:
+
+    if not parent:
         parent = aqt.mw.app.activeWindow() or aqt.mw
+
     icon = QIcon(join(addon_path, 'icons', 'migaku.png'))
     mb = QMessageBox(parent)
     if not day:
@@ -27,36 +45,35 @@ def miInfo(text, parent=False, level = 'msg', day = True):
     mb.setText(text)
     mb.setWindowIcon(icon)
     mb.setWindowTitle(title)
-    b = mb.addButton(QMessageBox.Ok)
+    b = _verify(mb.addButton(QMessageBox.StandardButton.Ok))
     b.setFixedSize(100, 30)
     b.setDefault(True)
 
-    return mb.exec_()
+    return mb.exec()
 
-def miAsk(text, parent=None, day=True, customText = False):
 
+def miAsk(text: str, parent: typing.Optional[QWidget]=None, day: bool=True, customText: typing.Sequence[str] = "") -> bool:
     msg = QMessageBox(parent)
     msg.setWindowTitle("Migaku Dictionary")
     msg.setText(text)
     icon = QIcon(join(addon_path, 'icons', 'migaku.png'))
-    b = msg.addButton(QMessageBox.Yes)
+    b = _verify(msg.addButton(QMessageBox.StandardButton.Yes))
     
     b.setFixedSize(100, 30)
     b.setDefault(True)
-    c = msg.addButton(QMessageBox.No)
+    c = _verify(msg.addButton(QMessageBox.StandardButton.No))
     c.setFixedSize(100, 30)
+
     if customText:
         b.setText(customText[0])
         c.setText(customText[1])
         b.setFixedSize(120, 40)
         c.setFixedSize(120, 40)
 
-    
     if not day:
         msg.setStyleSheet(" QMessageBox {background-color: #272828;}")
+
     msg.setWindowIcon(icon)
-    msg.exec_()
-    if msg.clickedButton() == b:
-        return True
-    else:
-        return False
+    msg.exec()
+
+    return msg.clickedButton() == b
