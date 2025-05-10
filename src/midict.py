@@ -170,7 +170,7 @@ class MIDict(AnkiWebView):
     def cleanTerm(self, term: str) -> str:
         return term.replace("'", "\'").replace('%', '').replace('_', '').replace('「', '').replace('」', '')
 
-    def getFontFamily(self, group: typer.DictionaryGroup) -> str:
+    def getFontFamily(self, group: typing.Union[typer.DictionaryGroup, typer.DictionaryGroup2]) -> str:
         if not group['font']:
             return ' '
         if group['customFont']:
@@ -190,7 +190,7 @@ class MIDict(AnkiWebView):
     def getHTMLResult(
         self,
         term: str,
-        selectedGroup: typer.DictionaryGroup,
+        selectedGroup: typer.DictionaryGroup2,
     ) -> tuple[str, str, str]:
         singleTab = self.getTabMode()
         cleaned = self.cleanTerm(term)
@@ -214,7 +214,7 @@ class MIDict(AnkiWebView):
         return html, cleaned, singleTab;
 
 
-    def addNewTab(self, term: str, selectedGroup: typer.DictionaryGroup) -> None:
+    def addNewTab(self, term: str, selectedGroup: typer.DictionaryGroup2) -> None:
         if selectedGroup['customFont'] and selectedGroup['font'] not in self.customFontsLoaded:
             self.customFontsLoaded.append(selectedGroup['font'])
             self.injectFont(selectedGroup['font'])
@@ -1377,7 +1377,7 @@ class DictInterface(QWidget):
 
         return html, url
 
-    def getAllGroups(self) -> typer.DictionaryGroup:
+    def getAllGroups(self) -> typer.DictionaryGroup2:
         return {
             'dictionaries': self.db.getAllDictsWithLang(),
             'customFont': False,
@@ -1486,15 +1486,13 @@ class DictInterface(QWidget):
         posSize = [x,y,width, height]
         self.writeConfig('dictSizePos', posSize)
 
-    def getUserGroups(self) -> dict[str, typer.DictionaryGroup]:
+    def getUserGroups(self) -> dict[str, typer.DictionaryGroup2]:
         groups = self.config['DictionaryGroups']
-        userGroups: dict[str, typer.DictionaryGroup] = {}
+        userGroups: dict[str, typer.DictionaryGroup2] = {}
 
         for name, group in groups.items():
             userGroups[name] = {
-                'dictionaries': self.db.getUserGroups(
-                    [dictionary["dict"] for dictionary in group['dictionaries']]
-                ),
+                'dictionaries': self.db.getUserGroups(group['dictionaries']),
                 'customFont': group['customFont'],
                 'font': group['font'],
             }
@@ -1941,7 +1939,7 @@ class DictInterface(QWidget):
         )
         self.reloadConfig(newConfig)
 
-    def getSelectedDictGroup(self) -> typer.DictionaryGroup:
+    def getSelectedDictGroup(self) -> typer.DictionaryGroup2:
         cur = self.dictGroups.currentText()
 
         if cur in self.userGroups:

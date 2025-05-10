@@ -108,7 +108,7 @@ class DictGroupEditor(QDialog):
         else:
             self.fontDropDown.setCurrentText(group['font'])
 
-        self.loadSelectedDictionaries([dictionary["dict"] for dictionary in group['dictionaries']])
+        self.loadSelectedDictionaries(group['dictionaries'])
 
     def loadSelectedDictionaries(self, dicts: typing.Iterable[str]) -> None:
         count = 1
@@ -243,10 +243,9 @@ class DictGroupEditor(QDialog):
 
             return
 
-        groups = {dictionary["dict"]: dictionary for dictionary in dictdb.get().getUserGroups(selectedDicts)}
         dictGroup: typer.DictionaryGroup = {
             'customFont' : customFont,
-            'dictionaries' : [groups[dictionary_name] for dictionary_name in selectedDicts],
+            'dictionaries' : selectedDicts,
             'font' : fontName,
         }
         curGroups[gn] = dictGroup

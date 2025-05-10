@@ -275,7 +275,7 @@ class DictDB:
     def searchTerm(
         self,
         term: str,
-        selectedGroup: typer.DictionaryGroup,
+        selectedGroup: typer.DictionaryGroup2,
         conjugations: dict[str, list[typer.Conjugation]],
         sT: typer.SearchTerm,
         deinflect: bool,

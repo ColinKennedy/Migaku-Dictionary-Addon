@@ -124,10 +124,17 @@ class DictionaryLanguagePair(typing.TypedDict):
     lang: str  # TODO: @ColinKennedy this type may not be right
 
 
-class DictionaryGroup(typing.TypedDict):
+class DictionaryGroup2(typing.TypedDict):
     # TODO: @ColinKennedy - I think bool is actually str. Test that later.
     customFont: bool
     dictionaries: list[DictionaryLanguagePair]
+    font: str
+
+
+class DictionaryGroup(typing.TypedDict):
+    # TODO: @ColinKennedy - I think bool is actually str. Test that later.
+    customFont: bool
+    dictionaries: list[str]
     font: str
 
 
