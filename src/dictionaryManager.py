@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import abc
 import collections
 import dataclasses
 import io
@@ -12,16 +11,16 @@ import re
 import shutil
 import typing
 import zipfile
+from collections import abc
 
 import aqt
-from aqt.qt import *
 from aqt import mw
-from .dictionaryWebInstallWizard import DictionaryWebInstallWizard
-from .freqConjWebWindow import FreqConjWebWindow
+from aqt.qt import *
 from PyQt6.QtWidgets import QMessageBox
 
 from . import dictdb, typer
-
+from .dictionaryWebInstallWizard import DictionaryWebInstallWizard
+from .freqConjWebWindow import FreqConjWebWindow
 
 _DEFINITION_TABLE_SEPARATOR = ', '
 _NOT_SET_FREQUENCY = 999999  # NOTE: This means "not frequent or frequency is not known"

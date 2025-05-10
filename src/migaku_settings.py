@@ -2,7 +2,6 @@ import typing
 
 from . import addonSettings
 
-
 _INSTANCE: typing.Optional[addonSettings.SettingsGui] = None
 
 

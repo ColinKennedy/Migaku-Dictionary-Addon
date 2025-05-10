@@ -2,12 +2,11 @@
 # 
 
 import typing
+from os.path import dirname, join
 
 import aqt
 from aqt.qt import *
-from os.path import dirname, join
 from aqt.webview import AnkiWebView
-
 
 T = typing.TypeVar("T")
 addon_path = dirname(__file__)

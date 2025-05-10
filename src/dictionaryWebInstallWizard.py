@@ -4,17 +4,13 @@ import logging
 import os
 import typing
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QTextCursor
+import aqt
 from anki.httpclient import HttpClient
 from aqt.qt import *
-import aqt
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QTextCursor
 
-from . import migaku_wizard
-from . import webConfig
-
-from . import dictdb, typer
-
+from . import dictdb, migaku_wizard, typer, webConfig
 
 addon_path = os.path.dirname(__file__)
 

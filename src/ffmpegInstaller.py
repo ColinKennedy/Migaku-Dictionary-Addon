@@ -1,21 +1,20 @@
 import logging
 import os
-import requests
 import stat
 import typing
+import zipfile
+from os.path import dirname, exists, join
 
 import aqt
-from aqt import main
-from anki.utils import is_mac, is_win, is_lin
+import requests
 from anki.hooks import addHook
-from os.path import join, exists, dirname
-from .miutils import miInfo
+from anki.utils import is_lin, is_mac, is_win
+from aqt import gui_hooks, main
+from aqt import mw as mw_
 from aqt.qt import *
-from aqt import mw as mw_, gui_hooks
-import zipfile
 
 from . import typer
-
+from .miutils import miInfo
 
 _LOGGER = logging.getLogger(__name__)
 

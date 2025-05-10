@@ -1,8 +1,7 @@
-import typing
 import os
+import typing
 
 from anki.utils import is_mac
-
 
 _CURRENT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 

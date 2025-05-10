@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
 # 
 
-import typing
 import argparse
 import json
 import os
-import urllib
-from aqt.utils import  showInfo
-from bs4 import BeautifulSoup
-import requests
-import time
 import re
-from aqt.qt import  QRunnable, QObject, pyqtSignal
+import time
+import typing
+import urllib
+
+import requests
+from aqt.qt import QObject, QRunnable, pyqtSignal
+from aqt.utils import showInfo
+
+from bs4 import BeautifulSoup
 
 countryCodes = {"Afghanistan" : "countryAF",
 "Albania": "countryAL",

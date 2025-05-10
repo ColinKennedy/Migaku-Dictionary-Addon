@@ -7,7 +7,6 @@ from anki.httpclient import HttpClient
 
 from . import typer
 
-
 DEFAULT_SERVER = 'dicts.migaku.io'
 
 

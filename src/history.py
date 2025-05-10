@@ -7,10 +7,11 @@ import datetime
 import json
 import typing
 
+from anki.utils import is_lin, is_mac, is_win
 from aqt.qt import *
 from aqt.utils import askUser, showInfo
-from anki.utils import is_mac, is_lin, is_win
-from .miutils import miInfo, miAsk
+
+from .miutils import miAsk, miInfo
 
 if typing.TYPE_CHECKING:
     from . import midict

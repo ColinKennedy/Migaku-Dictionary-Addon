@@ -1,7 +1,6 @@
-from anki.utils import is_win, is_lin
+from anki.utils import is_lin, is_win
 
 from . import threader
-
 
 _CURRENTLY_PRESSED: list[str] = []
 

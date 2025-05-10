@@ -2,29 +2,30 @@
 
 import json
 import math
+import os
+import platform
+import re
 import sys
 import typing
-
-from aqt import qt, main
-from aqt import mw as mw_
-from anki.hooks import addHook, wrap
-from aqt.qt import *
-from aqt.utils import openLink, tooltip, showInfo, askUser
-from anki.utils import is_mac, is_win, is_lin
-from anki.lang import _
-from aqt.webview import AnkiWebView
-import re
-import os
 from os.path import dirname, join
+
+from anki.hooks import addHook, wrap
+from anki.lang import _
+from anki.utils import is_lin, is_mac, is_win
+from aqt import main
+from aqt import mw as mw_
+from aqt import qt
+from aqt.qt import *
+from aqt.utils import askUser, openLink, showInfo, tooltip
+from aqt.webview import AnkiWebView
 from PyQt6.QtSvgWidgets import QSvgWidget
-import platform
-from .addDictGroup import DictGroupEditor
-from .addTemplate import TemplateEditor
-from .miutils import miInfo, miAsk
-from . dictionaryManager import DictionaryManagerWidget
-from .ffmpegInstaller import FFMPEGInstaller
 
 from . import dictdb, migaku_configuration, typer
+from .addDictGroup import DictGroupEditor
+from .addTemplate import TemplateEditor
+from .dictionaryManager import DictionaryManagerWidget
+from .ffmpegInstaller import FFMPEGInstaller
+from .miutils import miAsk, miInfo
 
 verNumber = "1.3.8"
 T = typing.TypeVar("T")

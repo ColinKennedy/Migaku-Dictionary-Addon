@@ -1,13 +1,12 @@
 import time
 import typing
-
-from PyQt6.QtCore import Qt
-from aqt import mw
 from urllib.request import Request, urlopen
+
 import aqt
+from aqt import mw
+from PyQt6.QtCore import Qt
 
 from . import googleimages
-
 
 _INSTANCE: typing.Optional[googleimages.Google] = None
 

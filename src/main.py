@@ -1,44 +1,58 @@
 # -*- coding: utf-8 -*-
 
+import codecs
 import functools
-import typing
-
-from os.path import dirname, join, basename, exists, join
-import sys, os, platform, subprocess, aqt.utils
-from anki.utils import is_win, is_mac
-from . import midict
+import json
+import os
+import platform
 import re
+import subprocess
+import sys
+import time
+import typing
 import unicodedata
 import urllib.parse
-from anki.hooks import addHook, wrap
-from aqt.utils import showInfo
-from aqt import editor as editor_
-import json
-from aqt import mw, gui_hooks
-from aqt.qt import *
-from . import dictdb
-from aqt.webview import AnkiWebView
-from .miutils import miInfo, miAsk
-from .addonSettings import SettingsGui
-import codecs
 from operator import itemgetter
-from aqt.addcards import AddCards
-from aqt.editcurrent import EditCurrent
-from aqt.browser import browser as browser_
-from aqt.tagedit import TagEdit
-from aqt.reviewer import Reviewer
-from . import googleimages
-from aqt.browser.previewer import Previewer
+from os.path import basename, dirname, exists, join
+
+import aqt.utils
 import requests
-import time
-import os
-from aqt.qt import debug;
-from PyQt6.QtCore import Qt
 from anki import notes as notes_
+from anki.hooks import addHook, wrap
+from anki.utils import is_mac, is_win
+from aqt import editor as editor_
+from aqt import gui_hooks, mw
+from aqt.addcards import AddCards
+from aqt.browser import browser as browser_
+from aqt.browser.previewer import Previewer
+from aqt.editcurrent import EditCurrent
+from aqt.qt import *
+from aqt.qt import debug
+from aqt.reviewer import Reviewer
+from aqt.tagedit import TagEdit
+from aqt.utils import showInfo
+from aqt.webview import AnkiWebView
+from PyQt6.QtCore import Qt
 
-from . import global_state, google_imager, migaku_dictionary, migaku_configuration, threader, typer, keypress_tracker
-from . import migaku_exporter, migaku_forvo, migaku_widget_global, migaku_settings, migaku_search
-
+from . import (
+    dictdb,
+    global_state,
+    google_imager,
+    googleimages,
+    keypress_tracker,
+    midict,
+    migaku_configuration,
+    migaku_dictionary,
+    migaku_exporter,
+    migaku_forvo,
+    migaku_search,
+    migaku_settings,
+    migaku_widget_global,
+    threader,
+    typer,
+)
+from .addonSettings import SettingsGui
+from .miutils import miAsk, miInfo
 
 _IS_EXPORTING_DEFINITIONS = False
 _MENU = None

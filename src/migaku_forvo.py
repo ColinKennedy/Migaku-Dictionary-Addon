@@ -1,13 +1,12 @@
 import logging
 import time
 import typing
-
-from aqt import mw, gui_hooks
 from os.path import join
 from urllib.request import Request, urlopen
 
-from .forvodl import Forvo
+from aqt import gui_hooks, mw
 
+from .forvodl import Forvo
 
 _LOGGER = logging.getLogger(__name__)
 _INSTANCE: typing.Optional[Forvo] = None

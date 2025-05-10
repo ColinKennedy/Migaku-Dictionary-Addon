@@ -2,7 +2,6 @@ import typing
 
 from . import midict
 
-
 _THREAD: typing.Optional[midict.ClipThread] = None
 
 

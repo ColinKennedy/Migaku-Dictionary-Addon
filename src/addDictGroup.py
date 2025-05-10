@@ -1,27 +1,28 @@
 # -*- coding: utf-8 -*-
 
-import typing
 import json
-import sys
 import math
-from aqt.qt import *
-from anki.utils import is_mac, is_lin
-from anki.lang import _
-from os.path import join, exists
-from aqt import main
-import aqt
-from PyQt6 import QtCore
-from .miutils import miInfo, miAsk
-from shutil import copyfile
-from operator import itemgetter
 import ntpath
+import sys
+import typing
+from operator import itemgetter
+from os.path import exists, join
+from shutil import copyfile
+
+import aqt
+from anki.lang import _
+from anki.utils import is_lin, is_mac
+from aqt import main
+from aqt.qt import *
+from PyQt6 import QtCore
+
+from .miutils import miAsk, miInfo
 
 if typing.TYPE_CHECKING:
     # TODO: @ColinKennedy - fix cyclic dependency "addonSettings.SettingsGui" later
     from . import addonSettings
 
-from . import dictdb
-from . import typer
+from . import dictdb, typer
 
 
 class DictGroupEditor(QDialog):

@@ -4,7 +4,6 @@ from aqt import mw
 
 from . import typer
 
-
 _INSTANCE: typing.Optional[typer.Configuration] = None
 
 

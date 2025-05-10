@@ -1,10 +1,10 @@
 import re
 import typing
 
-from anki.utils import is_win
-from aqt.qt import *
 import aqt
+from anki.utils import is_win
 from aqt import mw
+from aqt.qt import *
 
 from . import midict, migaku_dictionary, migaku_widget_global
 
