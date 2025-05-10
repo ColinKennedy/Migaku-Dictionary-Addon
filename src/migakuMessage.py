@@ -82,9 +82,10 @@ def miMessage(text: str, parent: typing.Optional[QWidget]=None) -> bool:
     mb.setWindowTitle(title)
     cb = QCheckBox("Don't show me the welcome screen again.")
     wv = AnkiWebView()
-    wv._page._bridge.onCmd = attemptOpenLink
+    page = _verify(wv.page())
+    page._bridge.onCmd = attemptOpenLink
     wv.setFixedSize(680, 450)
-    _verify(wv.page()).setHtml(text)
+    page.setHtml(text)
     wide = QWidget()
     wide.setFixedSize(18,18)
     layout = typing.cast(QGridLayout, _verify(mb.layout()))

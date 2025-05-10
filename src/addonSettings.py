@@ -27,6 +27,7 @@ from .ffmpegInstaller import FFMPEGInstaller
 from . import dictdb, migaku_configuration, typer
 
 verNumber = "1.3.8"
+T = typing.TypeVar("T")
 
 
 def attemptOpenLink(cmd: str) -> None:
@@ -661,15 +662,15 @@ class SettingsGui(QTabWidget):
 
     def getUserGuideTab(self) -> AnkiWebView:
         guide = AnkiWebView()
-        profile = guide._page.profile()
+        profile = _verify(guide.page()).profile()
 
         if not profile:
             raise RuntimeError("No Anki profile could be found.")
 
         profile.setHttpUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36')
-        guide._page._bridge.onCmd = attemptOpenLink
+        _verify(guide.page())._bridge.onCmd = attemptOpenLink
         html, url = self.getHTML()
-        guide._page.setHtml(html, url)
+        _verify(guide.page()).setHtml(html, url)
         guide.setObjectName("tab_4")
         return guide
 
@@ -751,3 +752,10 @@ class SettingsGui(QTabWidget):
         gitHubIcon.clicked.connect(lambda: openLink('https://github.com/migaku-official/Migaku-Dictionary-Addon'))
 
         return tab_4
+
+
+def _verify(item: typing.Optional[T]) -> T:
+    if item is not None:
+        return item
+
+    raise RuntimeError('Expected item to exist but got none.')

@@ -81,7 +81,7 @@ class MIDict(AnkiWebView):
         terms: typing.Optional[list[str]] = None,
     ) -> None:
         AnkiWebView.__init__(self)
-        _verify(self._page.profile()).setHttpUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36')
+        _verify(_verify(self.page()).profile()).setHttpUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36')
         self.terms = terms or []
         self.dictInt = dictInt
         self.config = self.dictInt.getConfig()
@@ -127,7 +127,7 @@ class MIDict(AnkiWebView):
         self.eval("loadImageForvoHtml('%s', '%s');"%(html.replace('"', '\\"'), idName))
 
     def loadHTMLURL(self, html: str, url: aqt.QUrl) -> None:
-        self._page.setHtml(html, url)
+        _verify(self.page()).setHtml(html, url)
 
     def formatTermHeaders(self, ths: dict[str, typing.Iterable[str]]) -> typing.Optional[dict[str, tuple[str, str]]]:
         formattedHeaders: dict[str, tuple[str, str]] = {}
