@@ -4,27 +4,26 @@
 from __future__ import annotations
 
 import collections
-import logging
-import typing
-
-from aqt import dialogs
-from aqt.qt import *
-from anki.utils import is_mac, is_lin, is_win
-from aqt.utils import ensureWidgetInScreenBoundaries
-from os.path import join, exists
-from shutil import copyfile
-from .miutils import miInfo, miAsk
 import json
-from anki.notes import Note
-from aqt import sound
+import logging
 import re
+import typing
+from os.path import exists, join
+from shutil import copyfile
+
+from anki.notes import Note
+from anki.utils import is_lin, is_mac, is_win
+from aqt import dialogs, sound
+from aqt.qt import *
+from aqt.utils import ensureWidgetInScreenBoundaries
+
+from .miutils import miAsk, miInfo
 
 if typing.TYPE_CHECKING:
     # TODO: @ColinKennedy - fix cyclic import
     from . import midict
 
 from . import dictdb, global_state, migaku_configuration, migaku_exporter, typer
-
 
 T = typing.TypeVar("T")
 _LOGGER = logging.getLogger(__name__)

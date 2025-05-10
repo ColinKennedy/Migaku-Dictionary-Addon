@@ -2,19 +2,20 @@
 
 from __future__ import annotations
 
-import typing
-
-from collections import abc
-import sqlite3
-import os.path
-from aqt.utils import showInfo
-from .miutils import miInfo
-from . import typer
-import re
 import json
+import os.path
+import re
+import sqlite3
+import typing
+from collections import abc
+
+from aqt.utils import showInfo
+
+from . import typer
+from .miutils import miInfo
+
 addon_path = os.path.dirname(__file__)
 from aqt import mw
-
 
 _DictionaryHeader = tuple[typing.Literal["term"], typing.Literal["altterm"], typing.Literal["pronunication"]]
 _INSTANCE: typing.Optional[DictDB] = None

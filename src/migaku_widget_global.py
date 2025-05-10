@@ -2,7 +2,6 @@ import typing
 
 from aqt import editor
 
-
 PARENT_EDITOR: typing.Optional[editor.Editor] = None
 
 

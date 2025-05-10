@@ -1,16 +1,12 @@
+import time
 import typing
 
-from aqt import qt
-from aqt import mw
-from aqt import addons
-from . import dictdb
-from anki.hooks import  wrap, addHook
-from .miutils import miInfo
-import time
+from anki.hooks import addHook, wrap
 from anki.httpclient import HttpClient
+from aqt import addons, mw, qt
 
 from . import dictdb, migaku_dictionary
-
+from .miutils import miInfo
 
 addonId = 1655992655
 dledIds: list[int] = []

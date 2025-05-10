@@ -3,9 +3,8 @@ from __future__ import annotations
 import typing
 
 from aqt.qt import *
-from PyQt6.QtWidgets import QSizePolicy, QLayout
 from PyQt6.QtGui import QPalette, QPixmap
-
+from PyQt6.QtWidgets import QLayout, QSizePolicy
 
 T = typing.TypeVar("T", bound="MiWizard", covariant=True)
 

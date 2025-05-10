@@ -12,4 +12,4 @@ import sys
 _CURRENT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, _CURRENT_DIRECTORY)
 
-from . import  main, ffmpegInstaller, miUpdater, migakuMessage, miflix, checkForThirtyTwo
+from . import checkForThirtyTwo, ffmpegInstaller, main, miflix, migakuMessage, miUpdater

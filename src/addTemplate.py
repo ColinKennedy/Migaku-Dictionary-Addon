@@ -4,19 +4,18 @@ from __future__ import annotations
 
 import typing
 
-from aqt.qt import *
-from aqt import main
-from anki.lang import _
 import aqt
+from anki.lang import _
+from aqt import main
+from aqt.qt import *
 
-from .miutils import miInfo, miAsk
+from .miutils import miAsk, miInfo
 
 if typing.TYPE_CHECKING:
     # TODO: @ColinKennedy - This line prevents a cyclic import. Fix later.
     from . import addonSettings
 
 from . import typer
-
 
 T = typing.TypeVar("T")
 _Template = typer.ExportTemplate

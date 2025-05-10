@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 # 
 import argparse
+import base64
 import json
 import os
+import re
 import typing
 import urllib
-from aqt.utils import  showInfo
-from bs4 import BeautifulSoup
+
 import requests
-import re
-import base64
-from aqt.qt import QRunnable, QObject, pyqtSignal
+from aqt.qt import QObject, QRunnable, pyqtSignal
+from aqt.utils import showInfo
+
+from bs4 import BeautifulSoup
 
 languages = {"German" : "de",
  "Tatar" : "tt",

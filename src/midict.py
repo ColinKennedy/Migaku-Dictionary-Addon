@@ -3,52 +3,68 @@
 
 from __future__ import annotations
 
-# TODO: @ColinKennedy - Clean these imports later
-
-import functools
-import logging
-import typing
-
-from aqt.utils import shortcut, saveGeom, saveSplitter, showInfo, askUser, ensureWidgetInScreenBoundaries
-from aqt import main
-from aqt import qt
-import json
-import sys
-import math
-from anki.hooks import runHook
-from aqt import qt
-from aqt.qt import *
-from aqt.utils import openLink, tooltip
-from anki.utils import is_mac, is_win, is_lin
-from anki.lang import _
-from aqt.webview import AnkiWebView
-import re
-from shutil import copyfile
-import os, shutil
-from os.path import join, exists, dirname
-from .history import HistoryBrowser, HistoryModel
-from aqt.editor import Editor
-from aqt.reviewer import Reviewer
-from .cardExporter import CardExporter
-import time
-from . import dictdb as dictdb_
-import aqt
-from aqt import gui_hooks
-from .miJapaneseHandler import miJHandler
-from urllib.request import Request, urlopen
-import requests
-import urllib.request
-from . import googleimages
-from .addonSettings import SettingsGui
-import datetime
 import codecs
-from .forvodl import Forvo
+import datetime
+import functools
+import json
+import logging
+import math
 import ntpath
-from .miutils import miInfo
+import os
+import re
+import shutil
+import sys
+import time
+import typing
+import urllib.request
+from os.path import dirname, exists, join
+from shutil import copyfile
+from urllib.request import Request, urlopen
+
+import aqt
+import requests
+from anki.hooks import runHook
+from anki.lang import _
+from anki.utils import is_lin, is_mac, is_win
+from aqt import gui_hooks, main, qt
+from aqt.editor import Editor
+from aqt.qt import *
+from aqt.reviewer import Reviewer
+from aqt.utils import (
+    askUser,
+    ensureWidgetInScreenBoundaries,
+    openLink,
+    saveGeom,
+    saveSplitter,
+    shortcut,
+    showInfo,
+    tooltip,
+)
+from aqt.webview import AnkiWebView
 from PyQt6.QtSvgWidgets import QSvgWidget
+
 from pynput import keyboard
 
-from . import migaku_configuration, migaku_search, migaku_settings, typer, welcomer
+from . import dictdb as dictdb_
+from . import (
+    googleimages,
+    migaku_configuration,
+    migaku_search,
+    migaku_settings,
+    typer,
+    welcomer,
+)
+from .addonSettings import SettingsGui
+from .cardExporter import CardExporter
+from .forvodl import Forvo
+from .history import HistoryBrowser, HistoryModel
+from .miJapaneseHandler import miJHandler
+from .miutils import miInfo
+
+# TODO: @ColinKennedy - Clean these imports later
+
+
+
 
 if typing.TYPE_CHECKING:
     import Quartz  # type: ignore[import-not-found]

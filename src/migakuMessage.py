@@ -1,19 +1,17 @@
 # -*- coding: utf-8 -*-
 
+import os
+import re
 import typing
+from os.path import basename, dirname, exists, join
 
 import aqt
-from aqt.qt import *
-from os.path import dirname, join
-from aqt.webview import AnkiWebView
-import os
-from aqt import mw
-from os.path import dirname, join, basename, exists, join
-from anki.hooks import addHook
 import requests as req
-import re
+from anki.hooks import addHook
+from aqt import mw
+from aqt.qt import *
 from aqt.utils import openLink
-
+from aqt.webview import AnkiWebView
 
 _MIGAKU_SHOULD_NOT_SHOW_MESSAGE = False
 T = typing.TypeVar("T")

@@ -1,9 +1,9 @@
-import typing
-
 import os
+import typing
 from enum import Enum
-from aqt.qt import *
+
 from anki.httpclient import HttpClient
+from aqt.qt import *
 
 from . import typer, webConfig
 

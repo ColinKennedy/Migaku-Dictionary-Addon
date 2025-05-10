@@ -4,7 +4,8 @@ import typing
 
 from anki.notes import Note
 from aqt import main
-from aqt.utils import  showInfo
+from aqt.utils import showInfo
+
 
 class miJHandler:
 

@@ -6,31 +6,32 @@ import re
 import sys
 import textwrap
 import typing
+from os.path import dirname, exists, join
 from threading import Timer
 
 from . import typer
 from .miutils import miInfo
 
-from os.path import join, exists, dirname
 sys.path.insert(0, join(dirname(__file__)))
 
-from aqt import main
-import aqt
-from aqt.qt import QThread, pyqtSignal
 import asyncio
+import os
+import os.path
+import uuid
+from threading import Thread
+
+import aqt
+from anki.collection import Collection
+from anki.utils import is_win
+from aqt import main
+from aqt import mw as mw_
+from aqt.qt import QThread, pyqtSignal
+
 import tornado.ioloop
 import tornado.web
-import os.path
-from threading import Thread
-from aqt.qt import QThread, pyqtSignal
-import os, uuid
-from aqt import mw as mw_
-from anki.collection import Collection
 from tornado import httputil
-from anki.utils import is_win
 
 from . import global_state, threader
-
 
 _LOGGER = logging.getLogger(__name__)
 _PseudoNumber = typing.Union[int, str]
