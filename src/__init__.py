@@ -7,14 +7,6 @@ import logging
 import os
 import sys
 
-# TODO: @ColinKennedy - Move vendor libraries into a different folder later. Then
-# replace this line to match it.
-#
-_CURRENT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
-sys.path.insert(0, _CURRENT_DIRECTORY)
-
-from . import checkForThirtyTwo, ffmpegInstaller, main, miflix, migakuMessage, miUpdater
-
 _LOGGER = logging.getLogger(__name__)
 _HANDLER = logging.StreamHandler(sys.stdout)
 _HANDLER.setLevel(logging.INFO)
@@ -22,3 +14,19 @@ _FORMATTER = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(messa
 _HANDLER.setFormatter(_FORMATTER)
 _LOGGER.addHandler(_HANDLER)
 _LOGGER.setLevel(logging.INFO)
+
+# TODO: @ColinKennedy - Move vendor libraries into a different folder later. Then
+# replace this line to match it.
+#
+_CURRENT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, os.path.join(_CURRENT_DIRECTORY, "vendors"))
+sys.path.insert(0, _CURRENT_DIRECTORY)
+
+from . import checkForThirtyTwo, ffmpegInstaller, main, miflix, migakuMessage
+
+
+checkForThirtyTwo.initialize()
+ffmpegInstaller.initialize()
+miflix.initialize()
+migakuMessage.initialize()
+main.initialize()

@@ -600,7 +600,8 @@ def removeCondensedAudioInProgressMessage() -> None:
         mw_.setWindowTitle(title.replace(msg, ""))
 
 
-serverThread = MigakuServerThread(mw_)
-serverThread.alertUser.connect(miInfo)
-serverThread.exportingCondensed.connect(addCondensedAudioInProgressMessage)
-serverThread.notExportingCondensed.connect(removeCondensedAudioInProgressMessage)
+def initialize() -> None:
+    serverThread = MigakuServerThread(mw_)
+    serverThread.alertUser.connect(miInfo)
+    serverThread.exportingCondensed.connect(addCondensedAudioInProgressMessage)
+    serverThread.notExportingCondensed.connect(removeCondensedAudioInProgressMessage)
