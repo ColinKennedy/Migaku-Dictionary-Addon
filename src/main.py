@@ -67,6 +67,36 @@ class _ExporterBaseWidget(QWidget):
             event.accept()
 
 
+class _ProgressWidget(_ExporterBaseWidget):
+    def __init__(self, parent: typing.Optional[QWidget] = None) -> None:
+        super().__init__(parent=parent)
+
+        main_layout = QHBoxLayout()
+        self.setLayout(main_layout)
+
+        self._bar = QProgressBar()
+        self._label = QLabel()
+
+        main_layout.addWidget(self._bar)
+        main_layout.addWidget(self._label)
+
+        if is_mac:
+            self._bar.setFixedSize(380, 50)
+        else:
+            self._bar.setFixedSize(390, 50)
+
+        self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+    def set_maximum(self, value: int) -> None:
+        self._bar.setMaximum(value)
+
+    def set_minimum(self, value: int) -> None:
+        self._bar.setMinimum(value)
+
+    def set_value(self, value: int) -> None:
+        self._bar.setValue(value)
+
+
 def _get_configuration() -> typer.Configuration:
     return typing.cast(typer.Configuration, mw.addonManager.getConfig(__name__))
 
@@ -442,22 +472,16 @@ def window_loaded() -> None:
                 level="not",
             )
 
-    def getProgressWidgetDefs() -> QProgressBar:
-        progressWidget = _ExporterBaseWidget(None)
+    def getProgressWidgetDefs(
+        parent: typing.Optional[QWidget] = None,
+    ) -> _ProgressWidget:
+        progressWidget = _ProgressWidget(parent)
         progressWidget.setFixedSize(400, 70)
         progressWidget.setWindowIcon(QIcon(join(addon_path, "icons", "migaku.png")))
         progressWidget.setWindowTitle("Generating Definitions...")
         progressWidget.setWindowModality(Qt.WindowModality.ApplicationModal)
-        bar = QProgressBar(progressWidget)
-        if is_mac:
-            bar.setFixedSize(380, 50)
-        else:
-            bar.setFixedSize(390, 50)
-        bar.move(10, 10)
-        per = QLabel(bar)
-        per.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        progressWidget.show()
-        return bar
+
+        return progressWidget
 
     def exportDefinitions(
         og: str,
@@ -494,9 +518,12 @@ def window_loaded() -> None:
         ):
             return
 
-        bar = getProgressWidgetDefs()
-        bar.setMinimum(0)
-        bar.setMaximum(len(notes))
+        progress = getProgressWidgetDefs()
+        progress.set_minimum(0)
+        progress.set_maximum(len(notes))
+
+        progress.show()
+
         val = 0
         fb = config["frontBracket"]
         bb = config["backBracket"]
@@ -558,7 +585,7 @@ def window_loaded() -> None:
                 note.flush()
 
             val += 1
-            bar.setValue(val)
+            progress.set_value(val)
             mw.app.processEvents()
 
         mw.progress.finish()
