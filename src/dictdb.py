@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os.path
 import re
 import sqlite3
@@ -17,11 +18,10 @@ from .miutils import miInfo
 addon_path = os.path.dirname(__file__)
 from aqt import mw
 
-_DictionaryHeader = tuple[
-    typing.Literal["term"], typing.Literal["altterm"], typing.Literal["pronunication"]
-]
+_DictionaryHeader = tuple[str, ...]
 _INSTANCE: typing.Optional[DictDB] = None
 DictSearchResults = dict[str, list[typer.DictionaryResult]]
+_LOGGER = logging.getLogger(__name__)
 
 
 class _DictionaryResultTuple(typing.NamedTuple):
@@ -576,19 +576,22 @@ class DictDB:
         self.c.execute("SELECT dictname, termHeader FROM dictnames")
         # TODO: Remove try/except
         try:
-            dictHeaders = self.c.fetchall()
-            # TODO: Make a more direct type for this type
+            dictHeaders = typing.cast(list[tuple[str, str]], self.c.fetchall())
             results: dict[str, _DictionaryHeader] = {}
-            if len(dictHeaders) > 0:
-                for r in dictHeaders:
-                    results[r[0]] = typing.cast(
-                        _DictionaryHeader, tuple(*json.loads(r[1]))
-                    )
-                return results
-        except:
-            return None
 
-        return None
+            for entry in dictHeaders:
+                dictionary_name = entry[0]
+                headers = entry[1]
+                results[dictionary_name] = typing.cast(
+                    _DictionaryHeader,
+                    tuple(json.loads(headers)),
+                )
+
+            return results
+        except:
+            _LOGGER.exception("Unable to get term headers.")
+
+            return None
 
     def getAddType(self, name: str) -> typing.Optional[typer.AddType]:
         self.c.execute("SELECT addtype FROM dictnames WHERE dictname=?", (name,))
