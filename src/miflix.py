@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 import re
-import sys
 import textwrap
 import typing
 from os.path import dirname, exists, join
@@ -11,8 +10,6 @@ from threading import Timer
 
 from . import typer
 from .miutils import miInfo
-
-sys.path.insert(0, join(dirname(__file__)))
 
 import asyncio
 import os

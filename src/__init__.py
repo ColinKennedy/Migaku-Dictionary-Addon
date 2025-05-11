@@ -7,6 +7,8 @@ import logging
 import os
 import sys
 
+from anki import utils
+
 _LOGGER = logging.getLogger(__name__)
 _HANDLER = logging.StreamHandler(sys.stdout)
 _HANDLER.setLevel(logging.INFO)
@@ -19,8 +21,20 @@ _LOGGER.setLevel(logging.INFO)
 # replace this line to match it.
 #
 _CURRENT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
-sys.path.insert(0, os.path.join(_CURRENT_DIRECTORY, "vendors"))
+_VENDORS_DIRECTORY = os.path.join(_CURRENT_DIRECTORY, "vendors")
+# NOTE: We need to add the vendors/ directory so third-party imports work as intended
+sys.path.insert(0, _VENDORS_DIRECTORY)
+
 sys.path.insert(0, _CURRENT_DIRECTORY)
+
+if utils.is_mac:
+    # NOTE: midict.py needs this so we can import `Quartz` Python package.
+    import ssl
+
+    ssl._create_default_https_context = ssl._create_unverified_context
+    sys.path.insert(0, os.path.join(_VENDORS_DIRECTORY, "keyboardMac"))
+elif utils.is_lin:
+    sys.path.insert(0, os.path.join(_VENDORS_DIRECTORY, "linux"))
 
 from . import checkForThirtyTwo, ffmpegInstaller, main, miflix, migakuMessage
 
