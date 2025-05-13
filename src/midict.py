@@ -41,9 +41,8 @@ from aqt.utils import (
     tooltip,
 )
 from aqt.webview import AnkiWebView
-from PyQt6.QtSvgWidgets import QSvgWidget
-
 from pynput import keyboard
+from PyQt6.QtSvgWidgets import QSvgWidget
 
 from . import dictdb as dictdb_
 from . import (

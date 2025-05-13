@@ -38,7 +38,6 @@ elif utils.is_lin:
 
 from . import checkForThirtyTwo, ffmpegInstaller, main, miflix, migakuMessage
 
-
 checkForThirtyTwo.initialize()
 ffmpegInstaller.initialize()
 miflix.initialize()

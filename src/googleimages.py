@@ -12,7 +12,6 @@ import urllib
 import requests
 from aqt.qt import QObject, QRunnable, pyqtSignal
 from aqt.utils import showInfo
-
 from bs4 import BeautifulSoup
 
 countryCodes = {
