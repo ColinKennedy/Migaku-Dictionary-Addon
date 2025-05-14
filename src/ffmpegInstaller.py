@@ -11,7 +11,7 @@ from anki.hooks import addHook
 from anki.utils import is_lin, is_mac, is_win
 from aqt import gui_hooks, main
 from aqt import mw as mw_
-from aqt.qt import *
+from aqt import qt
 
 from . import typer
 from .miutils import miInfo
@@ -53,22 +53,24 @@ class FFMPEGInstaller:
         self,
         title: str,
         initialText: str,
-    ) -> tuple[QWidget, QProgressBar, QLabel]:
-        progressWidget = QWidget(None)
-        textDisplay = QLabel()
-        progressWidget.setWindowIcon(QIcon(join(self.addonPath, "icons", "migaku.png")))
+    ) -> tuple[qt.QWidget, qt.QProgressBar, qt.QLabel]:
+        progressWidget = qt.QWidget(None)
+        textDisplay = qt.QLabel()
+        progressWidget.setWindowIcon(
+            qt.QIcon(join(self.addonPath, "icons", "migaku.png"))
+        )
         progressWidget.setWindowTitle(title)
         textDisplay.setText(initialText)
         progressWidget.setFixedSize(500, 100)
-        progressWidget.setWindowModality(Qt.WindowModality.ApplicationModal)
-        bar = QProgressBar(progressWidget)
-        layout = QVBoxLayout()
+        progressWidget.setWindowModality(qt.Qt.WindowModality.ApplicationModal)
+        bar = qt.QProgressBar(progressWidget)
+        layout = qt.QVBoxLayout()
         layout.addWidget(textDisplay)
         layout.addWidget(bar)
         progressWidget.setLayout(layout)
         bar.move(10, 10)
-        per = QLabel(bar)
-        per.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        per = qt.QLabel(bar)
+        per.setAlignment(qt.Qt.AlignmentFlag.AlignCenter)
         progressWidget.show()
         progressWidget.setFocus()
 
@@ -88,7 +90,7 @@ class FFMPEGInstaller:
         return round(value / 1000)
 
     def downloadFFMPEG(self) -> bool:
-        progressWidget: typing.Optional[QWidget] = None
+        progressWidget: typing.Optional[qt.QWidget] = None
         try:
             with requests.get(self.downloadURL, stream=True) as ffmpegRequest:
                 ffmpegRequest.raise_for_status()
@@ -126,7 +128,7 @@ class FFMPEGInstaller:
                 self.closeProgressBar(progressWidget)
             return False
 
-    def closeProgressBar(self, progressBar: QWidget) -> None:
+    def closeProgressBar(self, progressBar: qt.QWidget) -> None:
         progressBar.close()
         progressBar.deleteLater()
 

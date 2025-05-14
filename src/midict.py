@@ -28,7 +28,6 @@ from anki.lang import _
 from anki.utils import is_lin, is_mac, is_win
 from aqt import gui_hooks, main, qt
 from aqt.editor import Editor
-from aqt.qt import *
 from aqt.reviewer import Reviewer
 from aqt.utils import (
     askUser,
@@ -114,7 +113,7 @@ class MIDict(AnkiWebView):
             }
         )
         self.dupHeaders = self.db.getDupHeaders()
-        self.sType: typing.Optional[QComboBox] = None
+        self.sType: typing.Optional[qt.QComboBox] = None
         self.radioCount = 0
         self.homeDir = path
         self.conjugations = self.loadConjugations()
@@ -122,7 +121,7 @@ class MIDict(AnkiWebView):
         self.addWindow: typing.Optional[CardExporter] = None
         self.currentEditor: typing.Optional[Editor] = None
         self.reviewer: typing.Optional[Reviewer] = None
-        self.threadpool = QThreadPool()
+        self.threadpool = qt.QThreadPool()
         self.customFontsLoaded: list[str] = []
 
         gui_hooks.editor_did_init.append(self.on_editor_loaded)
@@ -145,7 +144,7 @@ class MIDict(AnkiWebView):
             "loadImageForvoHtml('%s', '%s');" % (html.replace('"', '\\"'), idName)
         )
 
-    def loadHTMLURL(self, html: str, url: aqt.QUrl) -> None:
+    def loadHTMLURL(self, html: str, url: qt.QUrl) -> None:
         _verify(self.page()).setHtml(html, url)
 
     def formatTermHeaders(
@@ -172,7 +171,7 @@ class MIDict(AnkiWebView):
             formattedHeaders[dictname] = (headerString, sbHeaderString)
         return formattedHeaders
 
-    def setSType(self, sType: QComboBox) -> None:
+    def setSType(self, sType: qt.QComboBox) -> None:
         self.sType = sType
 
     def loadConjugations(self) -> dict[str, list[typer.Conjugation]]:
@@ -745,36 +744,36 @@ class MIDict(AnkiWebView):
             },
         )
         file = urlopen(req).read()
-        image = QImage()
+        image = qt.QImage()
         image.loadFromData(file)
         image = image.scaled(
-            QSize(self.maxW, self.maxH),
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation,
+            qt.QSize(self.maxW, self.maxH),
+            qt.Qt.AspectRatioMode.KeepAspectRatio,
+            qt.Qt.TransformationMode.SmoothTransformation,
         )
         image.save(filename)
 
-    def getThumbs(self, paths: typing.Iterable[str]) -> QWidget:
-        thumbCase = QWidget()
+    def getThumbs(self, paths: typing.Iterable[str]) -> qt.QWidget:
+        thumbCase = qt.QWidget()
         thumbCase.setContentsMargins(0, 0, 0, 0)
-        vLayout = QVBoxLayout()
+        vLayout = qt.QVBoxLayout()
         vLayout.setContentsMargins(0, 0, 0, 0)
-        hLayout = QHBoxLayout()
+        hLayout = qt.QHBoxLayout()
         hLayout.setContentsMargins(0, 0, 0, 0)
         vLayout.addLayout(hLayout)
         for idx, path in enumerate(paths):
-            image = QPixmap(path)
+            image = qt.QPixmap(path)
             image = image.scaled(
-                QSize(50, 50),
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
+                qt.QSize(50, 50),
+                qt.Qt.AspectRatioMode.KeepAspectRatio,
+                qt.Qt.TransformationMode.SmoothTransformation,
             )
-            label = QLabel("")
+            label = qt.QLabel("")
             label.setPixmap(image)
             label.setFixedSize(40, 40)
             hLayout.addWidget(label)
             if idx > 0 and idx % 4 == 0:
-                hLayout = QHBoxLayout()
+                hLayout = qt.QHBoxLayout()
                 hLayout.setContentsMargins(0, 0, 0, 0)
                 vLayout.addLayout(hLayout)
         thumbCase.setLayout(vLayout)
@@ -1187,37 +1186,37 @@ class MIDict(AnkiWebView):
         self.dictInt.currentTarget.setText("")
 
 
-class HoverButton(QPushButton):
-    mouseHover = pyqtSignal(bool)
-    mouseOut = pyqtSignal(bool)
+class HoverButton(qt.QPushButton):
+    mouseHover = qt.pyqtSignal(bool)
+    mouseOut = qt.pyqtSignal(bool)
 
-    def __init__(self, parent: typing.Optional[aqt.QWidget] = None) -> None:
+    def __init__(self, parent: typing.Optional[qt.QWidget] = None) -> None:
         super().__init__(parent)
         self.setMouseTracking(True)
 
-    def enterEvent(self, event: typing.Optional[aqt.QEvent]) -> None:
+    def enterEvent(self, event: typing.Optional[qt.QEvent]) -> None:
         self.mouseHover.emit(True)
 
-    def leaveEvent(self, event: typing.Optional[aqt.QEvent]) -> None:
+    def leaveEvent(self, event: typing.Optional[qt.QEvent]) -> None:
         self.mouseHover.emit(False)
         self.mouseOut.emit(True)
 
 
-class ClipThread(QObject):
+class ClipThread(qt.QObject):
 
-    sentence = pyqtSignal(str)
-    search = pyqtSignal(str)
-    colSearch = pyqtSignal(str)
-    add = pyqtSignal(str)
-    image = pyqtSignal(list)
-    test = pyqtSignal(list)
-    release = pyqtSignal(list)
-    extensionCardExport = pyqtSignal(dict)
-    searchFromExtension = pyqtSignal(list)
-    extensionFileNotFound = pyqtSignal()
-    bulkTextExport = pyqtSignal(list)
-    bulkMediaExport = pyqtSignal(dict)
-    pageRefreshDuringBulkMediaImport = pyqtSignal()
+    sentence = qt.pyqtSignal(str)
+    search = qt.pyqtSignal(str)
+    colSearch = qt.pyqtSignal(str)
+    add = qt.pyqtSignal(str)
+    image = qt.pyqtSignal(list)
+    test = qt.pyqtSignal(list)
+    release = qt.pyqtSignal(list)
+    extensionCardExport = qt.pyqtSignal(dict)
+    searchFromExtension = qt.pyqtSignal(list)
+    extensionFileNotFound = qt.pyqtSignal()
+    bulkTextExport = qt.pyqtSignal(list)
+    bulkMediaExport = qt.pyqtSignal(dict)
+    pageRefreshDuringBulkMediaImport = qt.pyqtSignal()
 
     def __init__(self, mw: main.AnkiQt, path: str) -> None:
         if is_mac:
@@ -1362,11 +1361,11 @@ class ClipThread(QObject):
     def saveScaledImage(self, imageTempPath: str, imageFileName: str) -> None:
         configuration = migaku_configuration.get()
         path = join(self.mw.col.media.dir(), imageFileName)
-        image = QImage(imageTempPath)
+        image = qt.QImage(imageTempPath)
         image = image.scaled(
-            QSize(configuration["maxWidth"], configuration["maxHeight"]),
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation,
+            qt.QSize(configuration["maxWidth"], configuration["maxHeight"]),
+            qt.Qt.AspectRatioMode.KeepAspectRatio,
+            qt.Qt.TransformationMode.SmoothTransformation,
         )
         image.save(path)
 
@@ -1429,9 +1428,9 @@ class ClipThread(QObject):
                 maxW = max(self.config["maxWidth"], image.width())
                 maxH = max(self.config["maxHeight"], image.height())
                 image = image.scaled(
-                    QSize(maxW, maxH),
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
+                    qt.QSize(maxW, maxH),
+                    qt.Qt.AspectRatioMode.KeepAspectRatio,
+                    qt.Qt.TransformationMode.SmoothTransformation,
                 )
                 image.save(fullpath)
                 self.image.emit([fullpath, filename])
@@ -1501,7 +1500,7 @@ class ClipThread(QObject):
         self.sentence.emit(clipboard.text())
 
 
-class DictInterface(QWidget):
+class DictInterface(qt.QWidget):
 
     def __init__(
         self,
@@ -1509,7 +1508,7 @@ class DictInterface(QWidget):
         mw: main.AnkiQt,
         path: str,
         welcome: str,
-        parent: typing.Optional[QWidget] = None,
+        parent: typing.Optional[qt.QWidget] = None,
         terms: typing.Optional[list[str]] = None,
     ):
         super().__init__(parent)
@@ -1520,10 +1519,10 @@ class DictInterface(QWidget):
         self.addonPath = path
         self.welcome = welcome
         self.setAutoFillBackground(True)
-        self.ogPalette = self.getPalette(QColor("#F0F0F0"))
-        self.nightPalette = self.getPalette(QColor("#272828"))
-        self.blackBase = self.getFontColor(QColor(Qt.GlobalColor.black))
-        self.blackBase = self.getFontColor(QColor(Qt.GlobalColor.black))
+        self.ogPalette = self.getPalette(qt.QColor("#F0F0F0"))
+        self.nightPalette = self.getPalette(qt.QColor("#272828"))
+        self.blackBase = self.getFontColor(qt.QColor(qt.Qt.GlobalColor.black))
+        self.blackBase = self.getFontColor(qt.QColor(qt.Qt.GlobalColor.black))
         self.mw = mw
         self.iconpath = join(path, "icons")
         self.startUp(terms or [])
@@ -1531,38 +1530,40 @@ class DictInterface(QWidget):
         ensureWidgetInScreenBoundaries(self)
 
     def setHotkeys(self) -> None:
-        hotkey = QShortcut(QKeySequence("Esc"), self)
+        hotkey = qt.QShortcut(qt.QKeySequence("Esc"), self)
         hotkey.activated.connect(self.hide)
-        hotkey = QShortcut(QKeySequence("Ctrl+W"), self)
+        hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+W"), self)
         hotkey.activated.connect(dictionaryInit)
-        hotkey = QShortcut(QKeySequence("Ctrl+S"), self)
+        hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+S"), self)
         hotkey.activated.connect(functools.partial(migaku_search.searchTerm, self.dict))
-        hotkey = QShortcut(QKeySequence("Ctrl+Shift+B"), self)
+        hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+Shift+B"), self)
         hotkey.activated.connect(functools.partial(migaku_search.searchCol, self.dict))
 
-    def getFontColor(self, color: QColor) -> QPalette:
-        pal = QPalette()
-        # pal.setColor(QPalette.ColorRole.Base, color)
+    def getFontColor(self, color: qt.QColor) -> qt.QPalette:
+        pal = qt.QPalette()
+        # pal.setColor(qt.QPalette.ColorRole.Base, color)
         return pal
 
-    def getPalette(self, color: QColor) -> QPalette:
-        pal = QPalette()
-        # pal.setColor(QPalette.ColorRole.Background, color)
+    def getPalette(self, color: qt.QColor) -> qt.QPalette:
+        pal = qt.QPalette()
+        # pal.setColor(qt.QPalette.ColorRole.Background, color)
         return pal
 
-    def getStretchLay(self) -> QHBoxLayout:
-        stretch = QHBoxLayout()
+    def getStretchLay(self) -> qt.QHBoxLayout:
+        stretch = qt.QHBoxLayout()
         stretch.setContentsMargins(0, 0, 0, 0)
         stretch.addStretch()
         return stretch
 
     def setAlwaysOnTop(self) -> None:
         if self.alwaysOnTop:
-            self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
+            self.setWindowFlags(
+                self.windowFlags() | qt.Qt.WindowType.WindowStaysOnTopHint
+            )
             self.show()
         else:
             self.setWindowFlags(
-                self.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint
+                self.windowFlags() & ~qt.Qt.WindowType.WindowStaysOnTopHint
             )
             self.show()
 
@@ -1607,12 +1608,12 @@ class DictInterface(QWidget):
         self.sType = self.setupSearchType()
         self.openSB = self.setupOpenSB()
         self.openSB.opened = False
-        self.currentTarget: QLabel = QLabel("")
-        self.targetLabel = QLabel(" Target:")
+        self.currentTarget: qt.QLabel = qt.QLabel("")
+        self.targetLabel = qt.QLabel(" Target:")
         self.stretch1 = self.getStretchLay()
         self.stretch2 = self.getStretchLay()
-        self.layoutH2 = QHBoxLayout()
-        self.mainHLay = QHBoxLayout()
+        self.layoutH2 = qt.QHBoxLayout()
+        self.mainHLay = qt.QHBoxLayout()
         self.mainLayout = self.setupView()
         self.dict.setSType(self.sType)
         self.setLayout(self.mainLayout)
@@ -1621,7 +1622,7 @@ class DictInterface(QWidget):
         self.sbOpened = False
         self.historyModel = HistoryModel(self.getHistory(), self)
         self.historyBrowser = HistoryBrowser(self.historyModel, self)
-        self.setWindowIcon(QIcon(join(self.iconpath, "migaku.png")))
+        self.setWindowIcon(qt.QIcon(join(self.iconpath, "migaku.png")))
         self.readyToSearch = False
         self.restoreSizePos()
 
@@ -1641,7 +1642,9 @@ class DictInterface(QWidget):
 
     def maybeSetToAlwaysOnTop(self) -> None:
         if self.alwaysOnTop:
-            self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
+            self.setWindowFlags(
+                self.windowFlags() | qt.Qt.WindowType.WindowStaysOnTopHint
+            )
             self.show()
 
     def initTooltips(self) -> None:
@@ -1677,7 +1680,7 @@ class DictInterface(QWidget):
 
         return []
 
-    def getHTMLURL(self, willSearch: bool, day: bool) -> tuple[str, aqt.QUrl]:
+    def getHTMLURL(self, willSearch: bool, day: bool) -> tuple[str, qt.QUrl]:
         nightStyle = '<style id="nightModeCss">body, .definitionSideBar, .defTools{color: white !important;background: black !important;} .termPronunciation{background: black !important;border-top:1px solid white !important;border-bottom:1px solid white !important;} .overwriteSelect, .fieldSelect, .overwriteCheckboxes, .fieldCheckboxes{background: black !important;} .fieldCheckboxes label:hover, .overwriteCheckboxes label:hover {background-color:   #282828 !important;} #tabs{background:black !important; color: white !important;} .tablinks:hover{background:gray !important;} .tablinks{color: white !important;} .active{background-image: linear-gradient(#272828, black); border-left: 1px solid white !important;border-right: 1px solid white !important;} .dictionaryTitleBlock{border-top: 2px solid white;border-bottom: 1px solid white;} .imageLoader, .forvoLoader{background-image: linear-gradient(#272828, black); color: white; border: 1px solid gray;}.definitionSideBar{border: 2px solid white;}</style>'
         htmlPath = join(self.addonPath, "dictionaryInit.html")
 
@@ -1711,7 +1714,7 @@ class DictInterface(QWidget):
                     + self.welcome
                     + "'); document.getElementsByClassName('tablinks')[0].classList.add('active');</script>",
                 )
-            url = QUrl.fromLocalFile(htmlPath)
+            url = qt.QUrl.fromLocalFile(htmlPath)
 
         return html, url
 
@@ -1729,17 +1732,17 @@ class DictInterface(QWidget):
 
     def focusWindow(self) -> None:
         self.show()
-        if self.windowState() == Qt.WindowState.WindowMinimized:
-            self.setWindowState(Qt.WindowState.WindowNoState)
+        if self.windowState() == qt.Qt.WindowState.WindowMinimized:
+            self.setWindowState(qt.Qt.WindowState.WindowNoState)
         self.setFocus()
         self.activateWindow()
 
     # TODO: @ColinKennedy - return bool?
-    def closeEvent(self, event: typing.Optional[QCloseEvent]) -> None:
+    def closeEvent(self, event: typing.Optional[qt.QCloseEvent]) -> None:
         self.hide()
 
     # TODO: @ColinKennedy - return bool?
-    def hideEvent(self, event: typing.Optional[QHideEvent]) -> None:
+    def hideEvent(self, event: typing.Optional[qt.QHideEvent]) -> None:
         self.saveSizeAndPos()
 
         if event:
@@ -1845,9 +1848,9 @@ class DictInterface(QWidget):
             self.mw.addonManager.getConfig(__name__),
         )
 
-    def setupView(self) -> QVBoxLayout:
-        layoutV = QVBoxLayout()
-        layoutH = QHBoxLayout()
+    def setupView(self) -> qt.QVBoxLayout:
+        layoutV = qt.QVBoxLayout()
+        layoutH = qt.QHBoxLayout()
         self.toolbarTopLayout = layoutH
         layoutH.addWidget(self.dictGroups)
 
@@ -1904,7 +1907,7 @@ class DictInterface(QWidget):
             self.mainLayout.removeItem(self.layoutH2)
             self.mainHLay.insertLayout(1, self.layoutH2)
 
-    def resizeEvent(self, event: typing.Optional[QResizeEvent]) -> None:
+    def resizeEvent(self, event: typing.Optional[qt.QResizeEvent]) -> None:
         w = self.width()
         if w < 702 and not self.verticalBar:
             self.verticalBar = True
@@ -2103,9 +2106,9 @@ class DictInterface(QWidget):
         settings = migaku_settings.get()
         settings.show()
 
-        if settings.windowState() == Qt.WindowState.WindowMinimized:
+        if settings.windowState() == qt.Qt.WindowState.WindowMinimized:
             # Window is minimized. Restore it.
-            settings.setWindowState(Qt.WindowState.WindowNoState)
+            settings.setWindowState(qt.Qt.WindowState.WindowNoState)
 
         settings.setFocus()
         settings.activateWindow()
@@ -2129,10 +2132,10 @@ class DictInterface(QWidget):
         self.dict.eval("scaleFont(true)")
 
     def setupDictGroups(
-        self, dictGroups: typing.Optional[QComboBox] = None
-    ) -> QComboBox:
+        self, dictGroups: typing.Optional[qt.QComboBox] = None
+    ) -> qt.QComboBox:
 
-        def _get_item(model: qt.QStandardItemModel, index: int) -> QStandardItem:
+        def _get_item(model: qt.QStandardItemModel, index: int) -> qt.QStandardItem:
             item = model.item(index)
 
             if item:
@@ -2141,7 +2144,7 @@ class DictInterface(QWidget):
             raise RuntimeError(f'Model "{model}" has no "{index}" index.')
 
         if not dictGroups:
-            dictGroups = QComboBox()
+            dictGroups = qt.QComboBox()
             dictGroups.setFixedHeight(30)
             dictGroups.setFixedWidth(80)
             dictGroups.setContentsMargins(0, 0, 0, 0)
@@ -2164,13 +2167,13 @@ class DictInterface(QWidget):
         dictGroups.addItem("──────")
         item = get_item(dictGroups.count() - 1)
         item.setEnabled(False)
-        item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        item.setTextAlignment(qt.Qt.AlignmentFlag.AlignCenter)
         defaults = ["All", "Google Images", "Forvo"]
         dictGroups.addItems(defaults)
         dictGroups.addItem("──────")
         item = get_item(dictGroups.count() - 1)
         item.setEnabled(False)
-        item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        item.setTextAlignment(qt.Qt.AlignmentFlag.AlignCenter)
         dg = sorted(list(self.defaultGroups.keys()))
         dictGroups.addItems(dg)
         current = self.config["currentGroup"]
@@ -2182,8 +2185,8 @@ class DictInterface(QWidget):
         )
         return dictGroups
 
-    def setupSearchType(self) -> QComboBox:
-        searchTypes = QComboBox()
+    def setupSearchType(self) -> qt.QComboBox:
+        searchTypes = qt.QComboBox()
         searchTypes.addItems(self.searchOptions)
         current = self.config["searchMode"]
         if current in self.searchOptions:
@@ -2320,8 +2323,8 @@ class DictInterface(QWidget):
     def ensureVisible(self) -> None:
         if not self.isVisible():
             self.show()
-        if self.windowState() == Qt.WindowState.WindowMinimized:
-            self.setWindowState(Qt.WindowState.WindowNoState)
+        if self.windowState() == qt.Qt.WindowState.WindowMinimized:
+            self.setWindowState(qt.Qt.WindowState.WindowNoState)
         self.setFocus()
         self.activateWindow()
 
@@ -2377,8 +2380,8 @@ class DictInterface(QWidget):
     def updateAddType(self, dictName: str, addType: str) -> None:
         self.db.setAddType(dictName, addType)
 
-    def setupSearch(self) -> QLineEdit:
-        searchBox = QLineEdit()
+    def setupSearch(self) -> qt.QLineEdit:
+        searchBox = qt.QLineEdit()
         searchBox.setFixedHeight(30)
         searchBox.setFixedWidth(100)
         searchBox.returnPressed.connect(self.initSearch)
@@ -2700,22 +2703,22 @@ QScrollBar:vertical {
 
 
 class MigakuSVG(QSvgWidget):
-    clicked = pyqtSignal()
+    clicked = qt.pyqtSignal()
 
-    def __init__(self, parent: typing.Optional[QWidget] = None):
+    def __init__(self, parent: typing.Optional[qt.QWidget] = None):
         super().__init__(parent)
 
     # TODO: @ColinKennedy - Do I need return bool?
-    def mousePressEvent(self, ev: typing.Optional[QMouseEvent]) -> None:
+    def mousePressEvent(self, ev: typing.Optional[qt.QMouseEvent]) -> None:
         self.clicked.emit()
 
 
-class SVGPushButton(QPushButton):
+class SVGPushButton(qt.QPushButton):
     def __init__(
         self,
         width: int,
         height: int,
-        parent: typing.Optional[QWidget] = None,
+        parent: typing.Optional[qt.QWidget] = None,
     ) -> None:
         super().__init__(parent)
 
@@ -2727,7 +2730,7 @@ class SVGPushButton(QPushButton):
         self.setFixedWidth(43)
         self.svgWidth = width
         self.svgHeight = height
-        self._main_layout = QHBoxLayout()
+        self._main_layout = qt.QHBoxLayout()
         self._main_layout.setContentsMargins(0, 0, 0, 0)
         self.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self._main_layout)
@@ -2821,20 +2824,20 @@ def showAfterGlobalSearch() -> None:
 
     if not is_win:
         dictionary.setWindowState(
-            dictionary.windowState() & ~Qt.WindowState.WindowMinimized
-            | Qt.WindowState.WindowActive
+            dictionary.windowState() & ~qt.Qt.WindowState.WindowMinimized
+            | qt.Qt.WindowState.WindowActive
         )
         dictionary.raise_()
 
         return
 
     dictionary.setWindowFlags(
-        dictionary.windowFlags() | Qt.WindowType.WindowStaysOnTopHint
+        dictionary.windowFlags() | qt.Qt.WindowType.WindowStaysOnTopHint
     )
     dictionary.show()
 
     if not dictionary.alwaysOnTop:
         dictionary.setWindowFlags(
-            dictionary.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint
+            dictionary.windowFlags() & ~qt.Qt.WindowType.WindowStaysOnTopHint
         )
         dictionary.show()

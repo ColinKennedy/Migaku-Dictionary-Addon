@@ -5,7 +5,7 @@ import typing
 from os.path import dirname, join
 
 import aqt
-from aqt.qt import *
+from aqt import qt
 from aqt.webview import AnkiWebView
 
 T = typing.TypeVar("T")
@@ -21,7 +21,7 @@ def _verify(item: typing.Optional[T]) -> T:
 
 def miInfo(
     text: str,
-    parent: typing.Optional[QWidget] = None,
+    parent: typing.Optional[qt.QWidget] = None,
     level: str = "msg",
     day: bool = True,
 ) -> int:
@@ -37,14 +37,14 @@ def miInfo(
     if not parent:
         parent = aqt.mw.app.activeWindow() or aqt.mw
 
-    icon = QIcon(join(addon_path, "icons", "migaku.png"))
-    mb = QMessageBox(parent)
+    icon = qt.QIcon(join(addon_path, "icons", "migaku.png"))
+    mb = qt.QMessageBox(parent)
     if not day:
         mb.setStyleSheet(" QMessageBox {background-color: #272828;}")
     mb.setText(text)
     mb.setWindowIcon(icon)
     mb.setWindowTitle(title)
-    b = _verify(mb.addButton(QMessageBox.StandardButton.Ok))
+    b = _verify(mb.addButton(qt.QMessageBox.StandardButton.Ok))
     b.setFixedSize(100, 30)
     b.setDefault(True)
 
@@ -53,19 +53,19 @@ def miInfo(
 
 def miAsk(
     text: str,
-    parent: typing.Optional[QWidget] = None,
+    parent: typing.Optional[qt.QWidget] = None,
     day: bool = True,
     customText: typing.Sequence[str] = "",
 ) -> bool:
-    msg = QMessageBox(parent)
+    msg = qt.QMessageBox(parent)
     msg.setWindowTitle("Migaku Dictionary")
     msg.setText(text)
-    icon = QIcon(join(addon_path, "icons", "migaku.png"))
-    b = _verify(msg.addButton(QMessageBox.StandardButton.Yes))
+    icon = qt.QIcon(join(addon_path, "icons", "migaku.png"))
+    b = _verify(msg.addButton(qt.QMessageBox.StandardButton.Yes))
 
     b.setFixedSize(100, 30)
     b.setDefault(True)
-    c = _verify(msg.addButton(QMessageBox.StandardButton.No))
+    c = _verify(msg.addButton(qt.QMessageBox.StandardButton.No))
     c.setFixedSize(100, 30)
 
     if customText:

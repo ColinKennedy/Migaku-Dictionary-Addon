@@ -3,13 +3,12 @@ import typing
 
 import aqt
 from anki.utils import is_win
-from aqt import mw
-from aqt.qt import *
+from aqt import mw, qt
 
 from . import midict, migaku_dictionary, migaku_widget_global
 
 
-def _selectedText(page: QWebEngineView) -> typing.Optional[str]:
+def _selectedText(page: qt.QWebEngineView) -> typing.Optional[str]:
     text = page.selectedText()
 
     if not text:
@@ -49,29 +48,29 @@ def performColSearch(text: str) -> None:
 
     if not is_win:
         browser.setWindowState(
-            browser.windowState() & ~Qt.WindowState.WindowMinimized
-            | Qt.WindowState.WindowActive
+            browser.windowState() & ~qt.Qt.WindowState.WindowMinimized
+            | qt.Qt.WindowState.WindowActive
         )
         browser.raise_()
     else:
         browser.setWindowFlags(
-            browser.windowFlags() | Qt.WindowType.WindowStaysOnTopHint
+            browser.windowFlags() | qt.Qt.WindowType.WindowStaysOnTopHint
         )
         browser.show()
         browser.setWindowFlags(
-            browser.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint
+            browser.windowFlags() & ~qt.Qt.WindowType.WindowStaysOnTopHint
         )
         browser.show()
 
 
-def searchCol(self: QWebEngineView) -> None:
+def searchCol(self: qt.QWebEngineView) -> None:
     text = _selectedText(self)
 
     if text:
         performColSearch(text)
 
 
-def searchTerm(self: QWebEngineView) -> None:
+def searchTerm(self: qt.QWebEngineView) -> None:
     text = _selectedText(self)
 
     if not text:

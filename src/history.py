@@ -8,7 +8,7 @@ import json
 import typing
 
 from anki.utils import is_lin, is_mac, is_win
-from aqt.qt import *
+from aqt import qt
 from aqt.utils import askUser, showInfo
 
 from .miutils import miAsk, miInfo
@@ -17,7 +17,7 @@ if typing.TYPE_CHECKING:
     from . import midict
 
 
-class HistoryModel(QAbstractTableModel):
+class HistoryModel(qt.QAbstractTableModel):
 
     # TODO: @ColinKennedy fix the cyclic dependency (midict -> history -> midict.DictInterface) later
     def __init__(
@@ -31,16 +31,16 @@ class HistoryModel(QAbstractTableModel):
         self.dictInt = parent
         self.justTerms = [item[0] for item in history]
 
-    def rowCount(self, index: QModelIndex = QModelIndex()) -> int:
+    def rowCount(self, index: qt.QModelIndex = qt.QModelIndex()) -> int:
         return len(self.history)
 
-    def columnCount(self, index: QModelIndex = QModelIndex()) -> int:
+    def columnCount(self, index: qt.QModelIndex = qt.QModelIndex()) -> int:
         return 2
 
     def data(
         self,
-        index: QModelIndex,
-        role: int = Qt.ItemDataRole.DisplayRole,
+        index: qt.QModelIndex,
+        role: int = qt.Qt.ItemDataRole.DisplayRole,
     ) -> typing.Optional[str]:
         if not index.isValid():
             # TODO: @ColinKennedy this check is not necessary
@@ -49,7 +49,10 @@ class HistoryModel(QAbstractTableModel):
         if not 0 <= index.row() < len(self.history):
             return None
 
-        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
+        if (
+            role == qt.Qt.ItemDataRole.DisplayRole
+            or role == qt.Qt.ItemDataRole.EditRole
+        ):
             term = self.history[index.row()][0]
             date = self.history[index.row()][1]
 
@@ -63,13 +66,13 @@ class HistoryModel(QAbstractTableModel):
     def headerData(
         self,
         section: int,
-        orientation: Qt.Orientation,
-        role: int = Qt.ItemDataRole.DisplayRole,
+        orientation: qt.Qt.Orientation,
+        role: int = qt.Qt.ItemDataRole.DisplayRole,
     ) -> typing.Optional[str]:
-        if role != Qt.ItemDataRole.DisplayRole:
+        if role != qt.Qt.ItemDataRole.DisplayRole:
             return None
 
-        if orientation == Qt.Orientation.Vertical:
+        if orientation == qt.Qt.Orientation.Vertical:
             return str(section + 1)
 
         return None
@@ -78,7 +81,7 @@ class HistoryModel(QAbstractTableModel):
         self,
         position: typing.Optional[int] = None,
         rows: int = 1,
-        index: QModelIndex = QModelIndex(),
+        index: qt.QModelIndex = qt.QModelIndex(),
         term: str = "",
         date: str = "",
     ) -> bool:
@@ -90,7 +93,7 @@ class HistoryModel(QAbstractTableModel):
 
         changed = False
 
-        self.beginInsertRows(QModelIndex(), position, position)
+        self.beginInsertRows(qt.QModelIndex(), position, position)
 
         for row in range(rows):
             if term and date:
@@ -114,38 +117,38 @@ class HistoryModel(QAbstractTableModel):
         self,
         position: int,
         rows: int = 1,
-        index: QModelIndex = QModelIndex(),
+        index: qt.QModelIndex = qt.QModelIndex(),
     ) -> bool:
         # TODO: @ColinKennedy add range-check here
         # TODO: @ColinKennedy this code probably doesn't work. Fix?
-        self.beginRemoveRows(QModelIndex(), position, position + rows - 1)
+        self.beginRemoveRows(qt.QModelIndex(), position, position + rows - 1)
         del self.history[position : position + rows]
         self.endRemoveRows()
         self.dictInt.saveHistory()
         return True
 
 
-class HistoryBrowser(QWidget):
+class HistoryBrowser(qt.QWidget):
     def __init__(
         self,
         historyModel: HistoryModel,
         parent: midict.DictInterface,
     ) -> None:
-        super().__init__(parent, Qt.WindowType.Window)
+        super().__init__(parent, qt.Qt.WindowType.Window)
 
         self.setAutoFillBackground(True)
         self.resize(300, 200)
-        self.tableView = QTableView()
+        self.tableView = qt.QTableView()
         self.model = historyModel
         self.dictInt = parent
         self.tableView.setModel(self.model)
-        self.clearHistory = QPushButton("Clear History")
+        self.clearHistory = qt.QPushButton("Clear History")
         self.clearHistory.clicked.connect(self.deleteHistory)
         self.tableView.doubleClicked.connect(self.searchAgain)
         self.setupTable()
         self.setLayout(self.getLayout())
         self.setColors()
-        self.hotkeyEsc = QShortcut(QKeySequence("Esc"), self)
+        self.hotkeyEsc = qt.QShortcut(qt.QKeySequence("Esc"), self)
         self.hotkeyEsc.activated.connect(self.hide)
 
     def setupTable(self) -> None:
@@ -154,10 +157,10 @@ class HistoryBrowser(QWidget):
         if not tableHeader:
             raise RuntimeError(f'No horizontalHeader for "{self.tableView}" was found.')
 
-        tableHeader.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        tableHeader.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        tableHeader.setSectionResizeMode(0, qt.QHeaderView.ResizeMode.Stretch)
+        tableHeader.setSectionResizeMode(1, qt.QHeaderView.ResizeMode.Stretch)
         self.tableView.setSelectionBehavior(
-            QAbstractItemView.SelectionBehavior.SelectRows
+            qt.QAbstractItemView.SelectionBehavior.SelectRows
         )
         tableHeader.hide()
 
@@ -193,10 +196,10 @@ class HistoryBrowser(QWidget):
 
         self.model.removeRows(0, len(self.model.history))
 
-    def getLayout(self) -> QVBoxLayout:
-        vbox = QVBoxLayout()
+    def getLayout(self) -> qt.QVBoxLayout:
+        vbox = qt.QVBoxLayout()
         vbox.addWidget(self.tableView)
-        hbox = QHBoxLayout()
+        hbox = qt.QHBoxLayout()
         self.clearHistory.setFixedSize(100, 30)
         hbox.addStretch()
         hbox.addWidget(self.clearHistory)

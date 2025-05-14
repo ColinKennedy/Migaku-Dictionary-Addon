@@ -15,7 +15,6 @@ from anki.utils import is_lin, is_mac, is_win
 from aqt import main
 from aqt import mw as mw_
 from aqt import qt
-from aqt.qt import *
 from aqt.utils import askUser, openLink, showInfo, tooltip
 from aqt.webview import AnkiWebView
 from PyQt6.QtSvgWidgets import QSvgWidget
@@ -37,25 +36,25 @@ def attemptOpenLink(cmd: str) -> None:
 
 
 class MigakuSVG(QSvgWidget):
-    clicked = pyqtSignal()
+    clicked = qt.pyqtSignal()
 
     # TODO: @ColinKennedy Check if this returns bool
-    def mousePressEvent(self, ev: typing.Optional[QMouseEvent]) -> None:
+    def mousePressEvent(self, ev: typing.Optional[qt.QMouseEvent]) -> None:
         self.clicked.emit()
 
 
-class MigakuLabel(QLabel):
-    clicked = pyqtSignal()
+class MigakuLabel(qt.QLabel):
+    clicked = qt.pyqtSignal()
 
-    def __init__(self, parent: typing.Optional[QWidget] = None):
+    def __init__(self, parent: typing.Optional[qt.QWidget] = None):
         super().__init__(parent)
 
     # TODO: @ColinKennedy Check if this returns bool
-    def mousePressEvent(self, ev: typing.Optional[QMouseEvent]) -> None:
+    def mousePressEvent(self, ev: typing.Optional[qt.QMouseEvent]) -> None:
         self.clicked.emit()
 
 
-class SettingsGui(QTabWidget):
+class SettingsGui(qt.QTabWidget):
     def __init__(
         self, mw: main.AnkiQt, path: str, reboot: typing.Callable[[], None]
     ) -> None:
@@ -385,50 +384,50 @@ class SettingsGui(QTabWidget):
             self.resize(1034, 550)
         else:
             self.resize(920, 550)
-        # self.setContextMenuPolicy(Qt.NoContextMenu)
-        self.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
+        # self.setContextMenuPolicy(qt.Qt.NoContextMenu)
+        self.setContextMenuPolicy(qt.Qt.ContextMenuPolicy.NoContextMenu)
         self.setWindowTitle("Migaku Dictionary Settings (Ver. " + verNumber + ")")
         self.addonPath = path
-        self.setWindowIcon(QIcon(join(self.addonPath, "icons", "migaku.png")))
-        self.addDictGroup = QPushButton("Add Dictionary Group")
-        self.addExportTemplate = QPushButton("Add Export Template")
+        self.setWindowIcon(qt.QIcon(join(self.addonPath, "icons", "migaku.png")))
+        self.addDictGroup = qt.QPushButton("Add Dictionary Group")
+        self.addExportTemplate = qt.QPushButton("Add Export Template")
         self.dictGroups = self.getGroupTemplateTable()
         self.exportTemplates = self.getGroupTemplateTable()
-        self.tooltipCB = QCheckBox()
+        self.tooltipCB = qt.QCheckBox()
         self.tooltipCB.setFixedHeight(30)
-        self.maxImgWidth = QSpinBox()
+        self.maxImgWidth = qt.QSpinBox()
         self.maxImgWidth.setRange(0, 9999)
-        self.maxImgHeight = QSpinBox()
+        self.maxImgHeight = qt.QSpinBox()
         self.maxImgHeight.setRange(0, 9999)
-        self.safeSearch = QCheckBox()
-        self.googleCountry = QComboBox()
+        self.safeSearch = qt.QCheckBox()
+        self.googleCountry = qt.QComboBox()
         self.googleCountry.addItems(self.googleCountries)
-        self.forvoLang = QComboBox()
+        self.forvoLang = qt.QComboBox()
         self.forvoLang.addItems(self.forvoLanguages)
-        self.condensedAudioDirectoryLabel = QLabel("Condensed Audio Save Location:")
-        self.chooseAudioDirectory = QPushButton("Choose Directory")
-        self.convertToMp3 = QCheckBox()
-        self.disableCondensedMessages = QCheckBox()
-        self.dictOnTop = QCheckBox()
-        self.showTarget = QCheckBox()
-        self.totalDefs = QSpinBox()
+        self.condensedAudioDirectoryLabel = qt.QLabel("Condensed Audio Save Location:")
+        self.chooseAudioDirectory = qt.QPushButton("Choose Directory")
+        self.convertToMp3 = qt.QCheckBox()
+        self.disableCondensedMessages = qt.QCheckBox()
+        self.dictOnTop = qt.QCheckBox()
+        self.showTarget = qt.QCheckBox()
+        self.totalDefs = qt.QSpinBox()
         self.totalDefs.setRange(0, 1000)
-        self.dictDefs = QSpinBox()
+        self.dictDefs = qt.QSpinBox()
         self.dictDefs.setRange(0, 100)
-        self.genJSExport = QCheckBox()
-        self.genJSEdit = QCheckBox()
-        self.frontBracket = QLineEdit()
-        self.backBracket = QLineEdit()
-        self.highlightTarget = QCheckBox()
-        self.highlightSentence = QCheckBox()
-        self.openOnStart = QCheckBox()
-        self.globalHotkeys = QCheckBox()
-        self.globalOpen = QCheckBox()
-        self.restoreButton = QPushButton("Restore Defaults")
-        self.cancelButton = QPushButton("Cancel")
-        self.applyButton = QPushButton("Apply")
-        self._main_layout = QVBoxLayout()
-        self.settingsTab = QWidget(self)
+        self.genJSExport = qt.QCheckBox()
+        self.genJSEdit = qt.QCheckBox()
+        self.frontBracket = qt.QLineEdit()
+        self.backBracket = qt.QLineEdit()
+        self.highlightTarget = qt.QCheckBox()
+        self.highlightSentence = qt.QCheckBox()
+        self.openOnStart = qt.QCheckBox()
+        self.globalHotkeys = qt.QCheckBox()
+        self.globalOpen = qt.QCheckBox()
+        self.restoreButton = qt.QPushButton("Restore Defaults")
+        self.cancelButton = qt.QPushButton("Cancel")
+        self.applyButton = qt.QPushButton("Apply")
+        self._main_layout = qt.QVBoxLayout()
+        self.settingsTab = qt.QWidget(self)
         self.userGuideTab = self.getUserGuideTab()
         self.setupLayout()
         self.addTab(self.settingsTab, "Settings")
@@ -440,7 +439,7 @@ class SettingsGui(QTabWidget):
         self.initHandlers()
         self.loadConfig()
         self.initTooltips()
-        self.hotkeyEsc = QShortcut(QKeySequence("Esc"), self)
+        self.hotkeyEsc = qt.QShortcut(qt.QKeySequence("Esc"), self)
         self.hotkeyEsc.activated.connect(self.close)
 
         self.show()
@@ -453,7 +452,7 @@ class SettingsGui(QTabWidget):
 
         return item.text()
 
-    def hideEvent(self, event: typing.Optional[QHideEvent]) -> None:
+    def hideEvent(self, event: typing.Optional[qt.QHideEvent]) -> None:
         # TODO: @ColinKennedy - Fix this cyclic import
         from . import migaku_settings
 
@@ -464,7 +463,7 @@ class SettingsGui(QTabWidget):
         if event:
             event.accept()
 
-    def closeEvent(self, event: typing.Optional[QCloseEvent]) -> None:
+    def closeEvent(self, event: typing.Optional[qt.QCloseEvent]) -> None:
         # TODO: @ColinKennedy - Fix this cyclic import
         from . import migaku_settings
 
@@ -620,32 +619,34 @@ class SettingsGui(QTabWidget):
 
     def updateAudioDirectory(self) -> None:
         directory = str(
-            QFileDialog.getExistingDirectory(None, "Select Condensed Audio Directory")
+            qt.QFileDialog.getExistingDirectory(
+                None, "Select Condensed Audio Directory"
+            )
         )
         if directory:
             self.chooseAudioDirectory.setText(directory)
         else:
             self.chooseAudioDirectory.setText("Choose Directory")
 
-    def getGroupTemplateTable(self) -> QTableWidget:
+    def getGroupTemplateTable(self) -> qt.QTableWidget:
         macLin = False
         if is_mac or is_lin:
             macLin = True
-        groupTemplates = QTableWidget()
+        groupTemplates = qt.QTableWidget()
         groupTemplates.setColumnCount(3)
         tableHeader = groupTemplates.horizontalHeader()
 
         if not tableHeader:
             raise RuntimeError("Group templates has no horizontal header.")
 
-        tableHeader.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        tableHeader.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
-        tableHeader.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
+        tableHeader.setSectionResizeMode(0, qt.QHeaderView.ResizeMode.Stretch)
+        tableHeader.setSectionResizeMode(1, qt.QHeaderView.ResizeMode.Fixed)
+        tableHeader.setSectionResizeMode(2, qt.QHeaderView.ResizeMode.Fixed)
         groupTemplates.setRowCount(0)
         groupTemplates.setSortingEnabled(False)
-        groupTemplates.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        groupTemplates.setEditTriggers(qt.QAbstractItemView.EditTrigger.NoEditTriggers)
         groupTemplates.setSelectionBehavior(
-            QAbstractItemView.SelectionBehavior.SelectRows
+            qt.QAbstractItemView.SelectionBehavior.SelectRows
         )
         if macLin:
             groupTemplates.setColumnWidth(1, 50)
@@ -662,8 +663,8 @@ class SettingsGui(QTabWidget):
         for groupName in dictGroups:
             rc = self.dictGroups.rowCount()
             self.dictGroups.setRowCount(rc + 1)
-            self.dictGroups.setItem(rc, 0, QTableWidgetItem(groupName))
-            editButton = QPushButton("Edit")
+            self.dictGroups.setItem(rc, 0, qt.QTableWidgetItem(groupName))
+            editButton = qt.QPushButton("Edit")
             if is_win:
                 editButton.setFixedWidth(40)
             else:
@@ -671,7 +672,7 @@ class SettingsGui(QTabWidget):
                 editButton.setFixedHeight(30)
             editButton.clicked.connect(self.editGroupRow(rc))
             self.dictGroups.setCellWidget(rc, 1, editButton)
-            deleteButton = QPushButton("X")
+            deleteButton = qt.QPushButton("X")
             if is_win:
                 deleteButton.setFixedWidth(40)
             else:
@@ -722,8 +723,8 @@ class SettingsGui(QTabWidget):
         for template in exportTemplates:
             rc = self.exportTemplates.rowCount()
             self.exportTemplates.setRowCount(rc + 1)
-            self.exportTemplates.setItem(rc, 0, QTableWidgetItem(template))
-            editButton = QPushButton("Edit")
+            self.exportTemplates.setItem(rc, 0, qt.QTableWidgetItem(template))
+            editButton = qt.QPushButton("Edit")
             if is_win:
                 editButton.setFixedWidth(40)
             else:
@@ -731,7 +732,7 @@ class SettingsGui(QTabWidget):
                 editButton.setFixedHeight(30)
             editButton.clicked.connect(self.editTempRow(rc))
             self.exportTemplates.setCellWidget(rc, 1, editButton)
-            deleteButton = QPushButton("X")
+            deleteButton = qt.QPushButton("X")
             if is_win:
                 deleteButton.setFixedWidth(40)
             else:
@@ -840,29 +841,29 @@ class SettingsGui(QTabWidget):
         templateEditor = TemplateEditor(self.mw, self, self.getDictionaryNames())
         templateEditor.exec()
 
-    def miQLabel(self, text: str, width: int) -> QLabel:
-        label = QLabel(text)
+    def miQLabel(self, text: str, width: int) -> qt.QLabel:
+        label = qt.QLabel(text)
         label.setFixedHeight(30)
         label.setFixedWidth(width)
         return label
 
-    def getLineSeparator(self) -> QFrame:
-        line = QFrame()
-        line.setFrameShape(QFrame.Shape.VLine)
-        line.setFrameShadow(QFrame.Shadow.Plain)
+    def getLineSeparator(self) -> qt.QFrame:
+        line = qt.QFrame()
+        line.setFrameShape(qt.QFrame.Shape.VLine)
+        line.setFrameShadow(qt.QFrame.Shadow.Plain)
         line.setStyleSheet('QFrame[frameShape="5"]{color: #D5DFE5;}')
         return line
 
     def setupLayout(self) -> None:
-        groupLayout = QHBoxLayout()
-        dictsLayout = QVBoxLayout()
-        exportsLayout = QVBoxLayout()
+        groupLayout = qt.QHBoxLayout()
+        dictsLayout = qt.QVBoxLayout()
+        exportsLayout = qt.QVBoxLayout()
 
-        dictsLayout.addWidget(QLabel("Dictionary Groups"))
+        dictsLayout.addWidget(qt.QLabel("Dictionary Groups"))
         dictsLayout.addWidget(self.addDictGroup)
         dictsLayout.addWidget(self.dictGroups)
 
-        exportsLayout.addWidget(QLabel("Export Templates"))
+        exportsLayout.addWidget(qt.QLabel("Export Templates"))
         exportsLayout.addWidget(self.addExportTemplate)
         exportsLayout.addWidget(self.exportTemplates)
 
@@ -870,127 +871,127 @@ class SettingsGui(QTabWidget):
         groupLayout.addLayout(exportsLayout)
         self._main_layout.addLayout(groupLayout)
 
-        optionsBox = QGroupBox("Options")
-        optionsLayout = QHBoxLayout()
-        optLay1 = QVBoxLayout()
-        optLay2 = QVBoxLayout()
-        optLay3 = QVBoxLayout()
+        optionsBox = qt.QGroupBox("Options")
+        optionsLayout = qt.QHBoxLayout()
+        optLay1 = qt.QVBoxLayout()
+        optLay2 = qt.QVBoxLayout()
+        optLay3 = qt.QVBoxLayout()
 
-        startupLay = QHBoxLayout()
+        startupLay = qt.QHBoxLayout()
         startupLay.addWidget(self.miQLabel("Open on Startup:", 182))
         startupLay.addWidget(self.openOnStart)
         optLay1.addLayout(startupLay)
 
-        highSentLay = QHBoxLayout()
+        highSentLay = qt.QHBoxLayout()
         highSentLay.addWidget(self.miQLabel("Highlight Examples Sentences:", 182))
         highSentLay.addWidget(self.highlightSentence)
         optLay1.addLayout(highSentLay)
 
-        highWordLay = QHBoxLayout()
+        highWordLay = qt.QHBoxLayout()
         highWordLay.addWidget(self.miQLabel("Highlight Searched Term:", 182))
         highWordLay.addWidget(self.highlightTarget)
         optLay1.addLayout(highWordLay)
 
-        expTargetLay = QHBoxLayout()
+        expTargetLay = qt.QHBoxLayout()
         expTargetLay.addWidget(self.miQLabel("Show Export Target:", 182))
         expTargetLay.addWidget(self.showTarget)
         optLay1.addLayout(expTargetLay)
 
-        toolTipLay = QHBoxLayout()
+        toolTipLay = qt.QHBoxLayout()
         toolTipLay.addWidget(self.miQLabel("Dictionary Tooltips:", 182))
         toolTipLay.addWidget(self.tooltipCB)
         optLay1.addLayout(toolTipLay)
 
-        gHLay = QHBoxLayout()
+        gHLay = qt.QHBoxLayout()
         gHLay.addWidget(self.miQLabel("Global Hotkeys:", 182))
         gHLay.addWidget(self.globalHotkeys)
         optLay1.addLayout(gHLay)
 
-        extensionMp3Lay = QHBoxLayout()
+        extensionMp3Lay = qt.QHBoxLayout()
         extensionMp3Lay.addWidget(self.miQLabel("Convert Extension Audio to MP3", 182))
         extensionMp3Lay.addWidget(self.convertToMp3)
         optLay1.addLayout(extensionMp3Lay)
 
-        disableCondensedLay = QHBoxLayout()
+        disableCondensedLay = qt.QHBoxLayout()
         disableCondensedLay.addWidget(
             self.miQLabel("Disable Condensed Audio Messages:", 182)
         )
         disableCondensedLay.addWidget(self.disableCondensedMessages)
         optLay1.addLayout(disableCondensedLay)
 
-        globalOpenLay = QHBoxLayout()
+        globalOpenLay = qt.QHBoxLayout()
         globalOpenLay.addWidget(self.miQLabel("Open on Global Search:", 323))
         globalOpenLay.addWidget(self.globalOpen)
         optLay2.addLayout(globalOpenLay)
 
-        totResLay = QHBoxLayout()
+        totResLay = qt.QHBoxLayout()
         totResLay.addWidget(self.miQLabel("Max Total Search Results:", 180))
         totResLay.addWidget(self.totalDefs)
         self.totalDefs.setFixedWidth(160)
         optLay2.addLayout(totResLay)
 
-        dictResLay = QHBoxLayout()
+        dictResLay = qt.QHBoxLayout()
         dictResLay.addWidget(self.miQLabel("Max Dictionary Search Results:", 180))
         dictResLay.addWidget(self.dictDefs)
         self.dictDefs.setFixedWidth(160)
         optLay2.addLayout(dictResLay)
 
-        genJSExportLay = QHBoxLayout()
+        genJSExportLay = qt.QHBoxLayout()
         genJSExportLay.addWidget(
             self.miQLabel("Add Cards with Japanese Readings:", 323)
         )
         genJSExportLay.addWidget(self.genJSExport)
         optLay2.addLayout(genJSExportLay)
 
-        genJSEditLay = QHBoxLayout()
+        genJSEditLay = qt.QHBoxLayout()
         genJSEditLay.addWidget(self.miQLabel("Japanese Readings on Edit:", 323))
         genJSEditLay.addWidget(self.genJSEdit)
         optLay2.addLayout(genJSEditLay)
 
-        countryLay = QHBoxLayout()
+        countryLay = qt.QHBoxLayout()
         countryLay.addWidget(self.miQLabel("Google Images Search Region:", 180))
         countryLay.addWidget(self.googleCountry)
         self.googleCountry.setFixedWidth(160)
         optLay2.addLayout(countryLay)
 
-        safeLay = QHBoxLayout()
+        safeLay = qt.QHBoxLayout()
         safeLay.addWidget(self.miQLabel("Safe Search:", 323))
         safeLay.addWidget(self.safeSearch)
         optLay2.addLayout(safeLay)
 
         optLay2.addStretch()
 
-        maxWidLay = QHBoxLayout()
+        maxWidLay = qt.QHBoxLayout()
         maxWidLay.addWidget(self.miQLabel("Maximum Image Width:", 140))
         maxWidLay.addWidget(self.maxImgWidth)
         optLay3.addLayout(maxWidLay)
 
-        maxHeiLay = QHBoxLayout()
+        maxHeiLay = qt.QHBoxLayout()
         maxHeiLay.addWidget(self.miQLabel("Maximum Image Height:", 140))
         maxHeiLay.addWidget(self.maxImgHeight)
         optLay3.addLayout(maxHeiLay)
 
-        frontBracketLay = QHBoxLayout()
+        frontBracketLay = qt.QHBoxLayout()
         frontBracketLay.addWidget(self.miQLabel("Surround Term (Front):", 140))
         frontBracketLay.addWidget(self.frontBracket)
         optLay3.addLayout(frontBracketLay)
 
-        backBracketLay = QHBoxLayout()
+        backBracketLay = qt.QHBoxLayout()
         backBracketLay.addWidget(self.miQLabel("Surround Term (Back):", 140))
         backBracketLay.addWidget(self.backBracket)
         optLay3.addLayout(backBracketLay)
 
-        forvoLay = QHBoxLayout()
+        forvoLay = qt.QHBoxLayout()
         forvoLay.addWidget(self.miQLabel("Forvo Language:", 140))
         forvoLay.addWidget(self.forvoLang)
         optLay3.addLayout(forvoLay)
 
-        dictOnTopLay = QHBoxLayout()
+        dictOnTopLay = qt.QHBoxLayout()
         dictOnTopLay.addWidget(self.miQLabel("Always on Top:", 323))
         dictOnTopLay.addWidget(self.dictOnTop)
         optLay3.addLayout(dictOnTopLay)
 
-        extensionAudioLay = QHBoxLayout()
+        extensionAudioLay = qt.QHBoxLayout()
         extensionAudioLay.addWidget(self.condensedAudioDirectoryLabel)
         self.chooseAudioDirectory.setFixedWidth(100)
         extensionAudioLay.addWidget(self.chooseAudioDirectory)
@@ -1012,7 +1013,7 @@ class SettingsGui(QTabWidget):
         self._main_layout.addWidget(optionsBox)
         self._main_layout.addStretch()
 
-        buttonsLayout = QHBoxLayout()
+        buttonsLayout = qt.QHBoxLayout()
         buttonsLayout.addWidget(self.restoreButton)
         buttonsLayout.addStretch()
         buttonsLayout.addWidget(self.cancelButton)
@@ -1031,7 +1032,7 @@ class SettingsGui(QTabWidget):
 
     def getHTML(self) -> tuple[str, qt.QUrl]:
         htmlPath = join(self.addonPath, "guide.html")
-        url = QUrl.fromLocalFile(htmlPath)
+        url = qt.QUrl.fromLocalFile(htmlPath)
         with open(htmlPath, "r", encoding="utf-8") as fh:
             html = fh.read()
         return html, url
@@ -1052,37 +1053,37 @@ class SettingsGui(QTabWidget):
         guide.setObjectName("tab_4")
         return guide
 
-    def getAboutTab(self) -> QWidget:
-        tab_4 = QWidget()
+    def getAboutTab(self) -> qt.QWidget:
+        tab_4 = qt.QWidget()
         tab_4.setObjectName("tab_4")
-        tab4vl = QVBoxLayout()
-        migakuAbout = QGroupBox()
+        tab4vl = qt.QVBoxLayout()
+        migakuAbout = qt.QGroupBox()
         migakuAbout.setTitle("Migaku")
-        migakuAboutVL = QVBoxLayout()
+        migakuAboutVL = qt.QVBoxLayout()
 
         migakuAbout.setStyleSheet("QGroupBox { font-weight: bold; } ")
-        migakuAboutText = QLabel(
+        migakuAboutText = qt.QLabel(
             "This an original Migaku add-on. Migaku seeks to be a comprehensive platform for acquiring foreign languages. The official Migaku website will be published soon!"
         )
         migakuAboutText.setWordWrap(True)
         migakuAboutText.setOpenExternalLinks(True)
         migakuAbout.setLayout(migakuAboutVL)
-        migakuAboutLinksTitle = QLabel("<b>Links<b>")
+        migakuAboutLinksTitle = qt.QLabel("<b>Links<b>")
 
-        migakuAboutLinksHL3 = QHBoxLayout()
+        migakuAboutLinksHL3 = qt.QHBoxLayout()
 
-        migakuInfo = QLabel("Migaku:")
+        migakuInfo = qt.QLabel("Migaku:")
         migakuInfoSite = self.getSVGWidget("migaku.svg")
-        migakuInfoSite.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        migakuInfoSite.setCursor(qt.QCursor(qt.Qt.CursorShape.PointingHandCursor))
 
         migakuInfoYT = self.getSVGWidget("Youtube.svg")
-        migakuInfoYT.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        migakuInfoYT.setCursor(qt.QCursor(qt.Qt.CursorShape.PointingHandCursor))
 
         migakuInfoTW = self.getSVGWidget("Twitter.svg")
-        migakuInfoTW.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        migakuInfoTW.setCursor(qt.QCursor(qt.Qt.CursorShape.PointingHandCursor))
 
         migakuPatreonIcon = self.getSVGWidget("Patreon.svg")
-        migakuPatreonIcon.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        migakuPatreonIcon.setCursor(qt.QCursor(qt.Qt.CursorShape.PointingHandCursor))
         migakuAboutLinksHL3.addWidget(migakuInfo)
         migakuAboutLinksHL3.addWidget(migakuInfoSite)
         migakuAboutLinksHL3.addWidget(migakuInfoYT)
@@ -1094,23 +1095,23 @@ class SettingsGui(QTabWidget):
         migakuAboutVL.addWidget(migakuAboutLinksTitle)
         migakuAboutVL.addLayout(migakuAboutLinksHL3)
 
-        migakuContact = QGroupBox()
+        migakuContact = qt.QGroupBox()
         migakuContact.setTitle("Contact Us")
-        migakuContactVL = QVBoxLayout()
+        migakuContactVL = qt.QVBoxLayout()
         migakuContact.setStyleSheet("QGroupBox { font-weight: bold; } ")
-        migakuContactText = QLabel(
+        migakuContactText = qt.QLabel(
             "If you would like to report a bug or contribute to the add-on, the best way to do so is by starting a ticket or pull request on GitHub. If you are looking for personal assistance using the add-on, check out the Migaku Patreon Discord Server."
         )
         migakuContactText.setWordWrap(True)
 
         gitHubIcon = self.getSVGWidget("Github.svg")
-        gitHubIcon.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        gitHubIcon.setCursor(qt.QCursor(qt.Qt.CursorShape.PointingHandCursor))
 
-        migakuThanks = QGroupBox()
+        migakuThanks = qt.QGroupBox()
         migakuThanks.setTitle("A Word of Thanks")
-        migakuThanksVL = QVBoxLayout()
+        migakuThanksVL = qt.QVBoxLayout()
         migakuThanks.setStyleSheet("QGroupBox { font-weight: bold; } ")
-        migakuThanksText = QLabel(
+        migakuThanksText = qt.QLabel(
             "Thanks so much to all Migaku supporters! We would not have been able to develop this add-on or any other Migaku project without your support!"
         )
         migakuThanksText.setOpenExternalLinks(True)
