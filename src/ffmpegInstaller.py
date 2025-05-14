@@ -207,4 +207,5 @@ def window_loaded() -> None:
     addHook("profileLoaded", ffmpegInstaller.installFFMPEG)
 
 
-gui_hooks.main_window_did_init.append(window_loaded)
+def initialize() -> None:
+    gui_hooks.main_window_did_init.append(window_loaded)

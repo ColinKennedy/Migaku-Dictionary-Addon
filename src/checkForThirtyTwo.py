@@ -16,4 +16,5 @@ def checkForThirtyTwo() -> None:
                 openLink("https://www.migaku.io/tools-guides/anki/guide#installation")
 
 
-addHook("profileLoaded", checkForThirtyTwo)
+def initialize() -> None:
+    addHook("profileLoaded", checkForThirtyTwo)

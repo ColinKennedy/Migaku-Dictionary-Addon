@@ -783,4 +783,5 @@ def window_loaded() -> None:
     Reviewer.show = wrap(Reviewer.show, addBodyClick)  # type: ignore
 
 
-gui_hooks.main_window_did_init.append(window_loaded)
+def initialize() -> None:
+    gui_hooks.main_window_did_init.append(window_loaded)

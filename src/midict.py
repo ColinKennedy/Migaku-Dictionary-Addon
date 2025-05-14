@@ -41,9 +41,8 @@ from aqt.utils import (
     tooltip,
 )
 from aqt.webview import AnkiWebView
-from PyQt6.QtSvgWidgets import QSvgWidget
-
 from pynput import keyboard
+from PyQt6.QtSvgWidgets import QSvgWidget
 
 from . import dictdb as dictdb_
 from . import (
@@ -1222,16 +1221,10 @@ class ClipThread(QObject):
 
     def __init__(self, mw: main.AnkiQt, path: str) -> None:
         if is_mac:
-            import ssl
-
-            ssl._create_default_https_context = ssl._create_unverified_context
-            sys.path.insert(0, join(dirname(__file__), "keyboardMac"))
             from Quartz import CGEventGetIntegerValueField, kCGKeyboardEventKeycode
 
             self.kCGKeyboardEventKeycode = kCGKeyboardEventKeycode
             self.CGEventGetIntegerValueField = CGEventGetIntegerValueField
-        elif is_lin:
-            sys.path.insert(0, join(dirname(__file__), "linux"))
 
         super().__init__(mw)
 

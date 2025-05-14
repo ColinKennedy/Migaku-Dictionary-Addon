@@ -1,37 +1,29 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
-import re
-import sys
-import textwrap
-import typing
-from os.path import dirname, exists, join
-from threading import Timer
-
-from . import typer
-from .miutils import miInfo
-
-sys.path.insert(0, join(dirname(__file__)))
-
-import asyncio
 import os
 import os.path
+import re
+import textwrap
+import typing
 import uuid
-from threading import Thread
+from os.path import dirname, exists, join
+from threading import Thread, Timer
 
 import aqt
+import tornado.ioloop
+import tornado.web
 from anki.collection import Collection
 from anki.utils import is_win
 from aqt import main
 from aqt import mw as mw_
 from aqt.qt import QThread, pyqtSignal
-
-import tornado.ioloop
-import tornado.web
 from tornado import httputil
 
-from . import global_state, threader
+from . import global_state, threader, typer
+from .miutils import miInfo
 
 _LOGGER = logging.getLogger(__name__)
 _PseudoNumber = typing.Union[int, str]
@@ -600,7 +592,8 @@ def removeCondensedAudioInProgressMessage() -> None:
         mw_.setWindowTitle(title.replace(msg, ""))
 
 
-serverThread = MigakuServerThread(mw_)
-serverThread.alertUser.connect(miInfo)
-serverThread.exportingCondensed.connect(addCondensedAudioInProgressMessage)
-serverThread.notExportingCondensed.connect(removeCondensedAudioInProgressMessage)
+def initialize() -> None:
+    serverThread = MigakuServerThread(mw_)
+    serverThread.alertUser.connect(miInfo)
+    serverThread.exportingCondensed.connect(addCondensedAudioInProgressMessage)
+    serverThread.notExportingCondensed.connect(removeCondensedAudioInProgressMessage)

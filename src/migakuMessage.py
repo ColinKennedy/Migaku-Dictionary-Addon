@@ -218,4 +218,5 @@ def attemptShowMigakuBrandUpdateMessage() -> None:
         _MIGAKU_SHOULD_NOT_SHOW_MESSAGE = True
 
 
-addHook("profileLoaded", attemptShowMigakuBrandUpdateMessage)
+def initialize() -> None:
+    addHook("profileLoaded", attemptShowMigakuBrandUpdateMessage)
