@@ -13,8 +13,7 @@ from shutil import copyfile
 
 from anki.notes import Note
 from anki.utils import is_lin, is_mac, is_win
-from aqt import dialogs, sound
-from aqt.qt import *
+from aqt import dialogs, qt, sound
 from aqt.utils import ensureWidgetInScreenBoundaries
 
 from .miutils import miAsk, miInfo
@@ -37,19 +36,19 @@ class _Definition(typing.NamedTuple):
 
 
 # TODO: @ColinKennedy - This progress window is probably (visually) messed up. Fix later
-class _ProgressWindow(QWidget):
-    request_stop_bulk_text_import = pyqtSignal()
+class _ProgressWindow(qt.QWidget):
+    request_stop_bulk_text_import = qt.pyqtSignal()
 
-    def __init__(self, text: str, parent: typing.Optional[QWidget] = None) -> None:
+    def __init__(self, text: str, parent: typing.Optional[qt.QWidget] = None) -> None:
         super().__init__(parent=parent)
 
         self.currentValue = 0
 
-        self._textDisplay = QLabel()
+        self._textDisplay = qt.QLabel()
         self._textDisplay.setText(text)
 
-        self._bar = QProgressBar()
-        layout = QVBoxLayout()
+        self._bar = qt.QProgressBar()
+        layout = qt.QVBoxLayout()
         layout.addWidget(self._textDisplay)
         layout.addWidget(self._bar)
         self.setLayout(layout)
@@ -66,25 +65,25 @@ class _ProgressWindow(QWidget):
     def setText(self, text: str) -> None:
         self._textDisplay.setText(text)
 
-    def closeEvent(self, event: typing.Optional[QCloseEvent]) -> None:
+    def closeEvent(self, event: typing.Optional[qt.QCloseEvent]) -> None:
         self.request_stop_bulk_text_import.emit()
 
         if event:
             event.accept()
 
 
-class MITextEdit(QTextEdit):
+class MITextEdit(qt.QTextEdit):
     def __init__(
         self,
         dictInt: midict.DictInterface,
-        parent: typing.Optional[QWidget] = None,
+        parent: typing.Optional[qt.QWidget] = None,
     ) -> None:
         super().__init__(parent)
 
         self.dictInt = dictInt
         self.setAcceptRichText(False)
 
-    def contextMenuEvent(self, event: typing.Optional[QContextMenuEvent]) -> None:
+    def contextMenuEvent(self, event: typing.Optional[qt.QContextMenuEvent]) -> None:
         menu = super().createStandardContextMenu()
 
         if not menu:
@@ -92,7 +91,7 @@ class MITextEdit(QTextEdit):
                 f'No standard menu for "{self.__class__.__name__}" could be created.'
             )
 
-        search = QAction("Search")
+        search = qt.QAction("Search")
         search.triggered.connect(self.searchSelected)
         menu.addAction(search)
 
@@ -101,28 +100,28 @@ class MITextEdit(QTextEdit):
         else:
             menu.exec()
 
-    def keyPressEvent(self, event: typing.Optional[QKeyEvent]) -> None:
+    def keyPressEvent(self, event: typing.Optional[qt.QKeyEvent]) -> None:
         if not event:
             super().keyPressEvent(event)
 
             return
 
-        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
-            if event.key() == Qt.Key.Key_B:
+        if event.modifiers() & qt.Qt.KeyboardModifier.ControlModifier:
+            if event.key() == qt.Qt.Key.Key_B:
                 cursor = self.textCursor()
-                format = QTextCharFormat()
+                format = qt.QTextCharFormat()
                 format.setFontWeight(
-                    QFont.Weight.Bold
+                    qt.QFont.Weight.Bold
                     if not cursor.charFormat().font().bold()
-                    else QFont.Weight.Normal
+                    else qt.QFont.Weight.Normal
                 )
                 cursor.mergeCharFormat(format)
 
                 return
 
-            if event.key() == Qt.Key.Key_I:
+            if event.key() == qt.Qt.Key.Key_I:
                 cursor = self.textCursor()
-                format = QTextCharFormat()
+                format = qt.QTextCharFormat()
                 format.setFontItalic(
                     True if not cursor.charFormat().font().italic() else False
                 )
@@ -130,13 +129,13 @@ class MITextEdit(QTextEdit):
 
                 return
 
-            if event.key() == Qt.Key.Key_U:
+            if event.key() == qt.Qt.Key.Key_U:
                 cursor = self.textCursor()
-                format = QTextCharFormat()
+                format = qt.QTextCharFormat()
                 format.setUnderlineStyle(
-                    QTextCharFormat.UnderlineStyle.SingleUnderline
+                    qt.QTextCharFormat.UnderlineStyle.SingleUnderline
                     if not cursor.charFormat().font().underline()
-                    else QTextCharFormat.UnderlineStyle.NoUnderline
+                    else qt.QTextCharFormat.UnderlineStyle.NoUnderline
                 )
                 cursor.mergeCharFormat(format)
 
@@ -158,22 +157,22 @@ class MITextEdit(QTextEdit):
         return self.textCursor().selectedText()
 
 
-class MILineEdit(QLineEdit):
+class MILineEdit(qt.QLineEdit):
     def __init__(
         self,
         dictInt: midict.DictInterface,
-        parent: typing.Optional[QWidget] = None,
+        parent: typing.Optional[qt.QWidget] = None,
     ):
         super().__init__(parent)
         self.dictInt = dictInt
 
-    def contextMenuEvent(self, event: typing.Optional[QContextMenuEvent]) -> None:
+    def contextMenuEvent(self, event: typing.Optional[qt.QContextMenuEvent]) -> None:
         menu = super().createStandardContextMenu()
 
         if not menu:
             raise RuntimeError("No standard context menu could be created.")
 
-        search = QAction("Search")
+        search = qt.QAction("Search")
         search.triggered.connect(self.searchSelected)
         menu.addAction(search)
 
@@ -198,16 +197,18 @@ class CardExporter:
         sentence: str = "",
         word: str = "",
     ) -> None:
-        self._shortcuts: list[QShortcut] = []
-        self._progress_bar_closed_and_finished_importing: dict[QWidget, bool] = {}
+        self._shortcuts: list[qt.QShortcut] = []
+        self._progress_bar_closed_and_finished_importing: dict[qt.QWidget, bool] = {}
 
-        self.window = QWidget()
-        self.scrollArea = QScrollArea()
+        self.window = qt.QWidget()
+        self.scrollArea = qt.QScrollArea()
         self.scrollArea.setWidget(self.window)
         self.scrollArea.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+            qt.Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
-        self.scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.scrollArea.setVerticalScrollBarPolicy(
+            qt.Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
         self.scrollArea.setWidgetResizable(True)
         self.window.setAutoFillBackground(True)
         self.dictInt = dictInt
@@ -215,7 +216,7 @@ class CardExporter:
         self.bulkTextImporting = False
         self.config = self.getConfig()
         self.definitionSettings = self.config["autoDefinitionSettings"]
-        self.layout = QVBoxLayout()
+        self.layout = qt.QVBoxLayout()
         self.decks = self.getDecks()
         self.templates = self.config["ExportTemplates"]
         self.templateCB = self.getTemplateCB()
@@ -226,27 +227,27 @@ class CardExporter:
         self.wordLE = MILineEdit(dictInt=dictInt)
         self.tagsLE = MILineEdit(dictInt=dictInt)
         self.definitions = self.getDefinitions()
-        self.autoAdd = QCheckBox("Add Extension Cards Automatically")
+        self.autoAdd = qt.QCheckBox("Add Extension Cards Automatically")
         self.autoAdd.setChecked(self.config["autoAddCards"])
-        self.searchUnknowns = QSpinBox()
+        self.searchUnknowns = qt.QSpinBox()
         self.searchUnknowns.setValue(self.config.get("unknownsToSearch", 3))
         self.searchUnknowns.setMinimum(0)
         self.searchUnknowns.setMaximum(10)
-        self.addDefinitionsCheckbox = QCheckBox("Automatically Add Definitions")
+        self.addDefinitionsCheckbox = qt.QCheckBox("Automatically Add Definitions")
         self.addDefinitionsCheckbox.setChecked(self.config["autoAddDefinitions"])
-        self.definitionSettingsButton = QPushButton("Automatic Definition Settings")
-        self.clearButton = QPushButton("Clear Current Card")
-        self.cancelButton = QPushButton("Cancel")
-        self.addButton = QPushButton("Add")
-        self.audioMap = QLabel("No Audio Selected")
-        self.imageMap = QLabel("No Image Selected")
+        self.definitionSettingsButton = qt.QPushButton("Automatic Definition Settings")
+        self.clearButton = qt.QPushButton("Clear Current Card")
+        self.cancelButton = qt.QPushButton("Cancel")
+        self.addButton = qt.QPushButton("Add")
+        self.audioMap = qt.QLabel("No Audio Selected")
+        self.imageMap = qt.QLabel("No Image Selected")
         self.exportJS = self.config["jReadingCards"]
         self.imgName: typing.Optional[str] = None
         self.imgPath: typing.Optional[str] = None
         self.audioTag: typing.Optional[str] = None
         self.audioName: typing.Optional[str] = None
         self.audioPath: typing.Optional[str] = None
-        self.audioPlay = QPushButton("Play")
+        self.audioPlay = qt.QPushButton("Play")
         self.audioPlay.clicked.connect(self.playAudio)
         self.audioPlay.hide()
         self.setupLayout()
@@ -258,7 +259,7 @@ class CardExporter:
         self.scrollArea.setMinimumHeight(400)
         self.scrollArea.resize(490, 654)
         self.scrollArea.setWindowIcon(
-            QIcon(join(self.dictInt.addonPath, "icons", "migaku.png"))
+            qt.QIcon(join(self.dictInt.addonPath, "icons", "migaku.png"))
         )
         self.scrollArea.setWindowTitle("Migaku Card Exporter")
         self.definitionList: list[_Definition] = []
@@ -272,7 +273,7 @@ class CardExporter:
         self.maybeSetToAlwaysOnTop()
         self.bulkMediaExportProgressWindow: typing.Optional[_ProgressWindow] = None
 
-    def _closeProgressBar(self, progressBar: typing.Optional[QWidget]) -> None:
+    def _closeProgressBar(self, progressBar: typing.Optional[qt.QWidget]) -> None:
         if not progressBar:
             return
 
@@ -289,7 +290,7 @@ class CardExporter:
     def maybeSetToAlwaysOnTop(self) -> None:
         if self.alwaysOnTop:
             self.scrollArea.setWindowFlags(
-                self.scrollArea.windowFlags() | Qt.WindowType.WindowStaysOnTopHint
+                self.scrollArea.windowFlags() | qt.Qt.WindowType.WindowStaysOnTopHint
             )
             self.scrollArea.show()
 
@@ -312,21 +313,21 @@ class CardExporter:
 
     def setHotkeys(self) -> None:
         self._shortcuts.append(
-            QShortcut(
-                QKeySequence("Ctrl+S"),
+            qt.QShortcut(
+                qt.QKeySequence("Ctrl+S"),
                 self.scrollArea,
                 lambda: self.attemptSearch(False),
             )
         )
         self._shortcuts.append(
-            QShortcut(
-                QKeySequence("Ctrl+F"),
+            qt.QShortcut(
+                qt.QKeySequence("Ctrl+F"),
                 self.scrollArea,
                 lambda: self.attemptSearch(True),
             )
         )
 
-        shortcut = QShortcut(QKeySequence("Esc"), self.scrollArea)
+        shortcut = qt.QShortcut(qt.QKeySequence("Esc"), self.scrollArea)
         self._shortcuts.append(shortcut)
         shortcut.activated.connect(self.scrollArea.hide)
 
@@ -411,8 +412,8 @@ Please review your template and notetype combination."""
 
         return decks
 
-    def getDeckCB(self) -> QComboBox:
-        cb = QComboBox()
+    def getDeckCB(self) -> qt.QComboBox:
+        cb = qt.QComboBox()
         decks = list(self.decks.keys())
         decks.sort()
         cb.addItems(decks)
@@ -424,14 +425,14 @@ Please review your template and notetype combination."""
         )
         return cb
 
-    def hideEvent(self, event: QHideEvent) -> None:
+    def hideEvent(self, event: qt.QHideEvent) -> None:
         self.scrollArea.hideEvent(
             event
         )  # TODO: @ColinKennedy - not sure if this is needed
         self.saveSizeAndPos()
         event.accept()
 
-    def closeEvent(self, event: QCloseEvent) -> None:
+    def closeEvent(self, event: qt.QCloseEvent) -> None:
         self.scrollArea.closeEvent(
             event
         )  # TODO: @ColinKennedy - not sure if this is needed
@@ -687,11 +688,11 @@ Please review your template and notetype combination."""
         self.imgPath = None
         self.imgName = None
 
-    def getDefinitions(self) -> QTableWidget:
+    def getDefinitions(self) -> qt.QTableWidget:
         macLin = False
         if is_mac or is_lin:
             macLin = True
-        definitions = QTableWidget()
+        definitions = qt.QTableWidget()
         definitions.setMinimumHeight(100)
         definitions.setColumnCount(3)
         tableHeader = definitions.horizontalHeader()
@@ -707,15 +708,17 @@ Please review your template and notetype combination."""
             raise RuntimeError(f'Expected a vertical for "{definitions}" widget.')
 
         vHeader.setDefaultSectionSize(50)
-        vHeader.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        tableHeader.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
+        vHeader.setSectionResizeMode(qt.QHeaderView.ResizeMode.ResizeToContents)
+        tableHeader.setSectionResizeMode(0, qt.QHeaderView.ResizeMode.Fixed)
         definitions.setColumnWidth(1, 100)
-        tableHeader.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        tableHeader.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
+        tableHeader.setSectionResizeMode(1, qt.QHeaderView.ResizeMode.Stretch)
+        tableHeader.setSectionResizeMode(2, qt.QHeaderView.ResizeMode.Fixed)
         definitions.setRowCount(0)
         definitions.setSortingEnabled(False)
-        definitions.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        definitions.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        definitions.setEditTriggers(qt.QTableWidget.EditTrigger.NoEditTriggers)
+        definitions.setSelectionBehavior(
+            qt.QAbstractItemView.SelectionBehavior.SelectRows
+        )
         definitions.setColumnWidth(2, 40)
         tableHeader.hide()
         return definitions
@@ -726,11 +729,11 @@ Please review your template and notetype combination."""
         )
 
     def setupLayout(self) -> None:
-        tempLayout = QHBoxLayout()
-        tempLayout.addWidget(QLabel("Template: "))
+        tempLayout = qt.QHBoxLayout()
+        tempLayout.addWidget(qt.QLabel("Template: "))
         self.templateCB.setFixedSize(120, 30)
         tempLayout.addWidget(self.templateCB)
-        tempLayout.addWidget(QLabel(" Deck: "))
+        tempLayout.addWidget(qt.QLabel(" Deck: "))
         self.deckCB.setFixedSize(120, 30)
         tempLayout.addWidget(self.deckCB)
         tempLayout.addStretch()
@@ -738,16 +741,16 @@ Please review your template and notetype combination."""
         self.clearButton.setFixedSize(130, 30)
         tempLayout.addWidget(self.clearButton)
         self.layout.addLayout(tempLayout)
-        sentenceL = QLabel("Sentence")
+        sentenceL = qt.QLabel("Sentence")
         self.layout.addWidget(sentenceL)
         self.layout.addWidget(self.sentenceLE)
-        secondaryL = QLabel("Secondary")
+        secondaryL = qt.QLabel("Secondary")
         self.layout.addWidget(secondaryL)
         self.layout.addWidget(self.secondaryLE)
-        wordL = QLabel("Word")
+        wordL = qt.QLabel("Word")
         self.layout.addWidget(wordL)
         self.layout.addWidget(self.wordLE)
-        notesL = QLabel("User Notes")
+        notesL = qt.QLabel("User Notes")
         self.layout.addWidget(notesL)
         self.layout.addWidget(self.notesLE)
 
@@ -766,35 +769,35 @@ Please review your template and notetype combination."""
         self.wordLE.setFont(f)
 
         self.wordLE.setFixedHeight(40)
-        definitionsL = QLabel("Definitions")
+        definitionsL = qt.QLabel("Definitions")
         self.layout.addWidget(definitionsL)
         self.layout.addWidget(self.definitions)
 
-        self.layout.addWidget(QLabel("Audio"))
+        self.layout.addWidget(qt.QLabel("Audio"))
         self.layout.addWidget(self.audioMap)
         self.layout.addWidget(self.audioPlay)
-        self.layout.addWidget(QLabel("Image"))
+        self.layout.addWidget(qt.QLabel("Image"))
         self.layout.addWidget(self.imageMap)
-        tagsL = QLabel("Tags")
+        tagsL = qt.QLabel("Tags")
         self.layout.addWidget(tagsL)
         lastTags = self.config.get("exporterLastTags", "")
         self.tagsLE.setText(lastTags)
         self.layout.addWidget(self.tagsLE)
 
-        unknownLayout = QHBoxLayout()
-        unknownLayout.addWidget(QLabel("Number of unknown words to search: "))
+        unknownLayout = qt.QHBoxLayout()
+        unknownLayout.addWidget(qt.QLabel("Number of unknown words to search: "))
         unknownLayout.addStretch()
         unknownLayout.addWidget(self.searchUnknowns)
         self.layout.addLayout(unknownLayout)
 
-        autoDefLayout = QHBoxLayout()
+        autoDefLayout = qt.QHBoxLayout()
         autoDefLayout.addWidget(self.addDefinitionsCheckbox)
         autoDefLayout.addStretch()
         self.definitionSettingsButton.setFixedSize(202, 30)
         autoDefLayout.addWidget(self.definitionSettingsButton)
         self.layout.addLayout(autoDefLayout)
 
-        buttonLayout = QHBoxLayout()
+        buttonLayout = qt.QHBoxLayout()
         buttonLayout.addWidget(self.autoAdd)
         buttonLayout.addStretch()
         self.cancelButton.setFixedSize(100, 30)
@@ -805,8 +808,8 @@ Please review your template and notetype combination."""
         self.layout.setContentsMargins(2, 2, 2, 2)
         self.layout.setSpacing(2)
 
-    def getTemplateCB(self) -> QComboBox:
-        cb = QComboBox()
+    def getTemplateCB(self) -> qt.QComboBox:
+        cb = qt.QComboBox()
         cb.addItems(self.templates)
         current = self.config["currentTemplate"]
 
@@ -817,7 +820,7 @@ Please review your template and notetype combination."""
             cb.setCurrentText(current)
         return cb
 
-    def addImgs(self, word: str, imgs: str, thumbs: QWidget) -> None:
+    def addImgs(self, word: str, imgs: str, thumbs: qt.QWidget) -> None:
         self.focusWindow()
         defEntry = _Definition("Google Images", None, imgs, imgs)
         if defEntry in self.definitionList:
@@ -830,9 +833,9 @@ Please review your template and notetype combination."""
         self.definitionList.append(defEntry)
         rc = self.definitions.rowCount()
         self.definitions.setRowCount(rc + 1)
-        self.definitions.setItem(rc, 0, QTableWidgetItem("Google Images"))
+        self.definitions.setItem(rc, 0, qt.QTableWidgetItem("Google Images"))
         self.definitions.setCellWidget(rc, 1, thumbs)
-        deleteButton = QPushButton("X")
+        deleteButton = qt.QPushButton("X")
         deleteButton.setFixedWidth(40)
         deleteButton.clicked.connect(lambda: self.removeImgs(imgs))
         self.definitions.setCellWidget(rc, 2, deleteButton)
@@ -882,9 +885,9 @@ Please review your template and notetype combination."""
         self.definitionList.append(defEntry)
         rc = self.definitions.rowCount()
         self.definitions.setRowCount(rc + 1)
-        self.definitions.setItem(rc, 0, QTableWidgetItem(dictName))
-        self.definitions.setItem(rc, 1, QTableWidgetItem(shortDef))
-        deleteButton = QPushButton("X")
+        self.definitions.setItem(rc, 0, qt.QTableWidgetItem(dictName))
+        self.definitions.setItem(rc, 1, qt.QTableWidgetItem(shortDef))
+        deleteButton = qt.QPushButton("X")
         deleteButton.setFixedWidth(40)
         deleteButton.clicked.connect(self.removeDefinition)
         self.definitions.setCellWidget(rc, 2, deleteButton)
@@ -897,12 +900,12 @@ Please review your template and notetype combination."""
         self.imgPath = path
         if self.imageMap:
             self.imageMap.setText("")
-            screenshot = QPixmap(path)
+            screenshot = qt.QPixmap(path)
             screenshot = screenshot.scaled(
                 200,
                 200,
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
+                qt.Qt.AspectRatioMode.KeepAspectRatio,
+                qt.Qt.TransformationMode.SmoothTransformation,
             )
             self.imageMap.setPixmap(screenshot)
 
@@ -954,8 +957,8 @@ Please review your template and notetype combination."""
 
     def focusWindow(self) -> None:
         self.scrollArea.show()
-        if self.scrollArea.windowState() == Qt.WindowState.WindowMinimized:
-            self.scrollArea.setWindowState(Qt.WindowState.WindowNoState)
+        if self.scrollArea.windowState() == qt.Qt.WindowState.WindowMinimized:
+            self.scrollArea.setWindowState(qt.Qt.WindowState.WindowNoState)
         self.scrollArea.setFocus()
         self.scrollArea.activateWindow()
 
@@ -973,11 +976,11 @@ Please review your template and notetype combination."""
         return dictToTable
 
     def definitionSettingsWidget(self) -> None:
-        settingsWidget = QWidget(self.scrollArea, Qt.WindowType.Window)
-        layout = QVBoxLayout()
-        dict1 = QComboBox()
-        dict2 = QComboBox()
-        dict3 = QComboBox()
+        settingsWidget = qt.QWidget(self.scrollArea, qt.Qt.WindowType.Window)
+        layout = qt.QVBoxLayout()
+        dict1 = qt.QComboBox()
+        dict2 = qt.QComboBox()
+        dict3 = qt.QComboBox()
 
         dictToTable = self.getDictionaryNameToTableNameDictionary()
         dictNames = dictToTable.keys()
@@ -985,41 +988,41 @@ Please review your template and notetype combination."""
         dict2.addItems(dictNames)
         dict3.addItems(dictNames)
 
-        dict1Lay = QHBoxLayout()
-        dict1Lay.addWidget(QLabel("1st Dictionary:"))
+        dict1Lay = qt.QHBoxLayout()
+        dict1Lay.addWidget(qt.QLabel("1st Dictionary:"))
         dict1Lay.addStretch()
         dict1Lay.addWidget(dict1)
-        dict2Lay = QHBoxLayout()
-        dict2Lay.addWidget(QLabel("2nd Dictionary:"))
+        dict2Lay = qt.QHBoxLayout()
+        dict2Lay.addWidget(qt.QLabel("2nd Dictionary:"))
         dict2Lay.addStretch()
         dict2Lay.addWidget(dict2)
-        dict3Lay = QHBoxLayout()
-        dict3Lay.addWidget(QLabel("3rd Dictionary:"))
+        dict3Lay = qt.QHBoxLayout()
+        dict3Lay.addWidget(qt.QLabel("3rd Dictionary:"))
         dict3Lay.addStretch()
         dict3Lay.addWidget(dict3)
 
-        howMany1 = QSpinBox()
+        howMany1 = qt.QSpinBox()
         howMany1.setValue(1)
         howMany1.setMinimum(1)
         howMany1.setMaximum(20)
-        hmLay1 = QHBoxLayout()
-        hmLay1.addWidget(QLabel("Max Definitions:"))
+        hmLay1 = qt.QHBoxLayout()
+        hmLay1.addWidget(qt.QLabel("Max Definitions:"))
         hmLay1.addWidget(howMany1)
 
-        howMany2 = QSpinBox()
+        howMany2 = qt.QSpinBox()
         howMany2.setValue(1)
         howMany2.setMinimum(1)
         howMany2.setMaximum(20)
-        hmLay2 = QHBoxLayout()
-        hmLay2.addWidget(QLabel("Max Definitions:"))
+        hmLay2 = qt.QHBoxLayout()
+        hmLay2.addWidget(qt.QLabel("Max Definitions:"))
         hmLay2.addWidget(howMany2)
 
-        howMany3 = QSpinBox()
+        howMany3 = qt.QSpinBox()
         howMany3.setValue(1)
         howMany3.setMinimum(1)
         howMany3.setMaximum(20)
-        hmLay3 = QHBoxLayout()
-        hmLay3.addWidget(QLabel("Max Definitions:"))
+        hmLay3 = qt.QHBoxLayout()
+        hmLay3.addWidget(qt.QLabel("Max Definitions:"))
         hmLay3.addWidget(howMany3)
 
         layout.addLayout(dict1Lay)
@@ -1039,7 +1042,7 @@ Please review your template and notetype combination."""
                     dicts[idx].setCurrentText(dictName)
                     howManys[idx].setValue(limit)
 
-        save = QPushButton("Save Settings")
+        save = qt.QPushButton("Save Settings")
         layout.addWidget(save)
         layout.setContentsMargins(4, 4, 4, 4)
         save.clicked.connect(
@@ -1055,14 +1058,14 @@ Please review your template and notetype combination."""
         )
         settingsWidget.setWindowTitle("Definition Settings")
         settingsWidget.setWindowIcon(
-            QIcon(join(self.dictInt.addonPath, "icons", "migaku.png"))
+            qt.QIcon(join(self.dictInt.addonPath, "icons", "migaku.png"))
         )
         settingsWidget.setLayout(layout)
         settingsWidget.show()
 
     def saveDefinitionSettings(
         self,
-        settingsWidget: QWidget,
+        settingsWidget: qt.QWidget,
         dict1: str,
         limit1: int,
         dict2: str,
@@ -1402,18 +1405,18 @@ Please review your template and notetype combination."""
         progressWidget.setWindowTitle(title)
         self._progress_bar_closed_and_finished_importing[progressWidget] = False
         progressWidget.setWindowIcon(
-            QIcon(join(self.dictInt.addonPath, "icons", "migaku.png"))
+            qt.QIcon(join(self.dictInt.addonPath, "icons", "migaku.png"))
         )
 
         _center(progressWidget)
         progressWidget.setFixedSize(500, 100)
-        progressWidget.setWindowModality(Qt.WindowModality.ApplicationModal)
+        progressWidget.setWindowModality(qt.Qt.WindowModality.ApplicationModal)
         progressWidget.show()
         progressWidget.setFocus()
 
         if self.alwaysOnTop:
             progressWidget.setWindowFlags(
-                progressWidget.windowFlags() | Qt.WindowType.WindowStaysOnTopHint
+                progressWidget.windowFlags() | qt.Qt.WindowType.WindowStaysOnTopHint
             )
 
         progressWidget.request_stop_bulk_text_import.connect(_on_close)
@@ -1422,8 +1425,8 @@ Please review your template and notetype combination."""
         return progressWidget
 
 
-def _center(widget: QWidget) -> None:
-    screen = QGuiApplication.primaryScreen()
+def _center(widget: qt.QWidget) -> None:
+    screen = qt.QGuiApplication.primaryScreen()
 
     if not screen:
         raise RuntimeError(f'Cannot center "{widget}". No screen to center with.')

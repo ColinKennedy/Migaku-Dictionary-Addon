@@ -3,14 +3,14 @@ import typing
 from enum import Enum
 
 from anki.httpclient import HttpClient
-from aqt.qt import *
+from aqt import qt
 
 from . import typer, webConfig
 
 addon_path = os.path.dirname(__file__)
 
 
-class FreqConjWebWindow(QDialog):
+class FreqConjWebWindow(qt.QDialog):
 
     class Mode(Enum):
         Freq = (0,)
@@ -23,7 +23,7 @@ class FreqConjWebWindow(QDialog):
         dst_lang: str,
         index_data: typer.DictionaryLanguageIndex2Pack,
         mode: Mode,
-        parent: typing.Optional[QWidget] = None,
+        parent: typing.Optional[qt.QWidget] = None,
     ) -> None:
         super().__init__()
         self.dst_lang = dst_lang
@@ -31,18 +31,18 @@ class FreqConjWebWindow(QDialog):
         self.mode_str = "frequency" if self.mode == self.Mode.Freq else "conjugation"
 
         self.setWindowTitle("Migaku Dictionary - Web Installer")
-        self.setWindowIcon(QIcon(os.path.join(addon_path, "icons", "migaku.png")))
+        self.setWindowIcon(qt.QIcon(os.path.join(addon_path, "icons", "migaku.png")))
 
-        lyt = QVBoxLayout()
+        lyt = qt.QVBoxLayout()
         self.setLayout(lyt)
 
-        lbl = QLabel(
+        lbl = qt.QLabel(
             "Select the language you want to download %s data from" % self.mode_str
         )
         lbl.setWordWrap(True)
         lyt.addWidget(lbl)
 
-        self.lst = QListWidget()
+        self.lst = qt.QListWidget()
         lyt.addWidget(self.lst)
 
         for lang in index_data.get("languages") or []:
@@ -70,11 +70,11 @@ class FreqConjWebWindow(QDialog):
             if "name_native" in lang:
                 lang_str += " (" + lang["name_native"] + ")"
 
-            itm = QListWidgetItem(lang_str)
-            itm.setData(Qt.ItemDataRole.UserRole, url)
+            itm = qt.QListWidgetItem(lang_str)
+            itm.setData(qt.Qt.ItemDataRole.UserRole, url)
             self.lst.addItem(itm)
 
-        btn = QPushButton("Download")
+        btn = qt.QPushButton("Download")
         btn.clicked.connect(self.download)
         lyt.addWidget(btn)
 
@@ -84,19 +84,19 @@ class FreqConjWebWindow(QDialog):
         idx = self.lst.currentIndex()
 
         if not idx.isValid():
-            QMessageBox.information(
+            qt.QMessageBox.information(
                 self, self.windowTitle(), "Please select a language."
             )
 
             return
 
-        url = idx.data(Qt.ItemDataRole.UserRole)
+        url = idx.data(qt.Qt.ItemDataRole.UserRole)
 
         client = HttpClient()
         resp = client.get(url)
 
         if resp.status_code != 200:
-            QMessageBox.information(
+            qt.QMessageBox.information(
                 self,
                 self.windowTitle(),
                 "Downloading %s data failed." % self.mode_str,
@@ -121,7 +121,7 @@ class FreqConjWebWindow(QDialog):
             )
         else:
             msg = 'Imported conjugation data for "%s".' % self.dst_lang
-        QMessageBox.information(self, self.windowTitle(), msg)
+        qt.QMessageBox.information(self, self.windowTitle(), msg)
 
         self.accept()
 
@@ -130,18 +130,18 @@ class FreqConjWebWindow(QDialog):
         cls,
         dst_lang: str,
         mode: Mode,
-    ) -> typing.Union[QDialog.DialogCode, int]:
+    ) -> typing.Union[qt.QDialog.DialogCode, int]:
         index_data = webConfig.download_index()
 
         if index_data is None:
-            QMessageBox.information(
+            qt.QMessageBox.information(
                 None,
                 "Migaku Dictionary",
                 "The dictionary server is not reachable at the moment.\n\n"
                 "Please try again later.",
             )
 
-            return QDialog.DialogCode.Rejected
+            return qt.QDialog.DialogCode.Rejected
 
         window = cls(dst_lang, index_data, mode)
 

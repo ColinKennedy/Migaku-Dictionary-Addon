@@ -21,12 +21,11 @@ from anki import notes as notes_
 from anki.hooks import addHook, wrap
 from anki.utils import is_mac, is_win
 from aqt import editor as editor_
-from aqt import gui_hooks, mw
+from aqt import gui_hooks, mw, qt
 from aqt.addcards import AddCards
 from aqt.browser import browser as browser_
 from aqt.browser.previewer import Previewer
 from aqt.editcurrent import EditCurrent
-from aqt.qt import *
 from aqt.qt import debug
 from aqt.reviewer import Reviewer
 from aqt.tagedit import TagEdit
@@ -59,8 +58,8 @@ _MENU = None
 T = typing.TypeVar("T")
 
 
-class _ExporterBaseWidget(QWidget):
-    def closeEvent(self, event: typing.Optional[QCloseEvent]) -> None:
+class _ExporterBaseWidget(qt.QWidget):
+    def closeEvent(self, event: typing.Optional[qt.QCloseEvent]) -> None:
         _IS_EXPORTING_DEFINITIONS = False
 
         if event:
@@ -68,14 +67,14 @@ class _ExporterBaseWidget(QWidget):
 
 
 class _ProgressWidget(_ExporterBaseWidget):
-    def __init__(self, parent: typing.Optional[QWidget] = None) -> None:
+    def __init__(self, parent: typing.Optional[qt.QWidget] = None) -> None:
         super().__init__(parent=parent)
 
-        main_layout = QHBoxLayout()
+        main_layout = qt.QHBoxLayout()
         self.setLayout(main_layout)
 
-        self._bar = QProgressBar()
-        self._label = QLabel()
+        self._bar = qt.QProgressBar()
+        self._label = qt.QLabel()
 
         main_layout.addWidget(self._bar)
         main_layout.addWidget(self._label)
@@ -267,9 +266,9 @@ def window_loaded() -> None:
         settings.activateWindow()
 
     def initialize_menu() -> None:
-        menu = QMenu("Migaku", mw)
+        menu = qt.QMenu("Migaku", mw)
 
-        settings_action = QAction("Dictionary Settings", mw)
+        settings_action = qt.QAction("Dictionary Settings", mw)
         settings_action.triggered.connect(openDictionarySettings)
         menu.addAction(settings_action)
 
@@ -278,7 +277,7 @@ def window_loaded() -> None:
         if is_mac:
             shortcut = "⌘W"
 
-        open_dictionary_action = QAction(f"Open Dictionary {shortcut}", mw)
+        open_dictionary_action = qt.QAction(f"Open Dictionary {shortcut}", mw)
         open_dictionary_action.triggered.connect(midict.dictionaryInit)
         menu.addAction(open_dictionary_action)
 
@@ -328,16 +327,16 @@ def window_loaded() -> None:
     if _get_configuration()["globalHotkeys"]:
         initGlobalHotkeys()
 
-    hotkey = QShortcut(QKeySequence("Ctrl+W"), mw)
+    hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+W"), mw)
     hotkey.activated.connect(midict.dictionaryInit)
 
-    hotkey = QShortcut(QKeySequence("Ctrl+S"), mw)
+    hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+S"), mw)
     hotkey.activated.connect(lambda: migaku_search.searchTerm(mw.web))
-    hotkey = QShortcut(QKeySequence("Ctrl+Shift+B"), mw)
+    hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+Shift+B"), mw)
     hotkey.activated.connect(lambda: migaku_search.searchCol(mw.web))
 
-    def addToContextMenu(self: editor_.EditorWebView, menu: QMenu) -> None:
-        def _add_action(menu: QMenu, text: str) -> QAction:
+    def addToContextMenu(self: editor_.EditorWebView, menu: qt.QMenu) -> None:
+        def _add_action(menu: qt.QMenu, text: str) -> qt.QAction:
             if action := menu.addAction(text):
                 return action
 
@@ -356,15 +355,15 @@ def window_loaded() -> None:
 
         if notes:
             fields = anki.find.fieldNamesForNotes(mw.col, notes)
-            generateWidget = QDialog(None, Qt.WindowType.Window)
-            layout = QHBoxLayout()
-            origin = QComboBox()
+            generateWidget = qt.QDialog(None, Qt.WindowType.Window)
+            layout = qt.QHBoxLayout()
+            origin = qt.QComboBox()
             origin.addItems(fields)
-            addType = QComboBox()
+            addType = qt.QComboBox()
             addType.addItems(["Add", "Overwrite", "If Empty"])
-            dicts = QComboBox()
-            dict2 = QComboBox()
-            dict3 = QComboBox()
+            dicts = qt.QComboBox()
+            dict2 = qt.QComboBox()
+            dict3 = qt.QComboBox()
             dictDict = {}
             tempdicts = []
             database = dictdb.get()
@@ -383,7 +382,7 @@ def window_loaded() -> None:
             dictDict["Google Images"] = "Google Images"
             dictDict["Forvo"] = "Forvo"
             dictDict["None"] = "None"
-            ex = QPushButton("Execute")
+            ex = qt.QPushButton("Execute")
             ex.clicked.connect(
                 lambda: exportDefinitions(
                     origin.currentText(),
@@ -400,18 +399,18 @@ def window_loaded() -> None:
                     [dicts.currentText(), dict2.currentText(), dict3.currentText()],
                 )
             )
-            destination = QComboBox()
+            destination = qt.QComboBox()
             destination.addItems(fields)
-            howMany = QSpinBox()
+            howMany = qt.QSpinBox()
             howMany.setValue(1)
             howMany.setMinimum(1)
             howMany.setMaximum(20)
-            oLayout = QVBoxLayout()
-            oh1 = QHBoxLayout()
-            oh2 = QHBoxLayout()
-            oh1.addWidget(QLabel("Input Field:"))
+            oLayout = qt.QVBoxLayout()
+            oh1 = qt.QHBoxLayout()
+            oh2 = qt.QHBoxLayout()
+            oh1.addWidget(qt.QLabel("Input Field:"))
             oh1.addWidget(origin)
-            oh2.addWidget(QLabel("Output Field:"))
+            oh2.addWidget(qt.QLabel("Output Field:"))
             oh2.addWidget(destination)
             oLayout.addStretch()
             oLayout.addLayout(oh1)
@@ -419,21 +418,21 @@ def window_loaded() -> None:
             oLayout.addStretch()
             oLayout.setContentsMargins(6, 0, 6, 0)
             layout.addLayout(oLayout)
-            dlay = QHBoxLayout()
-            dlay.addWidget(QLabel("Dictionaries:"))
-            dictLay = QVBoxLayout()
+            dlay = qt.QHBoxLayout()
+            dlay.addWidget(qt.QLabel("Dictionaries:"))
+            dictLay = qt.QVBoxLayout()
             dictLay.addWidget(dicts)
             dictLay.addWidget(dict2)
             dictLay.addWidget(dict3)
             dlay.addLayout(dictLay)
             dlay.setContentsMargins(6, 0, 6, 0)
             layout.addLayout(dlay)
-            bLayout = QVBoxLayout()
-            bh1 = QHBoxLayout()
-            bh2 = QHBoxLayout()
-            bh1.addWidget(QLabel("Output Mode:"))
+            bLayout = qt.QVBoxLayout()
+            bh1 = qt.QHBoxLayout()
+            bh2 = qt.QHBoxLayout()
+            bh1.addWidget(qt.QLabel("Output Mode:"))
             bh1.addWidget(addType)
-            bh2.addWidget(QLabel("Max Per Dict:"))
+            bh2.addWidget(qt.QLabel("Max Per Dict:"))
             bh2.addWidget(howMany)
             bLayout.addStretch()
             bLayout.addLayout(bh1)
@@ -448,7 +447,9 @@ def window_loaded() -> None:
                 | Qt.WindowType.MSWindowsFixedSizeDialogHint
             )
             generateWidget.setWindowTitle("Migaku Dictionary: Export Definitions")
-            generateWidget.setWindowIcon(QIcon(join(addon_path, "icons", "migaku.png")))
+            generateWidget.setWindowIcon(
+                qt.QIcon(join(addon_path, "icons", "migaku.png"))
+            )
             generateWidget.setLayout(layout)
             config = _get_configuration()
             savedPreferences = config.get("massGenerationPreferences")
@@ -473,11 +474,11 @@ def window_loaded() -> None:
             )
 
     def getProgressWidgetDefs(
-        parent: typing.Optional[QWidget] = None,
+        parent: typing.Optional[qt.QWidget] = None,
     ) -> _ProgressWidget:
         progressWidget = _ProgressWidget(parent)
         progressWidget.setFixedSize(400, 70)
-        progressWidget.setWindowIcon(QIcon(join(addon_path, "icons", "migaku.png")))
+        progressWidget.setWindowIcon(qt.QIcon(join(addon_path, "icons", "migaku.png")))
         progressWidget.setWindowTitle("Generating Definitions...")
         progressWidget.setWindowModality(Qt.WindowModality.ApplicationModal)
 
@@ -490,7 +491,7 @@ def window_loaded() -> None:
         dictNs: list[str],
         howMany: int,
         notes: typing.Sequence[notes_.NoteId],
-        generateWidget: QWidget,
+        generateWidget: qt.QWidget,
         rawNames: list[str],
     ) -> None:
         config = _get_configuration()
@@ -600,7 +601,7 @@ def window_loaded() -> None:
             midict.dictionaryInit()
 
     def setupMenu(browser: browser_.Browser) -> None:
-        a = QAction("Export Definitions", browser)
+        a = qt.QAction("Export Definitions", browser)
         a.triggered.connect(lambda: exportDefinitionsWidget(browser))
         browser.form.menuEdit.addSeparator()
         browser.form.menuEdit.addAction(a)
@@ -679,7 +680,7 @@ def window_loaded() -> None:
 
     def addEditActivated(
         self: typing.Union[AddCards, EditCurrent],
-        event: typing.Optional[QMouseEvent] = None,
+        event: typing.Optional[qt.QMouseEvent] = None,
     ) -> None:
         dictionary = migaku_dictionary.get_visible_dictionary()
 
@@ -708,24 +709,24 @@ def window_loaded() -> None:
     AddCards.onHistory = wrap(AddCards.onHistory, addEditActivated)  # type: ignore[method-assign]
 
     def addHotkeys(self: editor_.Editor) -> None:
-        hotkey = QShortcut(QKeySequence("Ctrl+S"), self.parentWindow)
+        hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+S"), self.parentWindow)
         hotkey.activated.connect(lambda: migaku_search.searchTerm(self.web))
-        hotkey = QShortcut(QKeySequence("Ctrl+Shift+B"), self.parentWindow)
+        hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+Shift+B"), self.parentWindow)
         hotkey.activated.connect(lambda: migaku_search.searchCol(self.web))
-        hotkey = QShortcut(QKeySequence("Ctrl+W"), self.parentWindow)
+        hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+W"), self.parentWindow)
         hotkey.activated.connect(midict.dictionaryInit)
 
     def addHotkeysToPreview(self: Previewer) -> None:
-        hotkey = QShortcut(QKeySequence("Ctrl+S"), self._web)
+        hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+S"), self._web)
         hotkey.activated.connect(lambda: migaku_search.searchTerm(_verify(self._web)))
-        hotkey = QShortcut(QKeySequence("Ctrl+Shift+B"), self._web)
+        hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+Shift+B"), self._web)
         hotkey.activated.connect(lambda: migaku_search.searchCol(_verify(self._web)))
-        hotkey = QShortcut(QKeySequence("Ctrl+W"), self._web)
+        hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+W"), self._web)
         hotkey.activated.connect(midict.dictionaryInit)
 
     Previewer.open = wrap(Previewer.open, addHotkeysToPreview)  # type: ignore[method-assign]
 
-    def _get_parent_widget(widget: QWidget) -> QWidget:
+    def _get_parent_widget(widget: qt.QWidget) -> qt.QWidget:
         return _verify(widget.parentWidget())
 
     def addEditorFunctionality(self: editor_.Editor) -> None:
@@ -737,7 +738,7 @@ def window_loaded() -> None:
         return type(obj).__name__
 
     def announceParent(
-        self: TagEdit, event: typing.Optional[QFocusEvent] = None
+        self: TagEdit, event: typing.Optional[qt.QFocusEvent] = None
     ) -> None:
         dictionary = migaku_dictionary.get_visible_dictionary()
 

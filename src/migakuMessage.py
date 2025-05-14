@@ -8,8 +8,7 @@ from os.path import basename, dirname, exists, join
 import aqt
 import requests as req
 from anki.hooks import addHook
-from aqt import mw
-from aqt.qt import *
+from aqt import mw, qt
 from aqt.utils import openLink
 from aqt.webview import AnkiWebView
 
@@ -84,30 +83,30 @@ def getLatestVideos() -> tuple[typing.Optional[str], typing.Optional[str]]:
         return None, None
 
 
-def miMessage(text: str, parent: typing.Optional[QWidget] = None) -> bool:
+def miMessage(text: str, parent: typing.Optional[qt.QWidget] = None) -> bool:
     title = "Migaku"
 
     parent = parent or aqt.mw.app.activeWindow() or aqt.mw
 
-    icon = QIcon(join(addon_path, "icons", "migaku.png"))
-    mb = QMessageBox(parent)
+    icon = qt.QIcon(join(addon_path, "icons", "migaku.png"))
+    mb = qt.QMessageBox(parent)
     mb.setWindowIcon(icon)
     mb.setWindowTitle(title)
-    cb = QCheckBox("Don't show me the welcome screen again.")
+    cb = qt.QCheckBox("Don't show me the welcome screen again.")
     wv = AnkiWebView()
     page = _verify(wv.page())
     page._bridge.onCmd = attemptOpenLink
     wv.setFixedSize(680, 450)
     page.setHtml(text)
-    wide = QWidget()
+    wide = qt.QWidget()
     wide.setFixedSize(18, 18)
-    layout = typing.cast(QGridLayout, _verify(mb.layout()))
+    layout = typing.cast(qt.QGridLayout, _verify(mb.layout()))
     layout.addWidget(wv, 0, 1)
     layout.addWidget(wide, 0, 2)
     layout.setColumnStretch(0, 3)
     layout.addWidget(cb, 1, 1)
 
-    b = _verify(mb.addButton(QMessageBox.StandardButton.Ok))
+    b = _verify(mb.addButton(qt.QMessageBox.StandardButton.Ok))
     b.setFixedSize(100, 30)
     b.setDefault(True)
     mb.exec()

@@ -14,9 +14,7 @@ import zipfile
 from collections import abc
 
 import aqt
-from aqt import mw
-from aqt.qt import *
-from PyQt6.QtWidgets import QMessageBox
+from aqt import mw, qt
 
 from . import dictdb, typer
 from .dictionaryWebInstallWizard import DictionaryWebInstallWizard
@@ -150,82 +148,82 @@ class _FlatDictionary:
         self._star_count = getStarCount(self._frequency)
 
 
-class DictionaryManagerWidget(QWidget):
+class DictionaryManagerWidget(qt.QWidget):
 
-    def __init__(self, parent: typing.Optional[QWidget] = None) -> None:
+    def __init__(self, parent: typing.Optional[qt.QWidget] = None) -> None:
         super().__init__(parent)
 
-        lyt = QVBoxLayout()
+        lyt = qt.QVBoxLayout()
         lyt.setContentsMargins(0, 0, 0, 0)
         self.setLayout(lyt)
 
-        splitter = QSplitter()
+        splitter = qt.QSplitter()
         splitter.setChildrenCollapsible(False)
         lyt.addWidget(splitter)
 
-        left_side = QWidget()
+        left_side = qt.QWidget()
         splitter.addWidget(left_side)
-        left_lyt = QVBoxLayout()
+        left_lyt = qt.QVBoxLayout()
         left_side.setLayout(left_lyt)
 
-        self.dict_tree = QTreeWidget()
+        self.dict_tree = qt.QTreeWidget()
         self.dict_tree.setHeaderHidden(True)
         self.dict_tree.currentItemChanged.connect(self.on_current_item_change)
         left_lyt.addWidget(self.dict_tree)
 
-        add_lang_btn = QPushButton("Add a Language")
+        add_lang_btn = qt.QPushButton("Add a Language")
         add_lang_btn.clicked.connect(self.add_lang)
         left_lyt.addWidget(add_lang_btn)
 
-        web_installer_btn = QPushButton("Install Languages in Wizard")
+        web_installer_btn = qt.QPushButton("Install Languages in Wizard")
         web_installer_btn.clicked.connect(self.web_installer)
         left_lyt.addWidget(web_installer_btn)
 
-        right_side = QWidget()
+        right_side = qt.QWidget()
         splitter.addWidget(right_side)
-        right_lyt = QVBoxLayout()
+        right_lyt = qt.QVBoxLayout()
         right_side.setLayout(right_lyt)
 
-        self.lang_grp = QGroupBox("Language Options")
+        self.lang_grp = qt.QGroupBox("Language Options")
         right_lyt.addWidget(self.lang_grp)
 
-        lang_lyt = QVBoxLayout()
+        lang_lyt = qt.QVBoxLayout()
         self.lang_grp.setLayout(lang_lyt)
 
-        lang_lyt1 = QHBoxLayout()
-        lang_lyt2 = QHBoxLayout()
+        lang_lyt1 = qt.QHBoxLayout()
+        lang_lyt2 = qt.QHBoxLayout()
         lang_lyt.addLayout(lang_lyt2)
-        lang_lyt3 = QHBoxLayout()
+        lang_lyt3 = qt.QHBoxLayout()
         lang_lyt.addLayout(lang_lyt3)
-        lang_lyt4 = QHBoxLayout()
+        lang_lyt4 = qt.QHBoxLayout()
         lang_lyt.addLayout(lang_lyt4)
         lang_lyt.addLayout(lang_lyt1)
 
-        remove_lang_btn = QPushButton("Remove Language")
+        remove_lang_btn = qt.QPushButton("Remove Language")
         remove_lang_btn.clicked.connect(self.remove_lang)
         lang_lyt1.addWidget(remove_lang_btn)
 
-        web_installer_lang_btn = QPushButton("Install Dictionary in Wizard")
+        web_installer_lang_btn = qt.QPushButton("Install Dictionary in Wizard")
         web_installer_lang_btn.clicked.connect(self.web_installer_lang)
         lang_lyt2.addWidget(web_installer_lang_btn)
 
-        import_dict_btn = QPushButton("Install Dictionary From File")
+        import_dict_btn = qt.QPushButton("Install Dictionary From File")
         import_dict_btn.clicked.connect(self.import_dict)
         lang_lyt2.addWidget(import_dict_btn)
 
-        web_freq_data_btn = QPushButton("Install Frequency Data in Wizard")
+        web_freq_data_btn = qt.QPushButton("Install Frequency Data in Wizard")
         web_freq_data_btn.clicked.connect(self.web_freq_data)
         lang_lyt3.addWidget(web_freq_data_btn)
 
-        set_freq_data_btn = QPushButton("Install Frequency Data From File")
+        set_freq_data_btn = qt.QPushButton("Install Frequency Data From File")
         set_freq_data_btn.clicked.connect(self.set_freq_data)
         lang_lyt3.addWidget(set_freq_data_btn)
 
-        web_conj_data_btn = QPushButton("Install Conjugation Data in Wizard")
+        web_conj_data_btn = qt.QPushButton("Install Conjugation Data in Wizard")
         web_conj_data_btn.clicked.connect(self.web_conj_data)
         lang_lyt4.addWidget(web_conj_data_btn)
 
-        set_conj_data_btn = QPushButton("Install Conjugation Data From File")
+        set_conj_data_btn = qt.QPushButton("Install Conjugation Data From File")
         set_conj_data_btn.clicked.connect(self.set_conj_data)
         lang_lyt4.addWidget(set_conj_data_btn)
 
@@ -234,17 +232,17 @@ class DictionaryManagerWidget(QWidget):
         lang_lyt3.addStretch()
         lang_lyt4.addStretch()
 
-        self.dict_grp = QGroupBox("Dictionary Options")
+        self.dict_grp = qt.QGroupBox("Dictionary Options")
         right_lyt.addWidget(self.dict_grp)
 
-        dict_lyt = QHBoxLayout()
+        dict_lyt = qt.QHBoxLayout()
         self.dict_grp.setLayout(dict_lyt)
 
-        remove_dict_btn = QPushButton("Remove Dictionary")
+        remove_dict_btn = qt.QPushButton("Remove Dictionary")
         remove_dict_btn.clicked.connect(self.remove_dict)
         dict_lyt.addWidget(remove_dict_btn)
 
-        set_term_headers_btn = QPushButton("Edit Definition Header")
+        set_term_headers_btn = qt.QPushButton("Edit Definition Header")
         set_term_headers_btn.clicked.connect(self.set_term_header)
         dict_lyt.addWidget(set_term_headers_btn)
 
@@ -260,12 +258,12 @@ class DictionaryManagerWidget(QWidget):
         self.on_current_item_change(None, None)
 
     def info(self, text: str) -> int:
-        return QMessageBox.information(
-            self, "Migaku Dictionary", text, QMessageBox.StandardButton.Ok
+        return qt.QMessageBox.information(
+            self, "Migaku Dictionary", text, qt.QMessageBox.StandardButton.Ok
         )
 
     def get_string(self, text: str, default_text: str = "") -> tuple[str, int]:
-        dlg = QInputDialog(self)
+        dlg = qt.QInputDialog(self)
         dlg.setWindowTitle("Migaku Dictionary")
         dlg.setLabelText(text + ":")
         dlg.setTextValue(default_text)
@@ -290,18 +288,18 @@ class DictionaryManagerWidget(QWidget):
         self.dict_tree.clear()
 
         for lang in langs:
-            lang_item = QTreeWidgetItem([lang])
-            lang_item.setData(0, Qt.ItemDataRole.UserRole + 0, lang)
-            lang_item.setData(0, Qt.ItemDataRole.UserRole + 1, None)
+            lang_item = qt.QTreeWidgetItem([lang])
+            lang_item.setData(0, qt.Qt.ItemDataRole.UserRole + 0, lang)
+            lang_item.setData(0, qt.Qt.ItemDataRole.UserRole + 1, None)
 
             self.dict_tree.addTopLevelItem(lang_item)
 
             for d in dicts_by_langs.get(lang, []):
                 dict_name = db.cleanDictName(d)
                 dict_name = dict_name.replace("_", " ")
-                dict_item = QTreeWidgetItem([dict_name])
-                dict_item.setData(0, Qt.ItemDataRole.UserRole + 0, lang)
-                dict_item.setData(0, Qt.ItemDataRole.UserRole + 1, d)
+                dict_item = qt.QTreeWidgetItem([dict_name])
+                dict_item.setData(0, qt.Qt.ItemDataRole.UserRole + 0, lang)
+                dict_item.setData(0, qt.Qt.ItemDataRole.UserRole + 1, d)
                 lang_item.addChild(dict_item)
 
             lang_item.setExpanded(True)
@@ -323,12 +321,12 @@ class DictionaryManagerWidget(QWidget):
         dict_ = None
 
         if curr_item:
-            lang = curr_item.data(0, Qt.ItemDataRole.UserRole + 0)
-            dict_ = curr_item.data(0, Qt.ItemDataRole.UserRole + 1)
+            lang = curr_item.data(0, qt.Qt.ItemDataRole.UserRole + 0)
+            dict_ = curr_item.data(0, qt.Qt.ItemDataRole.UserRole + 1)
 
         return lang, dict_
 
-    def get_current_lang_item(self) -> typing.Optional[QTreeWidgetItem]:
+    def get_current_lang_item(self) -> typing.Optional[qt.QTreeWidgetItem]:
         curr_item = self.dict_tree.currentItem()
 
         if curr_item:
@@ -338,7 +336,7 @@ class DictionaryManagerWidget(QWidget):
 
         return curr_item
 
-    def get_current_dict_item(self) -> typing.Optional[QTreeWidgetItem]:
+    def get_current_dict_item(self) -> typing.Optional[qt.QTreeWidgetItem]:
 
         curr_item = self.dict_tree.currentItem()
 
@@ -372,9 +370,9 @@ class DictionaryManagerWidget(QWidget):
             self.info("Adding language failed.")
             return
 
-        lang_item = QTreeWidgetItem([name])
-        lang_item.setData(0, Qt.ItemDataRole.UserRole + 0, name)
-        lang_item.setData(0, Qt.ItemDataRole.UserRole + 1, None)
+        lang_item = qt.QTreeWidgetItem([name])
+        lang_item.setData(0, qt.Qt.ItemDataRole.UserRole + 0, name)
+        lang_item.setData(0, qt.Qt.ItemDataRole.UserRole + 1, None)
 
         self.dict_tree.addTopLevelItem(lang_item)
         self.dict_tree.setCurrentItem(lang_item)
@@ -385,17 +383,17 @@ class DictionaryManagerWidget(QWidget):
         lang_item = self.get_current_lang_item()
         if lang_item is None:
             return
-        lang_name = lang_item.data(0, Qt.ItemDataRole.UserRole + 0)
+        lang_name = lang_item.data(0, qt.Qt.ItemDataRole.UserRole + 0)
 
-        r = QMessageBox.question(
+        r = qt.QMessageBox.question(
             self,
             "Migaku Dictioanry",
             f'Do you really want to remove the language "{lang_name}"?\n\n'
             "All settings and dictionaries for it will be removed.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            qt.QMessageBox.StandardButton.Yes | qt.QMessageBox.StandardButton.No,
         )
 
-        if r != QMessageBox.StandardButton.Yes:
+        if r != qt.QMessageBox.StandardButton.Yes:
             return
 
         # Remove language from db
@@ -424,7 +422,7 @@ class DictionaryManagerWidget(QWidget):
         if lang_name is None:
             return
 
-        path = QFileDialog.getOpenFileName(
+        path = qt.QFileDialog.getOpenFileName(
             self,
             "Select the frequency list you want to import",
             os.path.expanduser("~"),
@@ -453,7 +451,7 @@ class DictionaryManagerWidget(QWidget):
         lang_item = self.get_current_lang_item()
         if lang_item is None:
             return
-        lang_name = lang_item.data(0, Qt.ItemDataRole.UserRole + 0)
+        lang_name = lang_item.data(0, qt.Qt.ItemDataRole.UserRole + 0)
 
         FreqConjWebWindow.execute_modal(lang_name, FreqConjWebWindow.Mode.Freq)
 
@@ -462,7 +460,7 @@ class DictionaryManagerWidget(QWidget):
         if lang_name is None:
             return
 
-        path = QFileDialog.getOpenFileName(
+        path = qt.QFileDialog.getOpenFileName(
             self,
             "Select the conjugation data you want to import",
             os.path.expanduser("~"),
@@ -488,7 +486,7 @@ class DictionaryManagerWidget(QWidget):
         lang_item = self.get_current_lang_item()
         if lang_item is None:
             return
-        lang_name = lang_item.data(0, Qt.ItemDataRole.UserRole + 0)
+        lang_name = lang_item.data(0, qt.Qt.ItemDataRole.UserRole + 0)
 
         FreqConjWebWindow.execute_modal(lang_name, FreqConjWebWindow.Mode.Conj)
 
@@ -496,9 +494,9 @@ class DictionaryManagerWidget(QWidget):
         lang_item = self.get_current_lang_item()
         if lang_item is None:
             return
-        lang_name = lang_item.data(0, Qt.ItemDataRole.UserRole + 0)
+        lang_name = lang_item.data(0, qt.Qt.ItemDataRole.UserRole + 0)
 
-        path = QFileDialog.getOpenFileName(
+        path = qt.QFileDialog.getOpenFileName(
             self,
             "Select the dictionary you want to import",
             os.path.expanduser("~"),
@@ -516,9 +514,9 @@ class DictionaryManagerWidget(QWidget):
             self.info(str(e))
             return
 
-        dict_item = QTreeWidgetItem([dict_name.replace("_", " ")])
-        dict_item.setData(0, Qt.ItemDataRole.UserRole + 0, lang_name)
-        dict_item.setData(0, Qt.ItemDataRole.UserRole + 1, dict_name)
+        dict_item = qt.QTreeWidgetItem([dict_name.replace("_", " ")])
+        dict_item.setData(0, qt.Qt.ItemDataRole.UserRole + 0, lang_name)
+        dict_item.setData(0, qt.Qt.ItemDataRole.UserRole + 1, dict_name)
 
         lang_item.addChild(dict_item)
         self.dict_tree.setCurrentItem(dict_item)
@@ -527,7 +525,7 @@ class DictionaryManagerWidget(QWidget):
         lang_item = self.get_current_lang_item()
         if lang_item is None:
             return
-        lang_name = lang_item.data(0, Qt.ItemDataRole.UserRole + 0)
+        lang_name = lang_item.data(0, qt.Qt.ItemDataRole.UserRole + 0)
 
         DictionaryWebInstallWizard.execute_modal(lang_name)
         self.reload_tree_widget()
@@ -538,20 +536,21 @@ class DictionaryManagerWidget(QWidget):
         dict_item = self.get_current_dict_item()
         if dict_item is None:
             return
-        dict_name = dict_item.data(0, Qt.ItemDataRole.UserRole + 1)
-        dict_display = dict_item.data(0, Qt.ItemDataRole.DisplayRole)
+        dict_name = dict_item.data(0, qt.Qt.ItemDataRole.UserRole + 1)
+        dict_display = dict_item.data(0, qt.Qt.ItemDataRole.DisplayRole)
 
-        dlg = QMessageBox(
-            QMessageBox.Icon.Question,
+        dlg = qt.QMessageBox(
+            qt.QMessageBox.Icon.Question,
             "Migaku Dictionary",
             f'Do you really want to remove the dictionary "{dict_display}"?',
-            buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            buttons=qt.QMessageBox.StandardButton.Yes
+            | qt.QMessageBox.StandardButton.No,
             parent=self,
         )
 
         r = dlg.exec()
 
-        if r != QMessageBox.StandardButton.Yes:
+        if r != qt.QMessageBox.StandardButton.Yes:
             return
 
         db.deleteDict(dict_name)

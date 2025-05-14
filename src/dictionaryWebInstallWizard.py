@@ -6,7 +6,7 @@ import typing
 
 import aqt
 from anki.httpclient import HttpClient
-from aqt.qt import *
+from aqt import qt
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QTextCursor
 
@@ -18,10 +18,10 @@ _LOGGER = logging.getLogger(__name__)
 T = typing.TypeVar("T")
 
 
-class NoAutoSelectLineEdit(QLineEdit):
+class NoAutoSelectLineEdit(qt.QLineEdit):
 
     # TODO: @ColinKennedy - Do I need return bool?
-    def focusInEvent(self, e: typing.Optional[QFocusEvent]) -> None:
+    def focusInEvent(self, e: typing.Optional[qt.QFocusEvent]) -> None:
         super().focusInEvent(e)
 
         self.deselect()
@@ -34,7 +34,7 @@ class DictionaryWebInstallWizard(migaku_wizard.MiWizard):
     def __init__(
         self,
         force_lang: typing.Optional[str] = None,
-        parent: typing.Optional[QWidget] = None,
+        parent: typing.Optional[qt.QWidget] = None,
     ) -> None:
         super().__init__(parent)
 
@@ -48,7 +48,7 @@ class DictionaryWebInstallWizard(migaku_wizard.MiWizard):
         self.dictionary_server_root: typing.Optional[str] = None
 
         self.setWindowTitle("Migaku Dictionary - Web Installer")
-        self.setWindowIcon(QIcon(os.path.join(addon_path, "icons", "migaku.png")))
+        self.setWindowIcon(qt.QIcon(os.path.join(addon_path, "icons", "migaku.png")))
 
         server_add_page = self.add_page(ServerAskPage(self))
         dict_select_page = self.add_page(DictionarySelectPage(self), server_add_page)
@@ -70,26 +70,26 @@ class ServerAskPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard]):
 
         self.title = "Select Dictionary Server"
 
-        lyt = QVBoxLayout()
+        lyt = qt.QVBoxLayout()
         self.setLayout(lyt)
 
         lyt.addStretch()
 
-        lbl = QLabel(
+        lbl = qt.QLabel(
             "Our dictionary server contains several free, open source dictionaries.\n\n"
             "You can also select a custom server to install other 3rd party dictionaries.\n"
         )
         lbl.setWordWrap(True)
         lyt.addWidget(lbl)
 
-        server_lyt = QHBoxLayout()
+        server_lyt = qt.QHBoxLayout()
         lyt.addLayout(server_lyt)
 
         self.server_line = NoAutoSelectLineEdit()
         self.server_line.setPlaceholderText("Insert Dictionary Server Address")
         server_lyt.addWidget(self.server_line)
 
-        self.server_reset_btn = QPushButton("Default")
+        self.server_reset_btn = qt.QPushButton("Default")
         server_lyt.addWidget(self.server_reset_btn)
 
         lyt.addStretch()
@@ -111,7 +111,7 @@ class ServerAskPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard]):
         index_data = webConfig.download_index(server_url)
 
         if index_data is None:
-            QMessageBox.information(
+            qt.QMessageBox.information(
                 self,
                 "Migaku Dictioanry",
                 'The server "%s" is not reachable.\n\n'
@@ -133,21 +133,21 @@ class DictionarySelectPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard
 
         self.title = "Select the dictionaries you want to install"
 
-        lyt = QVBoxLayout()
+        lyt = qt.QVBoxLayout()
         self.setLayout(lyt)
 
-        self.dict_tree = QTreeWidget()
+        self.dict_tree = qt.QTreeWidget()
         self.dict_tree.setHeaderHidden(True)
         lyt.addWidget(self.dict_tree)
 
-        options_lyt = QHBoxLayout()
+        options_lyt = qt.QHBoxLayout()
         lyt.addLayout(options_lyt)
 
-        self.install_freq = QCheckBox("Install Language Frequency Data")
+        self.install_freq = qt.QCheckBox("Install Language Frequency Data")
         self.install_freq.setChecked(True)
         options_lyt.addWidget(self.install_freq)
 
-        self.install_conj = QCheckBox("Install Language Conjugation Data")
+        self.install_conj = qt.QCheckBox("Install Language Conjugation Data")
         self.install_conj.setChecked(True)
         options_lyt.addWidget(self.install_conj)
 
@@ -174,7 +174,7 @@ class DictionarySelectPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard
 
             dictionaries: list[typer.IndexDictionary] = []
 
-            def scan_tree(item: QTreeWidgetItem) -> None:
+            def scan_tree(item: qt.QTreeWidgetItem) -> None:
                 for di in range(item.childCount()):
                     dict_item = _verify(item.child(di))
                     dictionary = typing.cast(
@@ -227,7 +227,7 @@ class DictionarySelectPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard
             if name_native:
                 text += " (" + name_native + ")"
 
-            lang_item = QTreeWidgetItem([text])
+            lang_item = qt.QTreeWidgetItem([text])
             lang_item.setData(0, Qt.ItemDataRole.UserRole + 0, language)
             lang_item.setData(0, Qt.ItemDataRole.UserRole + 1, None)
 
@@ -235,7 +235,7 @@ class DictionarySelectPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard
 
             def load_dict_list(
                 dictionaries: typing.Iterable[typer.IndexDictionary],
-                parent_item: QTreeWidgetItem,
+                parent_item: qt.QTreeWidgetItem,
             ) -> None:
                 for dictionary in dictionaries:
                     dictionary_name = dictionary["name"]
@@ -248,7 +248,7 @@ class DictionarySelectPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard
                     if dictionary_description:
                         dictionary_text += " - " + dictionary_description
 
-                    dict_item = QTreeWidgetItem([dictionary_text])
+                    dict_item = qt.QTreeWidgetItem([dictionary_text])
                     dict_item.setCheckState(0, Qt.CheckState.Unchecked)
                     dict_item.setData(0, Qt.ItemDataRole.UserRole + 0, None)
                     dict_item.setData(0, Qt.ItemDataRole.UserRole + 1, dictionary)
@@ -266,7 +266,7 @@ class DictionarySelectPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizard
                 if to_name_native:
                     text += " (" + to_name_native + ")"
 
-                to_lang_item = QTreeWidgetItem([text])
+                to_lang_item = qt.QTreeWidgetItem([text])
                 to_lang_item.setData(0, Qt.ItemDataRole.UserRole + 0, None)
                 to_lang_item.setData(0, Qt.ItemDataRole.UserRole + 1, None)
 
@@ -295,10 +295,10 @@ class DictionaryConfirmPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizar
         self.next_enabled = True
         self.next_text = "Confirm"
 
-        lyt = QVBoxLayout()
+        lyt = qt.QVBoxLayout()
         self.setLayout(lyt)
 
-        self.box = QTextEdit()
+        self.box = qt.QTextEdit()
         self.box.setReadOnly(True)
         lyt.addWidget(self.box)
 
@@ -381,16 +381,16 @@ class DictionaryInstallPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizar
         if self.is_last_page:
             self.next_text = "Finish"
 
-        lyt = QVBoxLayout()
+        lyt = qt.QVBoxLayout()
         self.setLayout(lyt)
 
-        self.progress_bar = QProgressBar()
+        self.progress_bar = qt.QProgressBar()
         self.progress_bar.setMinimum(0)
         self.progress_bar.setMaximum(100)
         self.progress_bar.setValue(0)
         lyt.addWidget(self.progress_bar)
 
-        self.log_box = QPlainTextEdit()
+        self.log_box = qt.QPlainTextEdit()
         self.log_box.setReadOnly(True)
         lyt.addWidget(self.log_box)
 
@@ -411,14 +411,14 @@ class DictionaryInstallPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizar
 
     def on_cancel(self) -> bool:
         if self.install_thread and self.install_thread.isRunning():
-            r = QMessageBox.question(
+            r = qt.QMessageBox.question(
                 self,
                 "Migaku Dictioanry",
                 "Do you really want to cancel the import process?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                qt.QMessageBox.StandardButton.Yes | qt.QMessageBox.StandardButton.No,
             )
 
-            if r != QMessageBox.StandardButton.Yes:
+            if r != qt.QMessageBox.StandardButton.Yes:
                 return False
 
             self.install_thread.cancel_requested = True
@@ -476,10 +476,10 @@ class DictionaryInstallPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizar
         self.refresh_wizard_states()
 
 
-class InstallThread(QThread):
+class InstallThread(qt.QThread):
 
-    progress_update = pyqtSignal(int)
-    log_update = pyqtSignal(str)
+    progress_update = qt.pyqtSignal(int)
+    log_update = qt.pyqtSignal(str)
 
     def __init__(
         self,
@@ -488,7 +488,7 @@ class InstallThread(QThread):
         install_freq: bool,
         install_conj: bool,
         force_lang: typing.Optional[str] = None,
-        parent: typing.Optional[QObject] = None,
+        parent: typing.Optional[qt.QObject] = None,
     ) -> None:
         super().__init__(parent)
 
