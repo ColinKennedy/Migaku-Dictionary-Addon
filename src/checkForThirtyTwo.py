@@ -6,7 +6,7 @@ from aqt.utils import openLink
 from .miutils import miAsk
 
 
-def checkForThirtyTwo() -> None:
+def _checkForThirtyTwo() -> None:
     if is_win or is_mac:
         qVer = qt.QT_VERSION_STR
         invalid = ["5.12.6", "5.9.7"]
@@ -17,4 +17,4 @@ def checkForThirtyTwo() -> None:
 
 
 def initialize() -> None:
-    addHook("profileLoaded", checkForThirtyTwo)
+    addHook("profileLoaded", _checkForThirtyTwo)

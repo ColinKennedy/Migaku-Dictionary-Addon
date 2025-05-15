@@ -14,7 +14,7 @@ from aqt.qt import QObject, QRunnable, pyqtSignal
 from aqt.utils import showInfo
 from bs4 import BeautifulSoup
 
-countryCodes = {
+_COUNTRY_CODES = {
     "Afghanistan": "countryAF",
     "Albania": "countryAL",
     "Algeria": "countryDZ",
@@ -260,7 +260,7 @@ countryCodes = {
 }
 
 
-class GoogleSignals(QObject):
+class _GoogleSignals(QObject):
     resultsFound = pyqtSignal(list)
     noResults = pyqtSignal(str)
     finished = pyqtSignal()
@@ -273,14 +273,15 @@ class Google(QRunnable):
     def __init__(self) -> None:
         super().__init__()
 
-        self.GOOGLE_SEARCH_URL = "https://www.google.com/search"
-        self.term: typing.Optional[str] = None
-        self.signals = GoogleSignals()
-        self.initSession()
+        self._GOOGLE_SEARCH_URL = "https://www.google.com/search"
+        self._term: typing.Optional[str] = None
+        self._session = requests.session()
+        self._safeSearch = False
+        self.signals = _GoogleSignals()
+        self._initSession()
 
-    def initSession(self) -> None:
-        self.session = requests.session()
-        self.session.headers.update(
+    def _initSession(self) -> None:
+        self._session.headers.update(
             {
                 "User-Agent": "Mozilla/5.0 (Linux; Android 9; SM-G960F "
                 "Build/PPR1.180610.011; wv) AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -288,44 +289,21 @@ class Google(QRunnable):
             }
         )
 
-    def setTermIdName(self, term: str, idName: str) -> None:
-        self.term = term
-        self.idName = idName
-
-    def run(self) -> None:
-        if self.term:
-            resultList = self.getPreparedResults(self.term, self.idName)
-            self.signals.resultsFound.emit(resultList)
-        self.signals.finished.emit()
-
-    def search(
-        self, keyword: str, maximum: int, region: str = ""
-    ) -> typing.Optional[list[str]]:
-        query = self.query_gen(keyword)
-
-        return self.image_search(query, maximum, region)
-
-    def query_gen(self, keyword: str) -> typing.Generator[str, None, None]:
+    def _query_gen(self, keyword: str) -> typing.Generator[str, None, None]:
         page = 0
         while True:
             queryDict = {"q": keyword, "tbm": "isch"}
-            if self.safeSearch:
+            if self._safeSearch:
                 queryDict["safe"] = "active"
             params = urllib.parse.urlencode(queryDict)
             if self.region == "Japan":
                 url = "https://www.google.co.jp/search"
             else:
-                url = self.GOOGLE_SEARCH_URL
+                url = self._GOOGLE_SEARCH_URL
             yield url + "?" + params
             page += 1
 
-    def setSearchRegion(self, region: str) -> None:
-        self.region = region
-
-    def setSafeSearch(self, safe: bool) -> None:
-        self.safeSearch = safe
-
-    def getResultsFromRawHtml(self, html: str) -> list[str]:
+    def _getResultsFromRawHtml(self, html: str) -> list[str]:
         pattern = r"AF_initDataCallback[\s\S]+AF_initDataCallback\({key: '[\s\S]+?',[\s\S]+?data:(\[[\s\S]+\])[\s\S]+?<\/script><script id="
         matches = re.findall(pattern, html)
         results: list[str] = []
@@ -341,7 +319,7 @@ class Google(QRunnable):
             # TODO: @ColinKennedy - Adjust try/except
             return []
 
-    def getHtml(self, term: str) -> str:
+    def _getHtml(self, term: str) -> str:
         images = self.search(term, 80)
 
         if not images or len(images) < 1:
@@ -376,20 +354,17 @@ class Google(QRunnable):
             )
         html += (
             '</div><button class="imageLoader" onclick="loadMoreImages(this, \\\''
-            + "\\' , \\'".join(self.getCleanedUrls(images))
+            + "\\' , \\'".join(_getCleanedUrls(images))
             + "\\')\">Load More</button>"
         )
         return html
 
-    def getPreparedResults(self, term: str, idName: str) -> list[str]:
-        html = self.getHtml(term)
+    def _getPreparedResults(self, term: str, idName: str) -> list[str]:
+        html = self._getHtml(term)
 
         return [html, idName]
 
-    def getCleanedUrls(self, urls: typing.Iterable[str]) -> list[str]:
-        return [x.replace("\\", "\\\\") for x in urls]
-
-    def image_search(
+    def _image_search(
         self,
         query_gen: typing.Iterator[str],
         maximum: int,
@@ -397,7 +372,7 @@ class Google(QRunnable):
     ) -> typing.Optional[list[str]]:
         results: list[str] = []
         if not region:
-            region = countryCodes[self.region]
+            region = _COUNTRY_CODES[self.region]
         total = 0
         finished = False
         while True:
@@ -405,13 +380,13 @@ class Google(QRunnable):
                 count = 0
                 while not finished:
                     count += 1
-                    hr = self.session.get(next(query_gen) + "&ijn=0&cr=" + region)
+                    hr = self._session.get(next(query_gen) + "&ijn=0&cr=" + region)
                     html = hr.text
                     if not html and not "<!doctype html>" in html:
                         if count > 5:
                             finished = True
                             break
-                        self.initSession()
+                        self._initSession()
                         time.sleep(0.1)
                     else:
                         finished = True
@@ -421,7 +396,7 @@ class Google(QRunnable):
                     "The Google Image Dictionary could not establish a connection. Please ensure you are connected to the internet and try again. If you will be without internet for some time, consider using a template that does not include the Google Images Dictionary in order to prevent this message appearing everytime a search is performed. "
                 )
                 return None
-            results = self.getResultsFromRawHtml(html)
+            results = self._getResultsFromRawHtml(html)
             if len(results) == 0:
                 soup = BeautifulSoup(html, "html.parser")
                 elements = soup.select(".rg_meta.notranslate")
@@ -440,6 +415,26 @@ class Google(QRunnable):
             else:
                 break
         return results
+
+    def search(
+        self, keyword: str, maximum: int, region: str = ""
+    ) -> typing.Optional[list[str]]:
+        query = self._query_gen(keyword)
+
+        return self._image_search(query, maximum, region)
+
+    def setSearchRegion(self, region: str) -> None:
+        self.region = region
+
+    def setSafeSearch(self, safe: bool) -> None:
+        self._safeSearch = safe
+
+    def setTermIdName(self, term: str, idName: str) -> None:
+        self._term = term
+
+
+def _getCleanedUrls(urls: typing.Iterable[str]) -> list[str]:
+    return [x.replace("\\", "\\\\") for x in urls]
 
 
 def search(target: str, number: int) -> list[str]:

@@ -26,9 +26,9 @@ class FreqConjWebWindow(qt.QDialog):
         parent: typing.Optional[qt.QWidget] = None,
     ) -> None:
         super().__init__()
-        self.dst_lang = dst_lang
-        self.mode = mode
-        self.mode_str = "frequency" if self.mode == self.Mode.Freq else "conjugation"
+        self._dst_lang = dst_lang
+        self._mode = mode
+        self._mode_str = "frequency" if self._mode == self.Mode.Freq else "conjugation"
 
         self.setWindowTitle("Migaku Dictionary - Web Installer")
         self.setWindowIcon(qt.QIcon(os.path.join(addon_path, "icons", "migaku.png")))
@@ -37,13 +37,13 @@ class FreqConjWebWindow(qt.QDialog):
         self.setLayout(lyt)
 
         lbl = qt.QLabel(
-            "Select the language you want to download %s data from" % self.mode_str
+            "Select the language you want to download %s data from" % self._mode_str
         )
         lbl.setWordWrap(True)
         lyt.addWidget(lbl)
 
-        self.lst = qt.QListWidget()
-        lyt.addWidget(self.lst)
+        self._lst = qt.QListWidget()
+        lyt.addWidget(self._lst)
 
         for lang in index_data.get("languages") or []:
             url = lang.get(
@@ -52,7 +52,7 @@ class FreqConjWebWindow(qt.QDialog):
                         typing.Literal["conjugation_url"],
                         typing.Literal["frequency_url"],
                     ],
-                    self.mode_str + "_url",
+                    self._mode_str + "_url",
                 )
             )
 
@@ -72,16 +72,16 @@ class FreqConjWebWindow(qt.QDialog):
 
             itm = qt.QListWidgetItem(lang_str)
             itm.setData(qt.Qt.ItemDataRole.UserRole, url)
-            self.lst.addItem(itm)
+            self._lst.addItem(itm)
 
         btn = qt.QPushButton("Download")
-        btn.clicked.connect(self.download)
+        btn.clicked.connect(self._download)
         lyt.addWidget(btn)
 
         self.setMinimumSize(*self.MIN_SIZE)
 
-    def download(self) -> None:
-        idx = self.lst.currentIndex()
+    def _download(self) -> None:
+        idx = self._lst.currentIndex()
 
         if not idx.isValid():
             qt.QMessageBox.information(
@@ -99,28 +99,28 @@ class FreqConjWebWindow(qt.QDialog):
             qt.QMessageBox.information(
                 self,
                 self.windowTitle(),
-                "Downloading %s data failed." % self.mode_str,
+                "Downloading %s data failed." % self._mode_str,
             )
 
             return
 
         data = client.stream_content(resp)
 
-        dir_path = os.path.join(addon_path, "user_files", "db", self.mode_str)
+        dir_path = os.path.join(addon_path, "user_files", "db", self._mode_str)
         os.makedirs(dir_path, exist_ok=True)
 
-        dst_path = os.path.join(dir_path, "%s.json" % self.dst_lang)
+        dst_path = os.path.join(dir_path, "%s.json" % self._dst_lang)
 
         with open(dst_path, "wb") as f:
             f.write(data)
 
-        if self.mode == self.Mode.Freq:
+        if self._mode == self.Mode.Freq:
             msg = (
                 'Imported frequency data for "%s".\n\nNote that the frequency data is only applied to newly imported dictionaries for this language.'
-                % self.dst_lang
+                % self._dst_lang
             )
         else:
-            msg = 'Imported conjugation data for "%s".' % self.dst_lang
+            msg = 'Imported conjugation data for "%s".' % self._dst_lang
         qt.QMessageBox.information(self, self.windowTitle(), msg)
 
         self.accept()

@@ -12,17 +12,17 @@ class miJHandler:
     def __init__(self, mw: main.AnkiQt) -> None:
         super().__init__()
 
-        self.mw = mw
-        self.activeNotes = self.getActiveNotes()
+        self._mw = mw
+        self._activeNotes = self._getActiveNotes()
 
-    def getActiveNotes(self) -> dict[str, list[str]]:
-        if not hasattr(self.mw, "CSSJSHandler"):
+    def _getActiveNotes(self) -> dict[str, list[str]]:
+        if not hasattr(self._mw, "CSSJSHandler"):
             # TODO: @ColinKennedy - add logging
             return {}
 
         # TODO: @ColinKennedy - This type-cast is a total guess. Check later.
         activeNotes: dict[str, list[str]]
-        activeNotes, _ = self.mw.CSSJSHandler.getWrapperDict()
+        activeNotes, _ = self._mw.CSSJSHandler.getWrapperDict()
 
         for noteType in activeNotes:
             activeNotes[noteType] = list(
@@ -35,19 +35,19 @@ class miJHandler:
         # TODO: @ColinKennedy - fetchParsedField doesn't exist. And the git
         # history says it never did. So this method can probably be removed.
         #
-        # note[field] = self.mw.Exporter.fetchParsedField(note[field], note)
-        # if self.activeNotes:
+        # note[field] = self._mw.Exporter.fetchParsedField(note[field], note)
+        # if self._activeNotes:
         # 	model = note.note_type()
         #
         # 	if not model:
         # 		raise RuntimeError(f'Note "{note}" has no note type.')
         #
-        # 	fields = self.mw.col.models.field_names(model)
+        # 	fields = self._mw.col.models.field_names(model)
         #
-        # 	if model['name'] in self.activeNotes:
+        # 	if model['name'] in self._activeNotes:
         # 		for field in fields:
-        # 			if field in self.activeNotes[model['name']] and note[field] != '':
-        # 				note[field] = self.mw.Exporter.fetchParsedField(note[field], note)
+        # 			if field in self._activeNotes[model['name']] and note[field] != '':
+        # 				note[field] = self._mw.Exporter.fetchParsedField(note[field], note)
         #
         return note
 
@@ -57,9 +57,9 @@ class miJHandler:
         # TODO: @ColinKennedy - fetchParsedField doesn't exist. And the git
         # history says it never did. So this method can probably be removed.
         #
-        # if self.activeNotes:
-        # 	if model in self.activeNotes:
-        # 		if field in self.activeNotes[model]:
-        # 			text = self.mw.Exporter.fetchParsedField(text, note)
+        # if self._activeNotes:
+        # 	if model in self._activeNotes:
+        # 		if field in self._activeNotes[model]:
+        # 			text = self._mw.Exporter.fetchParsedField(text, note)
         #
         return text
