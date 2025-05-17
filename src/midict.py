@@ -16,48 +16,37 @@ import shutil
 import sys
 import time
 import typing
-import urllib.request
-from os.path import dirname, exists, join
-from shutil import copyfile
-from urllib.request import Request, urlopen
+from urllib import request as request_
 
 import aqt
 import requests
-from anki.hooks import runHook
+from anki import utils
 from anki.lang import _
-from anki.utils import is_lin, is_mac, is_win
+from aqt import editor as editor_
 from aqt import gui_hooks, main, qt
-from aqt.editor import Editor
-from aqt.reviewer import Reviewer
-from aqt.utils import (
-    askUser,
-    ensureWidgetInScreenBoundaries,
-    openLink,
-    saveGeom,
-    saveSplitter,
-    shortcut,
-    showInfo,
-    tooltip,
-)
-from aqt.webview import AnkiWebView
+from aqt import reviewer as reviewer_
+from aqt import utils as aqt_utils
+from aqt import webview
 from pynput import keyboard
-from PyQt6.QtSvgWidgets import QSvgWidget
+from PyQt6 import QtSvgWidgets
 
+from . import (
+    addonSettings,
+    cardExporter,
+)
 from . import dictdb as dictdb_
 from . import (
+    forvodl,
     googleimages,
+    history,
     migaku_configuration,
     migaku_search,
     migaku_settings,
+    miJapaneseHandler,
+    miutils,
     typer,
     welcomer,
 )
-from .addonSettings import SettingsGui
-from .cardExporter import CardExporter
-from .forvodl import Forvo
-from .history import HistoryBrowser, HistoryModel
-from .miJapaneseHandler import miJHandler
-from .miutils import miInfo
 
 # TODO: @ColinKennedy - Clean these imports later
 
@@ -80,7 +69,7 @@ class _AddTypeGroup(typing.TypedDict):
     type: typer.AddType
 
 
-class MIDict(AnkiWebView):
+class MIDict(webview.AnkiWebView):
 
     def __init__(
         self,
@@ -89,8 +78,10 @@ class MIDict(AnkiWebView):
         path: str,
         day: bool,
         terms: typing.Optional[list[str]] = None,
+        parent: typing.Optional[qt.QWidget] = None,
     ) -> None:
-        AnkiWebView.__init__(self)
+        super().__init__(parent=parent)
+
         _verify(_verify(self.page()).profile()).setHttpUserAgent(
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36"
         )
@@ -119,17 +110,17 @@ class MIDict(AnkiWebView):
 
         self.deinflect = True
         self.onBridgeCmd = self._handleDictAction  # NOTE: This name comes from aqt
-        self.addWindow: typing.Optional[CardExporter] = None
-        self.currentEditor: typing.Optional[Editor] = None
-        self.reviewer: typing.Optional[Reviewer] = None
+        self.addWindow: typing.Optional[cardExporter.CardExporter] = None
+        self.currentEditor: typing.Optional[editor_.Editor] = None
+        self.reviewer: typing.Optional[reviewer_.Reviewer] = None
 
         gui_hooks.editor_did_init.append(self._on_editor_loaded)
 
-    def _checkEditorClose(self, editor: Editor) -> None:
+    def _checkEditorClose(self, editor: editor_.Editor) -> None:
         if self.currentEditor == editor:
             self.closeEditor()
 
-    def _on_editor_loaded(self, editor: Editor) -> None:
+    def _on_editor_loaded(self, editor: editor_.Editor) -> None:
         self.currentEditor = editor
 
     def _resetConfiguration(self, config: typer.Configuration) -> None:
@@ -139,7 +130,7 @@ class MIDict(AnkiWebView):
         self._maxH = self.config["maxHeight"]
 
     def _showGoogleForvoMessage(self, message: str) -> None:
-        miInfo(message, level="err")
+        miutils.miInfo(message, level="err")
 
     def _loadImageResults(self, results: tuple[str, str]) -> None:
         html, idName = results
@@ -175,11 +166,11 @@ class MIDict(AnkiWebView):
         langs = self.db.getCurrentDbLangs()
         conjugations: dict[str, list[typer.Conjugation]] = {}
         for lang in langs:
-            filePath = join(
+            filePath = os.path.join(
                 self._homeDir, "user_files", "db", "conjugation", "%s.json" % lang
             )
             if not os.path.exists(filePath):
-                filePath = join(
+                filePath = os.path.join(
                     self._homeDir,
                     "user_files",
                     "dictionaries",
@@ -485,7 +476,7 @@ class MIDict(AnkiWebView):
         return html.replace("'", "\\'")
 
     def _attemptFetchForvo(self, term: str, idName: str) -> str:
-        forvo = Forvo(self.config["ForvoLanguage"])
+        forvo = forvodl.Forvo(self.config["ForvoLanguage"])
         forvo.setTermIdName(term, idName)
         forvo.signals.resultsFound.connect(self._loadForvoResults)
         forvo.signals.noResults.connect(self._showGoogleForvoMessage)
@@ -710,7 +701,7 @@ class MIDict(AnkiWebView):
                     + re.sub(r"\..*$", "", url.strip().split("/")[-1])
                     + ".jpg"
                 )
-                fullpath = join(self._dictInt.mw.col.media.dir(), filename)
+                fullpath = os.path.join(self._dictInt.mw.col.media.dir(), filename)
                 self._saveQImage(imgurl, filename)
                 rawPaths.append(fullpath)
                 imgs.append('<img src="' + filename + '">')
@@ -723,13 +714,13 @@ class MIDict(AnkiWebView):
             )
 
     def _saveQImage(self, url: str, filename: str) -> None:
-        req = Request(
+        req = request_.Request(
             url,
             headers={
                 "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36"
             },
         )
-        file = urlopen(req).read()
+        file = request_.urlopen(req).read()
         image = qt.QImage()
         image.loadFromData(file)
         image = image.scaled(
@@ -773,7 +764,7 @@ class MIDict(AnkiWebView):
 
     def _initCardExporterIfNeeded(self) -> None:
         if not self.addWindow:
-            self.addWindow = CardExporter(self._dictInt)
+            self.addWindow = cardExporter.CardExporter(self._dictInt)
 
     def _getFieldContent(self, fContent: str, definition: str, addType: str) -> str:
         fieldText = ""
@@ -811,15 +802,17 @@ class MIDict(AnkiWebView):
         for url in urls:
             # TODO: @ColinKennedy - try/except
             try:
-                req = Request(
+                req = request_.Request(
                     url,
                     headers={
                         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36"
                     },
                 )
-                file = urlopen(req).read()
+                file = request_.urlopen(req).read()
                 filename = str(time.time()) + ".mp3"
-                open(join(self._dictInt.mw.col.media.dir(), filename), "wb").write(file)
+                open(
+                    os.path.join(self._dictInt.mw.col.media.dir(), filename), "wb"
+                ).write(file)
                 tags.append("[sound:" + filename + "]")
             except:
                 continue
@@ -1170,7 +1163,7 @@ class MIDict(AnkiWebView):
     def loadHTMLURL(self, html: str, url: qt.QUrl) -> None:
         _verify(self.page()).setHtml(html, url)
 
-    def setCurrentEditor(self, editor: Editor, target: str = "") -> None:
+    def setCurrentEditor(self, editor: editor_.Editor, target: str = "") -> None:
         if editor == self.currentEditor:
             return
 
@@ -1178,7 +1171,7 @@ class MIDict(AnkiWebView):
         self.reviewer = None
         self._dictInt.currentTarget.setText(target)
 
-    def setReviewer(self, reviewer: Reviewer) -> None:
+    def setReviewer(self, reviewer: reviewer_.Reviewer) -> None:
         self.reviewer = reviewer
         self.currentEditor = None
         self._dictInt.currentTarget.setText("Reviewer")
@@ -1220,11 +1213,11 @@ class ClipThread(qt.QObject):
     pageRefreshDuringBulkMediaImport = qt.pyqtSignal()
 
     def __init__(self, mw: main.AnkiQt, path: str) -> None:
-        if is_mac:
-            from Quartz import CGEventGetIntegerValueField, kCGKeyboardEventKeycode
+        if utils.is_mac:
+            import Quartz
 
-            self.kCGKeyboardEventKeycode = kCGKeyboardEventKeycode
-            self.CGEventGetIntegerValueField = CGEventGetIntegerValueField
+            self.kCGKeyboardEventKeycode = Quartz.kCGKeyboardEventKeycode
+            self.CGEventGetIntegerValueField = Quartz.CGEventGetIntegerValueField
 
         super().__init__(mw)
 
@@ -1281,11 +1274,11 @@ class ClipThread(qt.QObject):
     ) -> tuple[typing.Optional[str], typing.Optional[str]]:
         # TODO: @ColinKennedy - remove try/except
         try:
-            if exists(path):
+            if os.path.exists(path):
                 filename = str(time.time()).replace(".", "") + ".mp3"
-                destpath = join(self.addonPath, "temp", filename)
-                if not exists(destpath):
-                    copyfile(path, destpath)
+                destpath = os.path.join(self.addonPath, "temp", filename)
+                if not os.path.exists(destpath):
+                    shutil.copyfile(path, destpath)
                     return destpath, filename
             return None, None
         except:
@@ -1299,7 +1292,7 @@ class ClipThread(qt.QObject):
 
     def _saveScaledImage(self, imageTempPath: str, imageFileName: str) -> None:
         configuration = migaku_configuration.get()
-        path = join(self.mw.col.media.dir(), imageFileName)
+        path = os.path.join(self.mw.col.media.dir(), imageFileName)
         image = qt.QImage(imageTempPath)
         image = image.scaled(
             qt.QSize(configuration["maxWidth"], configuration["maxHeight"]),
@@ -1314,19 +1307,19 @@ class ClipThread(qt.QObject):
     def _checkFileExists(self, source: str) -> bool:
         now = time.time()
         while True:
-            if exists(source):
+            if os.path.exists(source):
                 return True
             if time.time() - now > 15:
                 return False
 
     def _moveExtensionFileToMediaFolder(self, source: str, filename: str) -> bool:
-        if not exists(source):
+        if not os.path.exists(source):
             return False
 
-        path = join(self.mw.col.media.dir(), filename)
+        path = os.path.join(self.mw.col.media.dir(), filename)
 
-        if not exists(path):
-            copyfile(source, path)
+        if not os.path.exists(path):
+            shutil.copyfile(source, path)
 
             return True
 
@@ -1334,10 +1327,12 @@ class ClipThread(qt.QObject):
 
     def _moveExtensionMp3ToMediaFolder(self, source: str, filename: str) -> None:
         suffix = ""
-        if is_win:
+        if utils.is_win:
             suffix = ".exe"
-        ffmpeg = join(dirname(__file__), "user_files", "ffmpeg", "ffmpeg" + suffix)
-        path = join(self.mw.col.media.dir(), filename)
+        ffmpeg = os.path.join(
+            os.path.dirname(__file__), "user_files", "ffmpeg", "ffmpeg" + suffix
+        )
+        path = os.path.join(self.mw.col.media.dir(), filename)
         import subprocess
 
         subprocess.call([ffmpeg, "-i", source, path])
@@ -1366,7 +1361,9 @@ class ClipThread(qt.QObject):
         imageFileName = card["image"]
         bulk = card["bulk"]
         if audioFileName:
-            audioTempPath = join(dirname(__file__), "temp", audioFileName)
+            audioTempPath = os.path.join(
+                os.path.dirname(__file__), "temp", audioFileName
+            )
 
             if not self._checkFileExists(audioTempPath):
                 self.extensionFileNotFound.emit()
@@ -1383,7 +1380,9 @@ class ClipThread(qt.QObject):
             self._removeFile(audioTempPath)
 
         if imageFileName:
-            imageTempPath = join(dirname(__file__), "temp", imageFileName)
+            imageTempPath = os.path.join(
+                os.path.dirname(__file__), "temp", imageFileName
+            )
 
             if self._checkFileExists(imageTempPath):
                 self._saveScaledImage(imageTempPath, imageFileName)
@@ -1415,7 +1414,7 @@ class ClipThread(qt.QObject):
             if not clip.endswith(".mp3") and mime.hasImage():
                 image = mime.imageData()
                 filename = str(time.time()) + ".png"
-                fullpath = join(self.addonPath, "temp", filename)
+                fullpath = os.path.join(self.addonPath, "temp", filename)
                 maxW = max(self.config["maxWidth"], image.width())
                 maxH = max(self.config["maxHeight"], image.height())
                 image = image.scaled(
@@ -1426,8 +1425,8 @@ class ClipThread(qt.QObject):
                 image.save(fullpath)
                 self.image.emit([fullpath, filename])
             elif clip.endswith(".mp3"):
-                if not is_lin:
-                    if is_mac:
+                if not utils.is_lin:
+                    if utils.is_mac:
                         clipboard = self.mw.app.clipboard()
 
                         if not clipboard:
@@ -1451,7 +1450,7 @@ class ClipThread(qt.QObject):
                     if clip.startswith("file:///") and clip.endswith(".mp3"):
                         # TODO: @ColinKennedy - remove try/except
                         try:
-                            if is_mac:
+                            if utils.is_mac:
                                 path = clip.replace("file://", "", 1)
                             else:
                                 path = clip.replace("file:///", "", 1)
@@ -1486,11 +1485,11 @@ class ClipThread(qt.QObject):
             )
 
     def run(self) -> None:
-        if is_win:
+        if utils.is_win:
             self.listener = self.keyboard.Listener(
                 on_press=self._on_press, on_release=self._on_release, suppress=True
             )
-        elif is_mac:
+        elif utils.is_mac:
             self.listener = self.keyboard.Listener(
                 on_press=self._on_press,
                 on_release=self._on_release,
@@ -1518,7 +1517,7 @@ class DictInterface(qt.QWidget):
         self.db = dictdb
         self.alwaysOnTop = False
         self.verticalBar = False
-        self.jHandler = miJHandler(mw)
+        self.jHandler = miJapaneseHandler.miJHandler(mw)
         self.addonPath = path
         self.welcome = welcome
         self.setAutoFillBackground(True)
@@ -1527,10 +1526,10 @@ class DictInterface(qt.QWidget):
         self.blackBase = self._getFontColor(qt.QColor(qt.Qt.GlobalColor.black))
         self.blackBase = self._getFontColor(qt.QColor(qt.Qt.GlobalColor.black))
         self.mw = mw
-        self.iconpath = join(path, "icons")
+        self.iconpath = os.path.join(path, "icons")
         self._startUp(terms or [])
         self._setHotkeys()
-        ensureWidgetInScreenBoundaries(self)
+        aqt_utils.ensureWidgetInScreenBoundaries(self)
 
     def _setHotkeys(self) -> None:
         hotkey = qt.QShortcut(qt.QKeySequence("Esc"), self)
@@ -1623,9 +1622,9 @@ class DictInterface(qt.QWidget):
         self.resize(800, 600)
         self.setMinimumSize(350, 350)
         self.sbOpened = False
-        self.historyModel = HistoryModel(self._getHistory(), self)
-        self.historyBrowser = HistoryBrowser(self.historyModel, self)
-        self.setWindowIcon(qt.QIcon(join(self.iconpath, "migaku.png")))
+        self.historyModel = history.HistoryModel(self._getHistory(), self)
+        self.historyBrowser = history.HistoryBrowser(self.historyModel, self)
+        self.setWindowIcon(qt.QIcon(os.path.join(self.iconpath, "migaku.png")))
         self.readyToSearch = False
         self._restoreSizePos()
 
@@ -1685,7 +1684,7 @@ class DictInterface(qt.QWidget):
 
     def _getHTMLURL(self, willSearch: bool, day: bool) -> tuple[str, qt.QUrl]:
         nightStyle = '<style id="nightModeCss">body, .definitionSideBar, .defTools{color: white !important;background: black !important;} .termPronunciation{background: black !important;border-top:1px solid white !important;border-bottom:1px solid white !important;} .overwriteSelect, .fieldSelect, .overwriteCheckboxes, .fieldCheckboxes{background: black !important;} .fieldCheckboxes label:hover, .overwriteCheckboxes label:hover {background-color:   #282828 !important;} #tabs{background:black !important; color: white !important;} .tablinks:hover{background:gray !important;} .tablinks{color: white !important;} .active{background-image: linear-gradient(#272828, black); border-left: 1px solid white !important;border-right: 1px solid white !important;} .dictionaryTitleBlock{border-top: 2px solid white;border-bottom: 1px solid white;} .imageLoader, .forvoLoader{background-image: linear-gradient(#272828, black); color: white; border: 1px solid gray;}.definitionSideBar{border: 2px solid white;}</style>'
-        htmlPath = join(self.addonPath, "dictionaryInit.html")
+        htmlPath = os.path.join(self.addonPath, "dictionaryInit.html")
 
         with open(htmlPath, "r", encoding="utf-8") as fh:
             html = fh.read()
@@ -1729,7 +1728,7 @@ class DictInterface(qt.QWidget):
         }
 
     def _getInsertHTMLJS(self) -> str:
-        insertHTML = join(self.addonPath, "js", "insertHTML.js")
+        insertHTML = os.path.join(self.addonPath, "js", "insertHTML.js")
         with open(insertHTML, "r", encoding="utf-8") as insertHTMLFile:
             return insertHTMLFile.read()
 
@@ -1788,7 +1787,7 @@ class DictInterface(qt.QWidget):
 
         layoutH.addWidget(self.search)
         layoutH.addWidget(self.searchButton)
-        if not is_win:
+        if not utils.is_win:
             self.dictGroups.setFixedSize(108, 38)
             self.search.setFixedSize(104, 38)
             self._sType.setFixedSize(92, 38)
@@ -1927,7 +1926,7 @@ class DictInterface(qt.QWidget):
 
     def _loadDay(self) -> None:
         self.setPalette(self.ogPalette)
-        if not is_win:
+        if not utils.is_win:
             self.setStyleSheet(self._getMacOtherStyles())
             self.dictGroups.setStyleSheet(self.getMacComboStyle())
             self._sType.setStyleSheet(self.getMacComboStyle())
@@ -1944,7 +1943,7 @@ class DictInterface(qt.QWidget):
             self.dict.addWindow.setColors()
 
     def _loadNight(self) -> None:
-        if not is_win:
+        if not utils.is_win:
             self.setStyleSheet(self._getMacNightStyles())
             self.dictGroups.setStyleSheet(self.getMacNightComboStyle())
             self._sType.setStyleSheet(self.getMacNightComboStyle())
@@ -1975,9 +1974,9 @@ class DictInterface(qt.QWidget):
 
     def _setSvg(self, widget: SVGPushButton, name: str) -> None:
         if self.nightModeToggler.day:
-            widget._setSvg(join(self.iconpath, "dictsvgs", name + ".svg"))
+            widget._setSvg(os.path.join(self.iconpath, "dictsvgs", name + ".svg"))
 
-        widget._setSvg(join(self.iconpath, "dictsvgs", name + "night.svg"))
+        widget._setSvg(os.path.join(self.iconpath, "dictsvgs", name + "night.svg"))
 
     def _setAllIcons(self) -> None:
         self._setSvg(self.setB, "settings")
@@ -2030,7 +2029,9 @@ class DictInterface(qt.QWidget):
     def _openDictionarySettings(self) -> None:
         if not migaku_settings.get_unsafe():
             migaku_settings.initialize(
-                SettingsGui(self.mw, self.addonPath, self._openDictionarySettings)
+                addonSettings.SettingsGui(
+                    self.mw, self.addonPath, self._openDictionarySettings
+                )
             )
 
         settings = migaku_settings.get()
@@ -2170,8 +2171,8 @@ class DictInterface(qt.QWidget):
         self.saveHistory()
 
     def _getHistory(self) -> list[list[str]]:
-        path = join(self.mw.col.media.dir(), "_searchHistory.json")
-        if not exists(path):
+        path = os.path.join(self.mw.col.media.dir(), "_searchHistory.json")
+        if not os.path.exists(path):
             return []
 
         # TODO: @ColinKennedy - remove try/except, maybe. Or log it
@@ -2259,7 +2260,7 @@ QCombobox:selected{
 
 QComboBox::down-arrow {
     image: url("""
-            + join(self.iconpath, "blackdown.png").replace("\\", "/")
+            + os.path.join(self.iconpath, "blackdown.png").replace("\\", "/")
             + """);
 }
 
@@ -2354,7 +2355,7 @@ QCombobox:selected{
 
 QComboBox::down-arrow {
     image: url("""
-            + join(self.iconpath, "down.png").replace("\\", "/")
+            + os.path.join(self.iconpath, "down.png").replace("\\", "/")
             + """);
 }
 
@@ -2468,7 +2469,7 @@ QComboBox QAbstractItemView
 
 QComboBox::down-arrow {
     image: url("""
-            + join(self.iconpath, "down.png").replace("\\", "/")
+            + os.path.join(self.iconpath, "down.png").replace("\\", "/")
             + """);
 }
 
@@ -2563,24 +2564,24 @@ QScrollBar:vertical {
             self.currentTarget.show()
         if self.config["tooltips"]:
             self.dictGroups.setToolTip("Select the dictionary group.")
-        if not is_win:
+        if not utils.is_win:
             self.dictGroups.setFixedSize(108, 38)
         else:
             self.dictGroups.setFixedSize(110, 38)
         if self.nightModeToggler.day:
-            if not is_win:
+            if not utils.is_win:
                 self.dictGroups.setStyleSheet(self.getMacComboStyle())
             else:
                 self.dictGroups.setStyleSheet("")
         else:
-            if not is_win:
+            if not utils.is_win:
                 self.dictGroups.setStyleSheet(self.getMacNightComboStyle())
             else:
                 self.dictGroups.setStyleSheet(self.getComboStyle())
         self._resetDict(willSearch, terms)
 
     def saveHistory(self) -> None:
-        path = join(self.mw.col.media.dir(), "_searchHistory.json")
+        path = os.path.join(self.mw.col.media.dir(), "_searchHistory.json")
 
         with codecs.open(path, "w", "utf-8") as outfile:
             json.dump(self.historyModel.history, outfile, ensure_ascii=False)
@@ -2706,7 +2707,7 @@ QScrollBar:vertical {
             event.accept()
 
 
-class MigakuSVG(QSvgWidget):
+class MigakuSVG(QtSvgWidgets.QSvgWidget):
     clicked = qt.pyqtSignal()
 
     def __init__(self, parent: typing.Optional[qt.QWidget] = None):
@@ -2755,7 +2756,7 @@ class SVGPushButton(qt.QPushButton):
 
             widget.setParent(None)
 
-        svg = QSvgWidget(svgPath)
+        svg = QtSvgWidgets.QSvgWidget(svgPath)
         svg.setFixedSize(self.svgWidth, self.svgHeight)
         self._main_layout.addWidget(svg)
 
@@ -2826,7 +2827,7 @@ def showAfterGlobalSearch() -> None:
     dictionary = migaku_dictionary.get()
     dictionary.activateWindow()
 
-    if not is_win:
+    if not utils.is_win:
         dictionary.setWindowState(
             dictionary.windowState() & ~qt.Qt.WindowState.WindowMinimized
             | qt.Qt.WindowState.WindowActive

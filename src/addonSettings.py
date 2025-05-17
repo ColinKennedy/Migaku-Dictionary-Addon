@@ -7,24 +7,26 @@ import platform
 import re
 import sys
 import typing
-from os.path import dirname, join
 
-from anki.hooks import addHook, wrap
+from anki import utils
 from anki.lang import _
-from anki.utils import is_lin, is_mac, is_win
 from aqt import main
 from aqt import mw as mw_
 from aqt import qt
-from aqt.utils import askUser, openLink, showInfo, tooltip
-from aqt.webview import AnkiWebView
-from PyQt6.QtSvgWidgets import QSvgWidget
+from aqt import utils as aqt_utils
+from aqt import webview
+from PyQt6 import QtSvgWidgets
 
-from . import dictdb, migaku_configuration, typer
-from .addDictGroup import DictGroupEditor
-from .addTemplate import TemplateEditor
-from .dictionaryManager import DictionaryManagerWidget
-from .ffmpegInstaller import FFMPEGInstaller
-from .miutils import miAsk, miInfo
+from . import (
+    addDictGroup,
+    addTemplate,
+    dictdb,
+    dictionaryManager,
+    ffmpegInstaller,
+    migaku_configuration,
+    miutils,
+    typer,
+)
 
 verNumber = "1.3.8"
 T = typing.TypeVar("T")
@@ -32,10 +34,10 @@ T = typing.TypeVar("T")
 
 def attemptOpenLink(cmd: str) -> None:
     if cmd.startswith("openLink:"):
-        openLink(cmd[9:])
+        aqt_utils.openLink(cmd[9:])
 
 
-class MigakuSVG(QSvgWidget):
+class MigakuSVG(QtSvgWidgets.QSvgWidget):
     clicked = qt.pyqtSignal()
 
     # TODO: @ColinKennedy Check if this returns bool
@@ -60,7 +62,7 @@ class SettingsGui(qt.QTabWidget):
     ) -> None:
         super(SettingsGui, self).__init__()
         self._mw = mw
-        self._ffmpegInstaller = FFMPEGInstaller(self._mw)
+        self._ffmpegInstaller = ffmpegInstaller.FFMPEGInstaller(self._mw)
         self._reboot = reboot
         self._googleCountries = [
             "Afghanistan",
@@ -380,7 +382,7 @@ class SettingsGui(qt.QTabWidget):
             "Yiddish",
         ]
         self.setMinimumSize(850, 550)
-        if not is_win:
+        if not utils.is_win:
             self.resize(1034, 550)
         else:
             self.resize(920, 550)
@@ -388,7 +390,9 @@ class SettingsGui(qt.QTabWidget):
         self.setContextMenuPolicy(qt.Qt.ContextMenuPolicy.NoContextMenu)
         self.setWindowTitle("Migaku Dictionary Settings (Ver. " + verNumber + ")")
         self.addonPath = path
-        self.setWindowIcon(qt.QIcon(join(self.addonPath, "icons", "migaku.png")))
+        self.setWindowIcon(
+            qt.QIcon(os.path.join(self.addonPath, "icons", "migaku.png"))
+        )
         self._addDictGroup = qt.QPushButton("Add Dictionary Group")
         self._addExportTemplate = qt.QPushButton("Add Export Template")
         self._dictGroups = self._getGroupTemplateTable()
@@ -431,7 +435,7 @@ class SettingsGui(qt.QTabWidget):
         self._userGuideTab = self._getUserGuideTab()
         self._setupLayout()
         self.addTab(self._settingsTab, "Settings")
-        self.addTab(DictionaryManagerWidget(), "Dictionaries")
+        self.addTab(dictionaryManager.DictionaryManagerWidget(), "Dictionaries")
         self.addTab(self._userGuideTab, "User Guide")
         self.addTab(self._getAboutTab(), "About")
         self.loadTemplateTable()
@@ -590,7 +594,7 @@ class SettingsGui(qt.QTabWidget):
             self._ffmpegInstaller.installFFMPEG()
 
         if migaku_dictionary.get_visible_dictionary():
-            miInfo(
+            miutils.miInfo(
                 "Please be aware that the dictionary window will not reflect any setting changes until it is closed and reopened.",
                 level="not",
             )
@@ -608,7 +612,7 @@ class SettingsGui(qt.QTabWidget):
 
     def _getGroupTemplateTable(self) -> qt.QTableWidget:
         macLin = False
-        if is_mac or is_lin:
+        if utils.is_mac or utils.is_lin:
             macLin = True
         groupTemplates = qt.QTableWidget()
         groupTemplates.setColumnCount(3)
@@ -648,13 +652,13 @@ class SettingsGui(qt.QTabWidget):
         dictGroups = self._getConfig()["DictionaryGroups"]
         if groupName in dictGroups:
             group = dictGroups[groupName]
-            dictEditor = DictGroupEditor(
+            dictEditor = addDictGroup.DictGroupEditor(
                 self._mw, self, self._getDictionaryNames(), group, groupName
             )
             dictEditor.exec()
 
     def _removeGroup(self, row: int) -> None:
-        if not miAsk(
+        if not miutils.miAsk(
             "Are you sure you would like to remove this dictionary group? This action will happen immediately and is not un-doable.",
             self,
         ):
@@ -672,7 +676,7 @@ class SettingsGui(qt.QTabWidget):
         self.loadGroupTable()
 
     def _removeTemplate(self, row: int) -> None:
-        if not miAsk(
+        if not miutils.miAsk(
             "Are you sure you would like to remove this template? This action will happen immediately and is not un-doable.",
             self,
         ):
@@ -711,7 +715,7 @@ class SettingsGui(qt.QTabWidget):
 
         if templateName in exportTemplates:
             template = exportTemplates[templateName]
-            templateEditor = TemplateEditor(
+            templateEditor = addTemplate.TemplateEditor(
                 self._mw,
                 self,
                 self._getDictionaryNames(),
@@ -743,12 +747,12 @@ class SettingsGui(qt.QTabWidget):
         self._chooseAudioDirectory.clicked.connect(self._updateAudioDirectory)
 
     def _restoreDefaults(self) -> None:
-        if not miAsk(
+        if not miutils.miAsk(
             "This will remove any export templates and dictionary groups you have created, and is not undoable. Are you sure you would like to restore the default settings?"
         ):
             return
 
-        directory = dirname(__file__)
+        directory = os.path.dirname(__file__)
         conf = self._mw.addonManager.addonConfigDefaults(directory)
 
         if not conf:
@@ -763,12 +767,16 @@ class SettingsGui(qt.QTabWidget):
         self._reboot()
 
     def _addGroup(self) -> None:
-        dictEditor = DictGroupEditor(self._mw, self, self._getDictionaryNames())
+        dictEditor = addDictGroup.DictGroupEditor(
+            self._mw, self, self._getDictionaryNames()
+        )
         dictEditor.clearGroupEditor(True)
         dictEditor.exec()
 
     def _addTemplate(self) -> None:
-        templateEditor = TemplateEditor(self._mw, self, self._getDictionaryNames())
+        templateEditor = addTemplate.TemplateEditor(
+            self._mw, self, self._getDictionaryNames()
+        )
         templateEditor.exec()
 
     def _miQLabel(self, text: str, width: int) -> qt.QLabel:
@@ -956,19 +964,19 @@ class SettingsGui(qt.QTabWidget):
         return re.sub(r"l\d+name", "", name)
 
     def _getSVGWidget(self, name: str) -> MigakuSVG:
-        widget = MigakuSVG(join(self.addonPath, "icons", name))
+        widget = MigakuSVG(os.path.join(self.addonPath, "icons", name))
         widget.setFixedSize(27, 27)
         return widget
 
     def _getHTML(self) -> tuple[str, qt.QUrl]:
-        htmlPath = join(self.addonPath, "guide.html")
+        htmlPath = os.path.join(self.addonPath, "guide.html")
         url = qt.QUrl.fromLocalFile(htmlPath)
         with open(htmlPath, "r", encoding="utf-8") as fh:
             html = fh.read()
         return html, url
 
-    def _getUserGuideTab(self) -> AnkiWebView:
-        guide = AnkiWebView()
+    def _getUserGuideTab(self) -> webview.AnkiWebView:
+        guide = webview.AnkiWebView()
         profile = _verify(guide.page()).profile()
 
         if not profile:
@@ -1058,18 +1066,20 @@ class SettingsGui(qt.QTabWidget):
         tab4vl.addStretch()
         tab_4.setLayout(tab4vl)
 
-        migakuInfoSite.clicked.connect(lambda: openLink("https://migaku.io"))
+        migakuInfoSite.clicked.connect(lambda: aqt_utils.openLink("https://migaku.io"))
         migakuPatreonIcon.clicked.connect(
-            lambda: openLink("https://www.patreon.com/Migaku")
+            lambda: aqt_utils.openLink("https://www.patreon.com/Migaku")
         )
         migakuInfoYT.clicked.connect(
-            lambda: openLink("https://www.youtube.com/channel/UCQFe3x4WAgm7joN5daMm5Ew")
+            lambda: aqt_utils.openLink(
+                "https://www.youtube.com/channel/UCQFe3x4WAgm7joN5daMm5Ew"
+            )
         )
         migakuInfoTW.clicked.connect(
-            lambda: openLink("https://twitter.com/Migaku_Yoga")
+            lambda: aqt_utils.openLink("https://twitter.com/Migaku_Yoga")
         )
         gitHubIcon.clicked.connect(
-            lambda: openLink(
+            lambda: aqt_utils.openLink(
                 "https://github.com/migaku-official/Migaku-Dictionary-Addon"
             )
         )
@@ -1084,7 +1094,7 @@ class SettingsGui(qt.QTabWidget):
             self._dictGroups.setRowCount(rc + 1)
             self._dictGroups.setItem(rc, 0, qt.QTableWidgetItem(groupName))
             editButton = qt.QPushButton("Edit")
-            if is_win:
+            if utils.is_win:
                 editButton.setFixedWidth(40)
             else:
                 editButton.setFixedWidth(50)
@@ -1092,7 +1102,7 @@ class SettingsGui(qt.QTabWidget):
             editButton.clicked.connect(self._editGroupRow(rc))
             self._dictGroups.setCellWidget(rc, 1, editButton)
             deleteButton = qt.QPushButton("X")
-            if is_win:
+            if utils.is_win:
                 deleteButton.setFixedWidth(40)
             else:
                 deleteButton.setFixedWidth(40)
@@ -1108,7 +1118,7 @@ class SettingsGui(qt.QTabWidget):
             self._exportTemplates.setRowCount(rc + 1)
             self._exportTemplates.setItem(rc, 0, qt.QTableWidgetItem(template))
             editButton = qt.QPushButton("Edit")
-            if is_win:
+            if utils.is_win:
                 editButton.setFixedWidth(40)
             else:
                 editButton.setFixedWidth(50)
@@ -1116,7 +1126,7 @@ class SettingsGui(qt.QTabWidget):
             editButton.clicked.connect(self._editTempRow(rc))
             self._exportTemplates.setCellWidget(rc, 1, editButton)
             deleteButton = qt.QPushButton("X")
-            if is_win:
+            if utils.is_win:
                 deleteButton.setFixedWidth(40)
             else:
                 deleteButton.setFixedWidth(40)

@@ -9,9 +9,7 @@ import typing
 import urllib
 
 import requests
-from aqt.qt import QObject, QRunnable, pyqtSignal
-from aqt.utils import showInfo
-from bs4 import BeautifulSoup
+from aqt import qt
 
 languages = {
     "German": "de",
@@ -88,15 +86,15 @@ languages = {
 }
 
 
-class ForvoSignals(QObject):
-    resultsFound = pyqtSignal(list)
-    noResults = pyqtSignal(str)
-    finished = pyqtSignal()
+class ForvoSignals(qt.QObject):
+    resultsFound = qt.pyqtSignal(list)
+    noResults = qt.pyqtSignal(str)
+    finished = qt.pyqtSignal()
 
 
-class Forvo(QRunnable):
-    resultsFound = pyqtSignal(list)
-    noResults = pyqtSignal(str)
+class Forvo(qt.QRunnable):
+    resultsFound = qt.pyqtSignal(list)
+    noResults = qt.pyqtSignal(str)
 
     def __init__(self, language: str) -> None:
         super().__init__()

@@ -1,7 +1,7 @@
 import os
 import typing
 
-from anki.utils import is_mac
+from anki import utils
 
 _CURRENT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 
@@ -20,7 +20,7 @@ def getMacWelcomeScreen() -> str:
         return fh.read()
 
 
-if is_mac:
+if utils.is_mac:
     welcomeScreen = getMacWelcomeScreen
 else:
     welcomeScreen = getWelcomeScreen

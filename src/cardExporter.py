@@ -6,17 +6,16 @@ from __future__ import annotations
 import collections
 import json
 import logging
+import os
 import re
+import shutil
 import typing
-from os.path import exists, join
-from shutil import copyfile
 
-from anki.notes import Note
-from anki.utils import is_lin, is_mac, is_win
+from anki import notes, utils
 from aqt import dialogs, qt, sound
-from aqt.utils import ensureWidgetInScreenBoundaries
+from aqt import utils as aqt_utils
 
-from .miutils import miAsk, miInfo
+from . import miutils
 
 if typing.TYPE_CHECKING:
     # TODO: @ColinKennedy - fix cyclic import
@@ -259,7 +258,7 @@ class CardExporter:
         self.scrollArea.setMinimumHeight(400)
         self.scrollArea.resize(490, 654)
         self.scrollArea.setWindowIcon(
-            qt.QIcon(join(self._dictInt.addonPath, "icons", "migaku.png"))
+            qt.QIcon(os.path.join(self._dictInt.addonPath, "icons", "migaku.png"))
         )
         self.scrollArea.setWindowTitle("Migaku Card Exporter")
         self._definitionList: list[_Definition] = []
@@ -303,7 +302,7 @@ class CardExporter:
         if sizePos:
             self.scrollArea.resize(sizePos[2], sizePos[3])
             self.scrollArea.move(sizePos[0], sizePos[1])
-            ensureWidgetInScreenBoundaries(self.scrollArea)
+            aqt_utils.ensureWidgetInScreenBoundaries(self.scrollArea)
 
     def _setHotkeys(self) -> None:
         self._shortcuts.append(
@@ -331,7 +330,7 @@ class CardExporter:
         if isinstance(focused, (MILineEdit, MITextEdit)):
             focused.searchSelected(in_browser)
 
-    def _addNote(self, note: Note, did: int) -> bool:
+    def _addNote(self, note: notes.Note, did: int) -> bool:
         model = note.note_type()
 
         if not model:
@@ -340,7 +339,7 @@ class CardExporter:
         model["did"] = int(did)
         ret = note.dupeOrEmpty()
         if ret == 1:
-            if not miAsk(
+            if not miutils.miAsk(
                 "Your note's sorting field will be empty with this configuration. Would you like to continue?",
                 self.scrollArea,
                 self._dictInt.nightModeToggler.day,
@@ -350,7 +349,7 @@ class CardExporter:
             if not self._mw.col.models._availClozeOrds(
                 model, note.joined_fields(), False
             ):
-                if not miAsk(
+                if not miutils.miAsk(
                     "You have a cloze deletion note type "
                     "but have not made any cloze deletions. Would you like to continue?",
                     self.scrollArea,
@@ -359,7 +358,7 @@ class CardExporter:
                     return False
         cards = self._mw.col.addNote(note)
         if not cards:
-            miInfo(
+            miutils.miInfo(
                 (
                     """\
 The current input and template combination \
@@ -430,8 +429,8 @@ Please review your template and notetype combination."""
 
     # TODO: @ColinKennedy - `word` might not be a str. Check later.
     def _automaticallyAddDefinitions(
-        self, note: Note, word: str, template: typer.ExportTemplate
-    ) -> Note:
+        self, note: notes.Note, word: str, template: typer.ExportTemplate
+    ) -> notes.Note:
         if not self._definitionSettings:
             return note
 
@@ -463,10 +462,10 @@ Please review your template and notetype combination."""
 
     def _moveImageToMediaFolder(self) -> None:
         if self._imgPath and self._imgName:
-            if exists(self._imgPath):
-                path = join(self._mw.col.media.dir(), self._imgName)
-                if not exists(path):
-                    copyfile(self._imgPath, path)
+            if os.path.exists(self._imgPath):
+                path = os.path.join(self._mw.col.media.dir(), self._imgName)
+                if not os.path.exists(path):
+                    shutil.copyfile(self._imgPath, path)
 
     def _fieldValid(self, field: str) -> bool:
         return field != "Don't Export"
@@ -584,7 +583,7 @@ Please review your template and notetype combination."""
 
     def _getDefinitions(self) -> qt.QTableWidget:
         macLin = False
-        if is_mac or is_lin:
+        if utils.is_mac or utils.is_lin:
             macLin = True
         definitions = qt.QTableWidget()
         definitions.setMinimumHeight(100)
@@ -738,10 +737,10 @@ Please review your template and notetype combination."""
 
     def _moveAudioToMediaFolder(self) -> None:
         if self._audioPath and self._audioName:
-            if exists(self._audioPath):
-                path = join(self._mw.col.media.dir(), self._audioName)
-                if not exists(path):
-                    copyfile(self._audioPath, path)
+            if os.path.exists(self._audioPath):
+                path = os.path.join(self._mw.col.media.dir(), self._audioName)
+                if not os.path.exists(path):
+                    shutil.copyfile(self._audioPath, path)
 
     def _playAudio(self) -> None:
         if self._audioPath:
@@ -864,7 +863,7 @@ Please review your template and notetype combination."""
         )
         settingsWidget.setWindowTitle("Definition Settings")
         settingsWidget.setWindowIcon(
-            qt.QIcon(join(self._dictInt.addonPath, "icons", "migaku.png"))
+            qt.QIcon(os.path.join(self._dictInt.addonPath, "icons", "migaku.png"))
         )
         settingsWidget.setLayout(layout)
         settingsWidget.show()
@@ -945,7 +944,7 @@ Please review your template and notetype combination."""
             noteType = template["noteType"]
             model = self._mw.col.models.by_name(noteType)
             if model:
-                note = Note(self._mw.col, model)
+                note = notes.Note(self._mw.col, model)
                 modelFields = self._mw.col.models.field_names(model)
                 fieldsValues, tagsField = self._getFieldsValuesForTextCard(
                     template, word, sentence
@@ -1010,7 +1009,7 @@ Please review your template and notetype combination."""
             noteType = template["noteType"]
             model = self._mw.col.models.by_name(noteType)
             if model:
-                note = Note(self._mw.col, model)
+                note = notes.Note(self._mw.col, model)
                 modelFields = self._mw.col.models.field_names(model)
                 fieldsValues, _ = self._getFieldsValuesForMediaCard(
                     template, word, card
@@ -1108,7 +1107,7 @@ Please review your template and notetype combination."""
 
                 if not self._progress_bar_closed_and_finished_importing[progressWidget]:
                     global_state.IS_BULK_MEDIA_EXPORT_CANCELLED = True
-                    miInfo(
+                    miutils.miInfo(
                         "Importing cancelled.\n\n{} cards were imported.".format(
                             currentValue
                         )
@@ -1126,7 +1125,7 @@ Please review your template and notetype combination."""
         progressWidget.setWindowTitle(title)
         self._progress_bar_closed_and_finished_importing[progressWidget] = False
         progressWidget.setWindowIcon(
-            qt.QIcon(join(self._dictInt.addonPath, "icons", "migaku.png"))
+            qt.QIcon(os.path.join(self._dictInt.addonPath, "icons", "migaku.png"))
         )
 
         _center(progressWidget)
@@ -1152,14 +1151,14 @@ Please review your template and notetype combination."""
             noteType = template["noteType"]
             model = self._mw.col.models.by_name(noteType)
             if model:
-                note = Note(self._mw.col, model)
+                note = notes.Note(self._mw.col, model)
                 modelFields = self._mw.col.models.field_names(model)
                 fieldsValues, imgField, audioField, tagsField = self._getFieldsValues(
                     template
                 )
                 word = self._wordLE.text()
                 if not fieldsValues:
-                    miInfo(
+                    miutils.miInfo(
                         "The currently selected template and values will lead to an invalid card. Please try again.",
                         level="wrn",
                         day=self._dictInt.nightModeToggler.day,
@@ -1186,13 +1185,13 @@ Please review your template and notetype combination."""
                 self._clearCurrent()
                 return
             else:
-                miInfo(
+                miutils.miInfo(
                     "The notetype for the currently selected template does not exist in the currently loaded profile.",
                     level="err",
                     day=self._dictInt.nightModeToggler.day,
                 )
                 return
-        miInfo(
+        miutils.miInfo(
             "A card could not be added with this current configuration. Please ensure that your template is configured correctly for this collection.",
             level="err",
             day=self._dictInt.nightModeToggler.day,
@@ -1206,7 +1205,7 @@ Please review your template and notetype combination."""
             shortDef = definition.replace("<br>", " ")
         defEntry = _Definition(dictName, shortDef, definition, None)
         if defEntry in self._definitionList:
-            miInfo(
+            miutils.miInfo(
                 "A card can not contain duplicate definitions.",
                 level="not",
                 day=self._dictInt.nightModeToggler.day,
@@ -1229,7 +1228,7 @@ Please review your template and notetype combination."""
         self.focusWindow()
         defEntry = _Definition("Google Images", None, imgs, imgs)
         if defEntry in self._definitionList:
-            miInfo(
+            miutils.miInfo(
                 "A card cannot contain duplicate definitions.",
                 level="not",
                 day=self._dictInt.nightModeToggler.day,
@@ -1295,9 +1294,9 @@ Please review your template and notetype combination."""
 
             if self._bulkMediaExportProgressWindow.currentValue == total:
                 if total == 1:
-                    miInfo("{} card has been imported.".format(total))
+                    miutils.miInfo("{} card has been imported.".format(total))
                 else:
-                    miInfo("{} cards have been imported.".format(total))
+                    miutils.miInfo("{} cards have been imported.".format(total))
 
                 self._closeProgressBar(self._bulkMediaExportProgressWindow)
                 self._bulkMediaExportProgressWindow = None
@@ -1309,7 +1308,7 @@ Please review your template and notetype combination."""
             return
 
         currentValue = self._bulkMediaExportProgressWindow.currentValue
-        miInfo(
+        miutils.miInfo(
             "Importing cards from the extension has been cancelled from within the browser.\n\n {} cards were imported.".format(
                 currentValue
             )
@@ -1328,7 +1327,7 @@ Please review your template and notetype combination."""
         progressWidget.setMaximum(total)
         for idx, card in enumerate(cards):
             if not self._bulkTextImporting:
-                miInfo(
+                miutils.miInfo(
                     "Importing cards from the extension has been cancelled.\n\n{} of {} were added.".format(
                         idx, total
                     )
@@ -1393,7 +1392,7 @@ Please review your template and notetype combination."""
     def setColors(self) -> None:
         if self._dictInt.nightModeToggler.day:
             self.scrollArea.setPalette(self._dictInt.ogPalette)
-            if is_mac:
+            if utils.is_mac:
                 self._templateCB.setStyleSheet(self._dictInt.getMacComboStyle())
                 self._deckCB.setStyleSheet(self._dictInt.getMacComboStyle())
                 self._definitions.setStyleSheet(self._dictInt.getMacTableStyle())
@@ -1403,7 +1402,7 @@ Please review your template and notetype combination."""
                 self._definitions.setStyleSheet("")
         else:
             self.scrollArea.setPalette(self._dictInt.nightPalette)
-            if is_mac:
+            if utils.is_mac:
                 self._templateCB.setStyleSheet(self._dictInt.getMacNightComboStyle())
                 self._deckCB.setStyleSheet(self._dictInt.getMacNightComboStyle())
             else:

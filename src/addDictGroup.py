@@ -3,19 +3,19 @@
 import json
 import math
 import ntpath
+import operator
+import os
+import shutil
 import sys
 import typing
-from operator import itemgetter
-from os.path import exists, join
-from shutil import copyfile
 
 import aqt
+from anki import utils
 from anki.lang import _
-from anki.utils import is_lin, is_mac
 from aqt import main, qt
 from PyQt6 import QtCore
 
-from .miutils import miAsk, miInfo
+from . import miutils
 
 if typing.TYPE_CHECKING:
     # TODO: @ColinKennedy - fix cyclic dependency "addonSettings.SettingsGui" later
@@ -200,7 +200,7 @@ class DictGroupEditor(qt.QDialog):
                 and not fileName.endswith(".woff2")
                 and not fileName.endswith(".eot")
             ):
-                miInfo("Please select a font file.", level="err")
+                miutils.miInfo("Please select a font file.", level="err")
                 return
             self._fontFileName.setText(ntpath.basename(fileName))
             self._fontToMove = fileName
@@ -212,11 +212,13 @@ class DictGroupEditor(qt.QDialog):
         newConfig = self._getConfig()
         gn = self._groupName.text()
         if gn == "":
-            miInfo("The dictionary group must have a name.", level="wrn")
+            miutils.miInfo("The dictionary group must have a name.", level="wrn")
             return
         curGroups = newConfig["DictionaryGroups"]
         if self._new and gn in curGroups:
-            miInfo("A new dictionary group must have a unique name.", level="wrn")
+            miutils.miInfo(
+                "A new dictionary group must have a unique name.", level="wrn"
+            )
             return
         if self._fontFromDropdown.isChecked():
             fontName = self._fontDropDown.currentText()
@@ -225,22 +227,22 @@ class DictGroupEditor(qt.QDialog):
         else:
             fontName = self._fontFileName.text()
             if fontName == "None Selected":
-                miInfo(
+                miutils.miInfo(
                     "You must select a file if you will be using a font from a file.",
                     level="wrn",
                 )
                 return
             customFont = True
-            if not exists(
-                join(self._settings.addonPath, "user_files", "fonts", fontName)
+            if not os.path.exists(
+                os.path.join(self._settings.addonPath, "user_files", "fonts", fontName)
             ):
                 if not self._fontToMove:
-                    miInfo("Not font to move was found.", level="err")
+                    miutils.miInfo("Not font to move was found.", level="err")
 
                     return
 
                 if not self._moveFontToFolder(self._fontToMove):
-                    miInfo(
+                    miutils.miInfo(
                         "The font file was unable to be loaded, please ensure your file exists in the target folder and try again.",
                         level="err",
                     )
@@ -249,7 +251,7 @@ class DictGroupEditor(qt.QDialog):
         selectedDicts = self._getSelectedDictionaryNames()
 
         if len(selectedDicts) < 1:
-            miInfo("You must select at least one dictionary.", level="wrn")
+            miutils.miInfo("You must select at least one dictionary.", level="wrn")
 
             return
 
@@ -290,7 +292,7 @@ class DictGroupEditor(qt.QDialog):
 
             dicts.append(typer.Dictionary(i, int(order), item.text()))
 
-        return sorted(dicts, key=itemgetter(1))
+        return sorted(dicts, key=operator.itemgetter(1))
 
     def _setDictionaryOrder(self, row: int) -> None:
         self._dictionaries.selectRow(row)
@@ -338,20 +340,22 @@ class DictGroupEditor(qt.QDialog):
         try:
             basename = ntpath.basename(filename)
 
-            if not exists(filename):
+            if not os.path.exists(filename):
                 # TODO: @ColinKennedy - Logging
                 return False
 
-            path = join(self._settings.addonPath, "user_files", "fonts", basename)
+            path = os.path.join(
+                self._settings.addonPath, "user_files", "fonts", basename
+            )
 
-            if exists(path):
-                if not miAsk(
+            if os.path.exists(path):
+                if not miutils.miAsk(
                     "A font with the same name currently exists in your custom fonts folder. Would you like to overwrite it?",
                     self,
                 ):
                     return False
 
-            copyfile(filename, path)
+            shutil.copyfile(filename, path)
 
             return True
         except:
@@ -393,7 +397,7 @@ class DictGroupEditor(qt.QDialog):
 
     def _setupDictionaries(self) -> qt.QTableWidget:
         macLin = False
-        if is_mac or is_lin:
+        if utils.is_mac or utils.is_lin:
             macLin = True
         dictionaries = qt.QTableWidget()
         dictionaries.setColumnCount(3)

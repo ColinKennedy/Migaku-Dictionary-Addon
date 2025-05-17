@@ -12,28 +12,24 @@ import time
 import typing
 import unicodedata
 import urllib.parse
-from operator import itemgetter
-from os.path import basename, dirname, exists, join
 
 import aqt.utils
 import requests
+from anki import hooks
 from anki import notes as notes_
-from anki.hooks import addHook, wrap
-from anki.utils import is_mac, is_win
+from anki import utils
+from aqt import editcurrent
 from aqt import editor as editor_
 from aqt import gui_hooks, mw, qt
+from aqt import reviewer as reviewer_
+from aqt import tagedit
 from aqt.addcards import AddCards
 from aqt.browser import browser as browser_
-from aqt.browser.previewer import Previewer
-from aqt.editcurrent import EditCurrent
-from aqt.qt import debug
-from aqt.reviewer import Reviewer
-from aqt.tagedit import TagEdit
-from aqt.utils import showInfo
-from aqt.webview import AnkiWebView
+from aqt.browser import previewer as previewer_
 from PyQt6.QtCore import Qt
 
 from . import (
+    addonSettings,
     dictdb,
     global_state,
     google_imager,
@@ -47,11 +43,10 @@ from . import (
     migaku_search,
     migaku_settings,
     migaku_widget_global,
+    miutils,
     threader,
     typer,
 )
-from .addonSettings import SettingsGui
-from .miutils import miAsk, miInfo
 
 _IS_EXPORTING_DEFINITIONS = False
 _MENU = None
@@ -79,7 +74,7 @@ class _ProgressWidget(_ExporterBaseWidget):
         main_layout.addWidget(self._bar)
         main_layout.addWidget(self._label)
 
-        if is_mac:
+        if utils.is_mac:
             self._bar.setFixedSize(380, 50)
         else:
             self._bar.setFixedSize(390, 50)
@@ -113,12 +108,12 @@ def window_loaded() -> None:
     migaku_settings.clear()
     dictdb.initialize(dictdb.DictDB())
     progressBar = False
-    addon_path = dirname(__file__)
+    addon_path = os.path.dirname(__file__)
     currentNote = False
     currentField = False
     currentKey = False
     wrapperDict = False
-    tmpdir = join(addon_path, "temp")
+    tmpdir = os.path.join(addon_path, "temp")
     global_state.IS_BULK_MEDIA_EXPORT_CANCELLED = False
 
     def removeTempFiles() -> None:
@@ -199,11 +194,17 @@ def window_loaded() -> None:
 
         if audio:
             dictionary.dict.exportAudio(
-                (join(mw.col.media.dir(), audio), "[sound:" + audio + "]", audio)
+                (
+                    os.path.join(mw.col.media.dir(), audio),
+                    "[sound:" + audio + "]",
+                    audio,
+                )
             )
 
         if image:
-            dictionary.dict.exportImage((join(mw.col.media.dir(), image), image))
+            dictionary.dict.exportImage(
+                (os.path.join(mw.col.media.dir(), image), image)
+            )
 
         dictionary.dict.exportSentence(primary, secondary)
         _verify(dictionary.dict.addWindow).focusWindow()
@@ -214,7 +215,7 @@ def window_loaded() -> None:
         adder = _verify(migaku_dictionary.get().dict.addWindow)
         cardWindow = adder.scrollArea
 
-        if not is_win:
+        if not utils.is_win:
             cardWindow.setWindowState(
                 cardWindow.windowState() & ~Qt.WindowState.WindowMinimized
                 | Qt.WindowState.WindowActive
@@ -253,7 +254,7 @@ def window_loaded() -> None:
     def openDictionarySettings() -> None:
         if not migaku_settings.get_unsafe():
             migaku_settings.initialize(
-                SettingsGui(mw, addon_path, openDictionarySettings)
+                addonSettings.SettingsGui(mw, addon_path, openDictionarySettings)
             )
 
         settings = migaku_settings.get()
@@ -274,7 +275,7 @@ def window_loaded() -> None:
 
         shortcut = "(Ctrl+W)"
 
-        if is_mac:
+        if utils.is_mac:
             shortcut = "⌘W"
 
         open_dictionary_action = qt.QAction(f"Open Dictionary {shortcut}", mw)
@@ -303,7 +304,7 @@ def window_loaded() -> None:
         midict.showAfterGlobalSearch()
 
     def extensionFileNotFound() -> None:
-        miInfo(
+        miutils.miInfo(
             'The media files were not found in your "Download Directory", please make sure you have selected the correct directory.'
         )
 
@@ -448,7 +449,7 @@ def window_loaded() -> None:
             )
             generateWidget.setWindowTitle("Migaku Dictionary: Export Definitions")
             generateWidget.setWindowIcon(
-                qt.QIcon(join(addon_path, "icons", "migaku.png"))
+                qt.QIcon(os.path.join(addon_path, "icons", "migaku.png"))
             )
             generateWidget.setLayout(layout)
             config = _get_configuration()
@@ -468,7 +469,7 @@ def window_loaded() -> None:
                 howMany.setValue(savedPreferences["limit"])
             generateWidget.exec()
         else:
-            miInfo(
+            miutils.miInfo(
                 "Please select some cards before attempting to export definitions.",
                 level="not",
             )
@@ -478,7 +479,9 @@ def window_loaded() -> None:
     ) -> _ProgressWidget:
         progressWidget = _ProgressWidget(parent)
         progressWidget.setFixedSize(400, 70)
-        progressWidget.setWindowIcon(qt.QIcon(join(addon_path, "icons", "migaku.png")))
+        progressWidget.setWindowIcon(
+            qt.QIcon(os.path.join(addon_path, "icons", "migaku.png"))
+        )
         progressWidget.setWindowTitle("Generating Definitions...")
         progressWidget.setWindowModality(Qt.WindowModality.ApplicationModal)
 
@@ -510,7 +513,7 @@ def window_loaded() -> None:
         )
         mw.checkpoint("Definition Export")
 
-        if not miAsk(
+        if not miutils.miAsk(
             'Are you sure you want to export definitions for the "'
             + og
             + '" field into the "'
@@ -611,11 +614,11 @@ def window_loaded() -> None:
             dictionary.saveSizeAndPos()
             dictionary.hide()
 
-    addHook("unloadProfile", closeDictionary)
-    addHook("EditorWebView.contextMenuEvent", addToContextMenu)
-    addHook("AnkiWebView.contextMenuEvent", addToContextMenu)
-    addHook("profileLoaded", dictOnStart)
-    addHook("browser.setupMenus", setupMenu)
+    hooks.addHook("unloadProfile", closeDictionary)
+    hooks.addHook("EditorWebView.contextMenuEvent", addToContextMenu)
+    hooks.addHook("AnkiWebView.contextMenuEvent", addToContextMenu)
+    hooks.addHook("profileLoaded", dictOnStart)
+    hooks.addHook("browser.setupMenus", setupMenu)
 
     def bridgeReroute(self: editor_.Editor, cmd: str) -> None:
         if cmd == "bodyClick":
@@ -673,13 +676,13 @@ def window_loaded() -> None:
             else:
                 dictionary.dict.closeEditor()
 
-    browser_.Browser.on_all_or_selected_rows_changed = wrap(  # type: ignore[method-assign]
+    browser_.Browser.on_all_or_selected_rows_changed = hooks.wrap(  # type: ignore[method-assign]
         browser_.Browser.on_all_or_selected_rows_changed,
         setBrowserEditor,
     )
 
     def addEditActivated(
-        self: typing.Union[AddCards, EditCurrent],
+        self: typing.Union[AddCards, editcurrent.EditCurrent],
         event: typing.Optional[qt.QMouseEvent] = None,
     ) -> None:
         dictionary = migaku_dictionary.get_visible_dictionary()
@@ -705,8 +708,8 @@ def window_loaded() -> None:
     def addBodyClick(self: editor_.Editor) -> None:
         self.web.eval(bodyClick)
 
-    AddCards.addCards = wrap(AddCards.addCards, addEditActivated)
-    AddCards.onHistory = wrap(AddCards.onHistory, addEditActivated)  # type: ignore[method-assign]
+    AddCards.addCards = hooks.wrap(AddCards.addCards, addEditActivated)
+    AddCards.onHistory = hooks.wrap(AddCards.onHistory, addEditActivated)  # type: ignore[method-assign]
 
     def addHotkeys(self: editor_.Editor) -> None:
         hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+S"), self.parentWindow)
@@ -716,7 +719,7 @@ def window_loaded() -> None:
         hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+W"), self.parentWindow)
         hotkey.activated.connect(midict.dictionaryInit)
 
-    def addHotkeysToPreview(self: Previewer) -> None:
+    def addHotkeysToPreview(self: previewer_.Previewer) -> None:
         hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+S"), self._web)
         hotkey.activated.connect(lambda: migaku_search.searchTerm(_verify(self._web)))
         hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+Shift+B"), self._web)
@@ -724,7 +727,10 @@ def window_loaded() -> None:
         hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+W"), self._web)
         hotkey.activated.connect(midict.dictionaryInit)
 
-    Previewer.open = wrap(Previewer.open, addHotkeysToPreview)  # type: ignore[method-assign]
+    previewer_.Previewer.open = hooks.wrap(  # type: ignore[method-assign]
+        previewer_.Previewer.open,
+        addHotkeysToPreview,
+    )
 
     def _get_parent_widget(widget: qt.QWidget) -> qt.QWidget:
         return _verify(widget.parentWidget())
@@ -738,7 +744,7 @@ def window_loaded() -> None:
         return type(obj).__name__
 
     def announceParent(
-        self: TagEdit, event: typing.Optional[qt.QFocusEvent] = None
+        self: tagedit.TagEdit, event: typing.Optional[qt.QFocusEvent] = None
     ) -> None:
         dictionary = migaku_dictionary.get_visible_dictionary()
 
@@ -767,21 +773,21 @@ def window_loaded() -> None:
             parent.editor, target=migaku_search.getTarget(pName) or ""
         )
 
-    TagEdit.focusInEvent = wrap(TagEdit.focusInEvent, announceParent)  # type: ignore[method-assign]
-    editor_.Editor.setupWeb = wrap(editor_.Editor.setupWeb, addEditorFunctionality)  # type: ignore[method-assign]
+    tagedit.TagEdit.focusInEvent = hooks.wrap(tagedit.TagEdit.focusInEvent, announceParent)  # type: ignore[method-assign]
+    editor_.Editor.setupWeb = hooks.wrap(editor_.Editor.setupWeb, addEditorFunctionality)  # type: ignore[method-assign]
     AddCards.mousePressEvent = addEditActivated  # type: ignore[method-assign,assignment]
-    EditCurrent.mousePressEvent = addEditActivated  # type: ignore[method-assign,assignment]
+    editcurrent.EditCurrent.mousePressEvent = addEditActivated  # type: ignore[method-assign,assignment]
 
     # TODO: @ColinKennedy - replace with functools.partial
-    def miLinks(self: Reviewer, cmd: str) -> None:
+    def miLinks(self: reviewer_.Reviewer, cmd: str) -> None:
         if dictionary := migaku_dictionary.get_visible_dictionary():
             dictionary.dict.setReviewer(self)
 
         ogLinks(self, cmd)
 
-    ogLinks = Reviewer._linkHandler
-    Reviewer._linkHandler = miLinks  # type: ignore
-    Reviewer.show = wrap(Reviewer.show, addBodyClick)  # type: ignore
+    ogLinks = reviewer_.Reviewer._linkHandler
+    reviewer_.Reviewer._linkHandler = miLinks  # type: ignore
+    reviewer_.Reviewer.show = hooks.wrap(reviewer_.Reviewer.show, addBodyClick)  # type: ignore
 
 
 def initialize() -> None:

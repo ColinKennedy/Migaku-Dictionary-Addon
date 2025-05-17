@@ -7,11 +7,10 @@ import datetime
 import json
 import typing
 
-from anki.utils import is_lin, is_mac, is_win
+from anki import utils
 from aqt import qt
-from aqt.utils import askUser, showInfo
 
-from .miutils import miAsk, miInfo
+from . import miutils
 
 if typing.TYPE_CHECKING:
     from . import midict
@@ -163,7 +162,7 @@ class HistoryBrowser(qt.QWidget):
         return vbox
 
     def _deleteHistory(self) -> None:
-        if not miAsk(
+        if not miutils.miAsk(
             "Clearing your history cannot be undone. Would you like to proceed?", self
         ):
             return
@@ -198,7 +197,7 @@ class HistoryBrowser(qt.QWidget):
 
     def setColors(self) -> None:
         if self.dictInt.nightModeToggler.day:
-            if is_mac:
+            if utils.is_mac:
                 self.tableView.setStyleSheet(self.dictInt.getMacTableStyle())
             else:
                 self.tableView.setStyleSheet("")

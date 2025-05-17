@@ -6,10 +6,10 @@ from urllib.request import Request, urlopen
 
 from aqt import gui_hooks, mw
 
-from .forvodl import Forvo
+from . import forvodl
 
 _LOGGER = logging.getLogger(__name__)
-_INSTANCE: typing.Optional[Forvo] = None
+_INSTANCE: typing.Optional[forvodl.Forvo] = None
 
 
 def _initialize() -> None:
@@ -20,7 +20,7 @@ def _initialize() -> None:
     if not configuration:
         raise RuntimeError(f'Configuration "{__name__}" is not defined.')
 
-    _INSTANCE = Forvo(configuration["ForvoLanguage"])
+    _INSTANCE = forvodl.Forvo(configuration["ForvoLanguage"])
 
 
 def _download_audio(urls: list[tuple[str, str, str, str]], count: int) -> list[str]:
@@ -73,7 +73,7 @@ def export_audio(term: str, count: int, lang: str) -> str:
     if not _INSTANCE:
         _initialize()
 
-    _INSTANCE = typing.cast(Forvo, _INSTANCE)
+    _INSTANCE = typing.cast(forvodl.Forvo, _INSTANCE)
 
     audioSeparator = ""
     urls = _INSTANCE.search(term, lang)

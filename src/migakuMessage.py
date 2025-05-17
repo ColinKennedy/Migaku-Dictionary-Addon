@@ -3,14 +3,11 @@
 import os
 import re
 import typing
-from os.path import basename, dirname, exists, join
 
 import aqt
 import requests as req
 from anki.hooks import addHook
-from aqt import mw, qt
-from aqt.utils import openLink
-from aqt.webview import AnkiWebView
+from aqt import mw, qt, utils, webview
 
 _MIGAKU_SHOULD_NOT_SHOW_MESSAGE = False
 T = typing.TypeVar("T")
@@ -22,10 +19,10 @@ class _Config(typing.TypedDict):
 
 def attemptOpenLink(cmd: str) -> None:
     if cmd.startswith("openLink:"):
-        openLink(cmd[9:])
+        utils.openLink(cmd[9:])
 
 
-addon_path = dirname(__file__)
+addon_path = os.path.dirname(__file__)
 
 
 def _verify(value: typing.Optional[T]) -> T:
@@ -88,12 +85,12 @@ def miMessage(text: str, parent: typing.Optional[qt.QWidget] = None) -> bool:
 
     parent = parent or aqt.mw.app.activeWindow() or aqt.mw
 
-    icon = qt.QIcon(join(addon_path, "icons", "migaku.png"))
+    icon = qt.QIcon(os.path.join(addon_path, "icons", "migaku.png"))
     mb = qt.QMessageBox(parent)
     mb.setWindowIcon(icon)
     mb.setWindowTitle(title)
     cb = qt.QCheckBox("Don't show me the welcome screen again.")
-    wv = AnkiWebView()
+    wv = webview.AnkiWebView()
     page = _verify(wv.page())
     page._bridge.onCmd = attemptOpenLink
     wv.setFixedSize(680, 450)

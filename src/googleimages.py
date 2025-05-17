@@ -9,10 +9,9 @@ import time
 import typing
 import urllib
 
+import bs4
 import requests
-from aqt.qt import QObject, QRunnable, pyqtSignal
-from aqt.utils import showInfo
-from bs4 import BeautifulSoup
+from aqt import qt
 
 _COUNTRY_CODES = {
     "Afghanistan": "countryAF",
@@ -260,15 +259,15 @@ _COUNTRY_CODES = {
 }
 
 
-class _GoogleSignals(QObject):
-    resultsFound = pyqtSignal(list)
-    noResults = pyqtSignal(str)
-    finished = pyqtSignal()
+class _GoogleSignals(qt.QObject):
+    resultsFound = qt.pyqtSignal(list)
+    noResults = qt.pyqtSignal(str)
+    finished = qt.pyqtSignal()
 
 
-class Google(QRunnable):
+class Google(qt.QRunnable):
 
-    # finished = pyqtSignal()
+    # finished = qt.pyqtSignal()
 
     def __init__(self) -> None:
         super().__init__()
@@ -398,7 +397,7 @@ class Google(QRunnable):
                 return None
             results = self._getResultsFromRawHtml(html)
             if len(results) == 0:
-                soup = BeautifulSoup(html, "html.parser")
+                soup = bs4.BeautifulSoup(html, "html.parser")
                 elements = soup.select(".rg_meta.notranslate")
                 jsons = [json.loads(e.get_text()) for e in elements]
 

@@ -10,10 +10,7 @@ import sqlite3
 import typing
 from collections import abc
 
-from aqt.utils import showInfo
-
 from . import typer
-from .miutils import miInfo
 
 addon_path = os.path.dirname(__file__)
 from aqt import mw

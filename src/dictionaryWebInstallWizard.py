@@ -5,10 +5,10 @@ import os
 import typing
 
 import aqt
-from anki.httpclient import HttpClient
+from anki import httpclient
 from aqt import qt
+from PyQt6 import QtGui
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QTextCursor
 
 from . import dictdb, migaku_wizard, typer, webConfig
 
@@ -397,7 +397,7 @@ class DictionaryInstallPage(migaku_wizard.MiWizardPage[DictionaryWebInstallWizar
         self.install_thread: typing.Optional[InstallThread] = None
 
     def _add_log(self, txt: str) -> None:
-        self.log_box.moveCursor(QTextCursor.MoveOperation.End)
+        self.log_box.moveCursor(QtGui.QTextCursor.MoveOperation.End)
 
         if not _verify(self.log_box.document()).isEmpty():
             self.log_box.insertPlainText("\n")
@@ -504,9 +504,9 @@ class InstallThread(qt.QThread):
         return url
 
     def run(self) -> None:
-        from .dictionaryManager import importDict
+        from . import dictionaryManager
 
-        client = HttpClient()
+        client = httpclient.HttpClient()
 
         num_dicts = 0
         num_installed = 0
@@ -599,7 +599,7 @@ class InstallThread(qt.QThread):
                     self.log_update.emit(" Importing...")
                     ddata = client.stream_content(dl_resp)
                     try:
-                        importDict(lname, io.BytesIO(ddata), dname)
+                        dictionaryManager.importDict(lname, io.BytesIO(ddata), dname)
                     except ValueError as e:
                         self.log_update.emit(" ERROR: %s" % str(e))
                 else:
