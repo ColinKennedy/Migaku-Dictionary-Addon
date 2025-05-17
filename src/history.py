@@ -143,28 +143,34 @@ class HistoryBrowser(qt.QWidget):
         self.dictInt = parent
         self.tableView.setModel(self.model)
         self.clearHistory = qt.QPushButton("Clear History")
-        self.clearHistory.clicked.connect(self.deleteHistory)
-        self.tableView.doubleClicked.connect(self.searchAgain)
-        self.setupTable()
-        self.setLayout(self.getLayout())
+        self.clearHistory.clicked.connect(self._deleteHistory)
+        self.tableView.doubleClicked.connect(self._searchAgain)
+        self._setupTable()
+        self.setLayout(self._getLayout())
         self.setColors()
         self.hotkeyEsc = qt.QShortcut(qt.QKeySequence("Esc"), self)
         self.hotkeyEsc.activated.connect(self.hide)
 
-    def setupTable(self) -> None:
-        tableHeader = self.tableView.horizontalHeader()
+    def _getLayout(self) -> qt.QVBoxLayout:
+        vbox = qt.QVBoxLayout()
+        vbox.addWidget(self.tableView)
+        hbox = qt.QHBoxLayout()
+        self.clearHistory.setFixedSize(100, 30)
+        hbox.addStretch()
+        hbox.addWidget(self.clearHistory)
+        vbox.addLayout(hbox)
+        vbox.setContentsMargins(2, 2, 2, 2)
+        return vbox
 
-        if not tableHeader:
-            raise RuntimeError(f'No horizontalHeader for "{self.tableView}" was found.')
+    def _deleteHistory(self) -> None:
+        if not miAsk(
+            "Clearing your history cannot be undone. Would you like to proceed?", self
+        ):
+            return
 
-        tableHeader.setSectionResizeMode(0, qt.QHeaderView.ResizeMode.Stretch)
-        tableHeader.setSectionResizeMode(1, qt.QHeaderView.ResizeMode.Stretch)
-        self.tableView.setSelectionBehavior(
-            qt.QAbstractItemView.SelectionBehavior.SelectRows
-        )
-        tableHeader.hide()
+        self.model.removeRows(0, len(self.model.history))
 
-    def searchAgain(self) -> None:
+    def _searchAgain(self) -> None:
         date = str(datetime.date.today())
         model = self.tableView.selectionModel()
 
@@ -177,6 +183,19 @@ class HistoryBrowser(qt.QWidget):
         self.model.insertRows(term=term, date=date)
         self.dictInt.initSearch(term)
 
+    def _setupTable(self) -> None:
+        tableHeader = self.tableView.horizontalHeader()
+
+        if not tableHeader:
+            raise RuntimeError(f'No horizontalHeader for "{self.tableView}" was found.')
+
+        tableHeader.setSectionResizeMode(0, qt.QHeaderView.ResizeMode.Stretch)
+        tableHeader.setSectionResizeMode(1, qt.QHeaderView.ResizeMode.Stretch)
+        self.tableView.setSelectionBehavior(
+            qt.QAbstractItemView.SelectionBehavior.SelectRows
+        )
+        tableHeader.hide()
+
     def setColors(self) -> None:
         if self.dictInt.nightModeToggler.day:
             if is_mac:
@@ -187,22 +206,3 @@ class HistoryBrowser(qt.QWidget):
         else:
             self.setPalette(self.dictInt.nightPalette)
             self.tableView.setStyleSheet(self.dictInt.getTableStyle())
-
-    def deleteHistory(self) -> None:
-        if not miAsk(
-            "Clearing your history cannot be undone. Would you like to proceed?", self
-        ):
-            return
-
-        self.model.removeRows(0, len(self.model.history))
-
-    def getLayout(self) -> qt.QVBoxLayout:
-        vbox = qt.QVBoxLayout()
-        vbox.addWidget(self.tableView)
-        hbox = qt.QHBoxLayout()
-        self.clearHistory.setFixedSize(100, 30)
-        hbox.addStretch()
-        hbox.addWidget(self.clearHistory)
-        vbox.addLayout(hbox)
-        vbox.setContentsMargins(2, 2, 2, 2)
-        return vbox

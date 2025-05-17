@@ -12,7 +12,7 @@ addonId = 1655992655
 dledIds: list[int] = []
 
 
-def shutdownDB(
+def _shutdownDB(
     parent: qt.QWidget,
     mgr: addons.AddonManager,
     ids: typing.Sequence[int],
@@ -35,7 +35,7 @@ def shutdownDB(
         time.sleep(2)
 
 
-def restartDB(*args: typing.Any) -> None:
+def _restartDB(*args: typing.Any) -> None:
     if addonId in dledIds:
         dictdb.initialize(dictdb.DictDB())
         migaku_dictionary.get().db = dictdb.DictDB()
@@ -44,12 +44,12 @@ def restartDB(*args: typing.Any) -> None:
         )
 
 
-def wrapOnDone(self: addons.DownloaderInstaller, *_: typing.Any) -> None:
-    self.mgr.mw.progress.timer(50, lambda: restartDB(), False)
+def _wrapOnDone(self: addons.DownloaderInstaller, *_: typing.Any) -> None:
+    self.mgr.mw.progress.timer(50, lambda: _restartDB(), False)
 
 
-addons.download_addons = wrap(addons.download_addons, shutdownDB, "before")
+addons.download_addons = wrap(addons.download_addons, _shutdownDB, "before")
 addons.DownloaderInstaller._download_done = wrap(  # type: ignore[method-assign]
     addons.DownloaderInstaller._download_done,
-    wrapOnDone,
+    _wrapOnDone,
 )

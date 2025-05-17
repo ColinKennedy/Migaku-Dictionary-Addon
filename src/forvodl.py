@@ -101,62 +101,21 @@ class Forvo(QRunnable):
     def __init__(self, language: str) -> None:
         super().__init__()
 
-        self.selLang = language
-        self.term: typing.Optional[str] = None
-        self.signals = ForvoSignals()
-        self.langShortCut = languages[self.selLang]
-        self.GOOGLE_SEARCH_URL = "https://forvo.com/word/◳t/#" + self.langShortCut  # ◳r
-        self.session = requests.session()
-        self.session.headers.update(
+        self._selLang = language
+        self._langShortCut = languages[self._selLang]
+        self._GOOGLE_SEARCH_URL = (
+            "https://forvo.com/word/◳t/#" + self._langShortCut
+        )  # ◳r
+        self._session = requests.session()
+        self._session.headers.update(
             {
                 "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:10.0) \
                     Gecko/20100101 Firefox/10.0"
             }
         )
+        self.signals = ForvoSignals()
 
-    def setTermIdName(self, term: str, idName: str) -> None:
-        self.term = term
-        self.idName = idName
-
-    def run(self) -> None:
-        if self.term:
-            resultList = [self.attemptFetchForvoLinks(self.term), self.idName]
-            self.signals.resultsFound.emit(resultList)
-        self.signals.finished.emit()
-
-    def search(
-        self,
-        term: str,
-        lang: typing.Union[str, typing.Literal[False]] = False,
-    ) -> list[tuple[str, str, str, str]]:
-        if lang and self.selLang != lang:
-            self.selLang = lang
-            self.langShortCut = languages[self.selLang]
-            self.GOOGLE_SEARCH_URL = "https://forvo.com/word/◳t/#" + self.langShortCut
-        query = self.GOOGLE_SEARCH_URL.replace(
-            "◳t", re.sub(r'[\/\'".,&*@!#()\[\]\{\}]', "", term)
-        )
-        return self.forvo_search(query)
-
-    def decodeURL(
-        self,
-        url1: str,
-        url2: str,
-        protocol: str,
-        audiohost: str,
-        server: str,
-    ) -> tuple[str, str]:
-        url2 = protocol + "//" + server + "/player-mp3-highHandler.php?path=" + url2
-        url1 = (
-            protocol
-            + "//"
-            + audiohost
-            + "/mp3/"
-            + base64.b64decode(url1).decode("utf-8", "strict")
-        )
-        return url1, url2
-
-    def attemptFetchForvoLinks(
+    def _attemptFetchForvoLinks(
         self, term: str
     ) -> typing.Union[str, typing.Literal[False]]:
         urls = self.search(term)
@@ -166,8 +125,20 @@ class Forvo(QRunnable):
         # TODO: @ColinKennedy remove False?
         return False
 
+    def _forvo_search(self, query_gen: str) -> list[tuple[str, str, str, str]]:
+        try:
+            html = self._session.get(query_gen).text
+        except:
+            self.signals.noResults.emit(
+                "The Forvo Dictionary could not be loaded, please confirm that your are connected to the internet and try again. "
+            )
+            return []
+        results = html
+
+        return self._generateURLS(results)
+
     # TODO: @ColinKennedy - Make a more specific type-hint instead of a hard-coded tuple
-    def generateURLS(self, results: str) -> list[tuple[str, str, str, str]]:
+    def _generateURLS(self, results: str) -> list[tuple[str, str, str, str]]:
         matches = typing.cast(
             list[str], re.findall(r"var pronunciations = \[([\w\W\n]*?)\];", results)
         )
@@ -175,7 +146,7 @@ class Forvo(QRunnable):
             return []
         audio = matches[0]
         data = re.findall(
-            self.selLang
+            self._selLang
             + r'.*?Pronunciation by (?:<a.*?>)?(\w+).*?class="lang_xx"\>(.*?)\<.*?,.*?,.*?,.*?,\'(.+?)\',.*?,.*?,.*?\'(.+?)\'',
             audio,
         )
@@ -198,22 +169,42 @@ class Forvo(QRunnable):
         urls: list[tuple[str, str, str, str]] = []
 
         for datum in data:
-            url1, url2 = self.decodeURL(datum[2], datum[3], protocol, audiohost, server)
+            url1, url2 = _decodeURL(datum[2], datum[3], protocol, audiohost, server)
             urls.append((datum[0], datum[1], url1, url2))
 
         return urls
 
-    def setSearchRegion(self, region: str) -> None:
-        self.region = region
+    def setTermIdName(self, term: str, idName: str) -> None:
+        self.idName = idName
 
-    def forvo_search(self, query_gen: str) -> list[tuple[str, str, str, str]]:
-        try:
-            html = self.session.get(query_gen).text
-        except:
-            self.signals.noResults.emit(
-                "The Forvo Dictionary could not be loaded, please confirm that your are connected to the internet and try again. "
-            )
-            return []
-        results = html
+    def search(
+        self,
+        term: str,
+        lang: typing.Union[str, typing.Literal[False]] = False,
+    ) -> list[tuple[str, str, str, str]]:
+        if lang and self._selLang != lang:
+            self._selLang = lang
+            self._langShortCut = languages[self._selLang]
+            self._GOOGLE_SEARCH_URL = "https://forvo.com/word/◳t/#" + self._langShortCut
+        query = self._GOOGLE_SEARCH_URL.replace(
+            "◳t", re.sub(r'[\/\'".,&*@!#()\[\]\{\}]', "", term)
+        )
+        return self._forvo_search(query)
 
-        return self.generateURLS(results)
+
+def _decodeURL(
+    url1: str,
+    url2: str,
+    protocol: str,
+    audiohost: str,
+    server: str,
+) -> tuple[str, str]:
+    url2 = protocol + "//" + server + "/player-mp3-highHandler.php?path=" + url2
+    url1 = (
+        protocol
+        + "//"
+        + audiohost
+        + "/mp3/"
+        + base64.b64decode(url1).decode("utf-8", "strict")
+    )
+    return url1, url2
