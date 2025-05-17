@@ -2,7 +2,7 @@ import re
 import typing
 
 import aqt
-from anki.utils import is_win
+from anki import utils
 from aqt import mw, qt
 
 from . import midict, migaku_dictionary, migaku_widget_global
@@ -46,7 +46,7 @@ def performColSearch(text: str) -> None:
     browser.onSearchActivated()
     browser.activateWindow()
 
-    if not is_win:
+    if not utils.is_win:
         browser.setWindowState(
             browser.windowState() & ~qt.Qt.WindowState.WindowMinimized
             | qt.Qt.WindowState.WindowActive

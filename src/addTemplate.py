@@ -8,7 +8,7 @@ import aqt
 from anki.lang import _
 from aqt import main, qt
 
-from .miutils import miAsk, miInfo
+from . import miutils
 
 if typing.TYPE_CHECKING:
     # TODO: @ColinKennedy - This line prevents a cyclic import. Fix later.
@@ -147,11 +147,13 @@ class TemplateEditor(qt.QDialog):
         newConfig = self._getConfig()
         tn = self._templateName.text()
         if tn == "":
-            miInfo("The export template must have a name.", level="wrn")
+            miutils.miInfo("The export template must have a name.", level="wrn")
             return
         curGroups = newConfig["ExportTemplates"]
         if self._new and tn in curGroups:
-            miInfo("A new export template must have a unique name.", level="wrn")
+            miutils.miInfo(
+                "A new export template must have a unique name.", level="wrn"
+            )
             return
         exportTemplate: typer.ExportTemplate = {
             "noteType": self._noteType.currentText(),

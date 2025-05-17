@@ -1,8 +1,8 @@
+import enum
 import os
 import typing
-from enum import Enum
 
-from anki.httpclient import HttpClient
+from anki import httpclient
 from aqt import qt
 
 from . import typer, webConfig
@@ -12,7 +12,7 @@ addon_path = os.path.dirname(__file__)
 
 class FreqConjWebWindow(qt.QDialog):
 
-    class Mode(Enum):
+    class Mode(enum.Enum):
         Freq = (0,)
         Conj = (1,)
 
@@ -92,7 +92,7 @@ class FreqConjWebWindow(qt.QDialog):
 
         url = idx.data(qt.Qt.ItemDataRole.UserRole)
 
-        client = HttpClient()
+        client = httpclient.HttpClient()
         resp = client.get(url)
 
         if resp.status_code != 200:

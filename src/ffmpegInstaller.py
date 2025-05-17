@@ -3,18 +3,15 @@ import os
 import stat
 import typing
 import zipfile
-from os.path import dirname, exists, join
 
 import aqt
 import requests
-from anki.hooks import addHook
-from anki.utils import is_lin, is_mac, is_win
+from anki import hooks, utils
 from aqt import gui_hooks, main
 from aqt import mw as mw_
 from aqt import qt
 
-from . import typer
-from .miutils import miInfo
+from . import miutils, typer
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,19 +22,19 @@ class FFMPEGInstaller:
         super().__init__()
 
         self._mw = mw
-        self._addonPath = dirname(__file__)
-        self._ffmpegDir = join(self._addonPath, "user_files", "ffmpeg")
+        self._addonPath = os.path.dirname(__file__)
+        self._ffmpegDir = os.path.join(self._addonPath, "user_files", "ffmpeg")
         self._ffmpegFilename = "ffmpeg"
         # TODO: @ColinKennedy download these sources elsewhere
-        if is_win:
+        if utils.is_win:
             self._ffmpegFilename += ".exe"
             self._downloadURL = "http://dicts.migaku.io/ffmpeg/windows"
-        elif is_lin:
+        elif utils.is_lin:
             self._downloadURL = "http://dicts.migaku.io/ffmpeg/linux"
-        elif is_mac:
+        elif utils.is_mac:
             self._downloadURL = "http://dicts.migaku.io/ffmpeg/macos"
-        self._ffmpegPath = join(self._ffmpegDir, self._ffmpegFilename)
-        self._tempPath = join(self._addonPath, "temp", "ffmpeg")
+        self._ffmpegPath = os.path.join(self._ffmpegDir, self._ffmpegFilename)
+        self._tempPath = os.path.join(self._addonPath, "temp", "ffmpeg")
 
     def _get_configuration(self) -> typer.Configuration:
         return typing.cast(
@@ -52,7 +49,7 @@ class FFMPEGInstaller:
         progressWidget = qt.QWidget(None)
         textDisplay = qt.QLabel()
         progressWidget.setWindowIcon(
-            qt.QIcon(join(self._addonPath, "icons", "migaku.png"))
+            qt.QIcon(os.path.join(self._addonPath, "icons", "migaku.png"))
         )
         progressWidget.setWindowTitle(title)
         textDisplay.setText(initialText)
@@ -78,7 +75,7 @@ class FFMPEGInstaller:
     def _couldNotInstall(self) -> None:
         self._toggleMP3Conversion(False)
         self._toggleFailedInstallation(True)
-        miInfo(
+        miutils.miInfo(
             "FFMPEG could not be installed. MP3 Conversion has been disabled. You will not be able to convert audio files imported from the Immerse with Migaku Browser Extension to MP3 format until it is installed. Migaku Dictionary will attempt to install it again on the next profile load."
         )
 
@@ -122,7 +119,7 @@ class FFMPEGInstaller:
             return False
 
     def _makeExecutable(self) -> bool:
-        if not is_win:
+        if not utils.is_win:
             # TODO: @ColinKennedy - remove try/except later
             try:
                 st = os.stat(self._ffmpegPath)
@@ -155,9 +152,9 @@ class FFMPEGInstaller:
 
     def installFFMPEG(self) -> None:
         config = self._get_configuration()
-        if (config["mp3Convert"] or config["failedFFMPEGInstallation"]) and not exists(
-            self._ffmpegPath
-        ):
+        if (
+            config["mp3Convert"] or config["failedFFMPEGInstallation"]
+        ) and not os.path.exists(self._ffmpegPath):
             currentStep = 1
             totalSteps = 3
             stepText = "Step {} of {}"
@@ -207,7 +204,7 @@ def _roundToKb(value: typing.Union[float, int]) -> float:
 
 def _window_loaded() -> None:
     ffmpegInstaller = FFMPEGInstaller(mw_)
-    addHook("profileLoaded", ffmpegInstaller.installFFMPEG)
+    hooks.addHook("profileLoaded", ffmpegInstaller.installFFMPEG)
 
 
 def initialize() -> None:

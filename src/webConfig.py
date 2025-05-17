@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import typing
 
-from anki.httpclient import HttpClient
+from anki import httpclient
 
 from . import typer
 
@@ -27,7 +27,7 @@ def download_index(
 
     index_url = server_url + "/index.json"
 
-    client = HttpClient()
+    client = httpclient.HttpClient()
     resp = client.get(index_url)
 
     if resp.status_code != 200:

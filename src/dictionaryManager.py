@@ -16,9 +16,7 @@ from collections import abc
 import aqt
 from aqt import mw, qt
 
-from . import dictdb, typer
-from .dictionaryWebInstallWizard import DictionaryWebInstallWizard
-from .freqConjWebWindow import FreqConjWebWindow
+from . import dictdb, dictionaryWebInstallWizard, freqConjWebWindow, typer
 
 _DEFINITION_TABLE_SEPARATOR = ", "
 _NOT_SET_FREQUENCY = 999999  # NOTE: This means "not frequent or frequency is not known"
@@ -343,7 +341,7 @@ class DictionaryManagerWidget(qt.QWidget):
         return curr_item
 
     def _web_installer(self) -> None:
-        DictionaryWebInstallWizard.execute_modal()
+        dictionaryWebInstallWizard.DictionaryWebInstallWizard.execute_modal()
         self._reload_tree_widget()
 
     def _add_lang(self) -> None:
@@ -447,7 +445,9 @@ class DictionaryManagerWidget(qt.QWidget):
             return
         lang_name = lang_item.data(0, qt.Qt.ItemDataRole.UserRole + 0)
 
-        FreqConjWebWindow.execute_modal(lang_name, FreqConjWebWindow.Mode.Freq)
+        freqConjWebWindow.FreqConjWebWindow.execute_modal(
+            lang_name, freqConjWebWindow.FreqConjWebWindow.Mode.Freq
+        )
 
     def _set_conj_data(self) -> None:
         lang_name = self._get_current_lang_dict()[0]
@@ -482,7 +482,9 @@ class DictionaryManagerWidget(qt.QWidget):
             return
         lang_name = lang_item.data(0, qt.Qt.ItemDataRole.UserRole + 0)
 
-        FreqConjWebWindow.execute_modal(lang_name, FreqConjWebWindow.Mode.Conj)
+        freqConjWebWindow.FreqConjWebWindow.execute_modal(
+            lang_name, freqConjWebWindow.FreqConjWebWindow.Mode.Conj
+        )
 
     def _import_dict(self) -> None:
         lang_item = self._get_current_lang_item()
@@ -521,7 +523,7 @@ class DictionaryManagerWidget(qt.QWidget):
             return
         lang_name = lang_item.data(0, qt.Qt.ItemDataRole.UserRole + 0)
 
-        DictionaryWebInstallWizard.execute_modal(lang_name)
+        dictionaryWebInstallWizard.DictionaryWebInstallWizard.execute_modal(lang_name)
         self._reload_tree_widget()
 
     def _remove_dict(self) -> None:

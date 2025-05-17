@@ -1,4 +1,4 @@
-from anki.utils import is_lin, is_win
+from anki import utils
 
 from . import threader
 
@@ -22,7 +22,7 @@ def capture_key(keyList: list[str]) -> None:
 
     thread = threader.get()
 
-    if is_win:
+    if utils.is_win:
         if (
             "Key.ctrl_l" in _CURRENTLY_PRESSED
             and "'c'" in _CURRENTLY_PRESSED
@@ -54,7 +54,7 @@ def capture_key(keyList: list[str]) -> None:
         ):
             thread.handleImageExport()
             clear()
-    elif is_lin:
+    elif utils.is_lin:
         if (
             "Key.ctrl" in _CURRENTLY_PRESSED
             and "'c'" in _CURRENTLY_PRESSED

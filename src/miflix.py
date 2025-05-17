@@ -4,22 +4,19 @@ import asyncio
 import json
 import logging
 import os
-import os.path
 import re
 import textwrap
 import typing
 import uuid
-from os.path import dirname, exists, join
-from threading import Thread, Timer
 
 import aqt
 import tornado.ioloop
 import tornado.web
-from anki.collection import Collection
-from anki.utils import is_win
+from anki import collection as collection_
+from anki import utils
 from aqt import main
 from aqt import mw as mw_
-from aqt.qt import QThread, pyqtSignal
+from aqt import qt
 from tornado import httputil
 
 from . import global_state, threader, typer
@@ -35,7 +32,7 @@ class _Field(typing.TypedDict):
 
 
 def getNextBatchOfCards(
-    collection: Collection,
+    collection: collection_.Collection,
     start: _PseudoNumber,
     incrementor: _PseudoNumber,
 ) -> list[list[str]]:
@@ -71,8 +68,8 @@ class MigakuHTTPHandler(tornado.web.RequestHandler):
 
     def initialize(self) -> None:
         self.mw = typing.cast(main.AnkiQt, self.application.settings.get("mw"))
-        self.addonDirectory = dirname(__file__)
-        self.tempDirectory = join(self.addonDirectory, "temp")
+        self.addonDirectory = os.path.dirname(__file__)
+        self.tempDirectory = os.path.join(self.addonDirectory, "temp")
         self.alert = self.application.alert
         self.addCondensedAudioInProgressMessage = (
             self.application.addCondensedAudioInProgressMessage
@@ -81,9 +78,9 @@ class MigakuHTTPHandler(tornado.web.RequestHandler):
             self.application.removeCondensedAudioInProgressMessage
         )
         suffix = ""
-        if is_win:
+        if utils.is_win:
             suffix = ".exe"
-        self.ffmpeg = join(
+        self.ffmpeg = os.path.join(
             self.addonDirectory, "user_files", "ffmpeg", "ffmpeg" + suffix
         )
 
@@ -111,7 +108,7 @@ class ImportHandler(MigakuHTTPHandler):
         self.finish("ImportHandler")
 
     def ffmpegExists(self) -> bool:
-        return exists(self.ffmpeg)
+        return os.path.exists(self.ffmpeg)
 
     def removeTempFiles(self) -> None:
         tmpdir = self.tempDirectory
@@ -133,8 +130,8 @@ class ImportHandler(MigakuHTTPHandler):
         timestamp: str,
         config: typer.Configuration,
     ) -> None:
-        wavDir = join(self.tempDirectory, timestamp)
-        if exists(wavDir):
+        wavDir = os.path.join(self.tempDirectory, timestamp)
+        if os.path.exists(wavDir):
             config = self.getConfig()
             mp3dir = config.get("condensedAudioDirectory")
 
@@ -143,12 +140,12 @@ class ImportHandler(MigakuHTTPHandler):
 
             wavs = [f for f in os.listdir(wavDir)]
             wavs.sort()
-            wavListFilePath = join(wavDir, "list.txt")
+            wavListFilePath = os.path.join(wavDir, "list.txt")
             wavListFile = open(wavListFilePath, "w+")
             filename = self.cleanFilename(filename + "\n") + "-condensed.mp3"
-            mp3path = join(mp3dir, filename)
+            mp3path = os.path.join(mp3dir, filename)
             for wav in wavs:
-                wavListFile.write("file '{}'\n".format(join(wavDir, wav)))
+                wavListFile.write("file '{}'\n".format(os.path.join(wavDir, wav)))
             wavListFile.close()
             import subprocess
 
@@ -346,7 +343,7 @@ class ImportHandler(MigakuHTTPHandler):
         return True
 
     def copyFileToTempDir(self, handler: httputil.HTTPFile, filename: str) -> None:
-        filePath = join(self.tempDirectory, filename)
+        filePath = os.path.join(self.tempDirectory, filename)
 
         with open(filePath, "wb") as handler_:
             handler_.write(handler["body"].encode())
@@ -361,12 +358,12 @@ class ImportHandler(MigakuHTTPHandler):
         else:
             timestamp = str(timestamp_value)
 
-        directoryPath = join(self.tempDirectory, timestamp)
+        directoryPath = os.path.join(self.tempDirectory, timestamp)
 
-        if not exists(directoryPath):
+        if not os.path.isdir(directoryPath):
             os.mkdir(directoryPath)
 
-        filePath = join(directoryPath, filename)
+        filePath = os.path.join(directoryPath, filename)
 
         with open(filePath, "wb") as handler_:
             handler_.write(handler["body"].encode())
@@ -552,15 +549,15 @@ class MigakuHTTPServer(tornado.web.Application):
         return True
 
 
-class MigakuServerThread(QThread):
+class MigakuServerThread(qt.QThread):
 
-    alertUser = pyqtSignal(str)
-    exportingCondensed = pyqtSignal()
-    notExportingCondensed = pyqtSignal()
+    alertUser = qt.pyqtSignal(str)
+    exportingCondensed = qt.pyqtSignal()
+    notExportingCondensed = qt.pyqtSignal()
 
     def __init__(self, mw: main.AnkiQt) -> None:
+        super().__init__()
         self.mw = mw
-        QThread.__init__(self)
         self.server = MigakuHTTPServer(self, mw)
         self.start()
 

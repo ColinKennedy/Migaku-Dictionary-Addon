@@ -1,6 +1,6 @@
 import time
 import typing
-from urllib.request import Request, urlopen
+from urllib import request
 
 import aqt
 from aqt import mw
@@ -32,13 +32,13 @@ def _download_image(
 ) -> typing.Union[str, typing.Literal[False]]:
     try:
         filename = str(time.time()).replace(".", "") + ".png"
-        req = Request(
+        req = request.Request(
             url,
             headers={
                 "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36"
             },
         )
-        file = urlopen(req).read()
+        file = request.urlopen(req).read()
         image = aqt.QImage()
         image.loadFromData(file)
         image = image.scaled(

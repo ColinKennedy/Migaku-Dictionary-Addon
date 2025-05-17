@@ -2,9 +2,8 @@
 
 import typing
 
-from anki.notes import Note
+from anki import notes
 from aqt import main
-from aqt.utils import showInfo
 
 
 class miJHandler:
@@ -31,7 +30,7 @@ class miJHandler:
 
         return activeNotes
 
-    def attemptGenerate(self, note: Note) -> Note:
+    def attemptGenerate(self, note: notes.Note) -> notes.Note:
         # TODO: @ColinKennedy - fetchParsedField doesn't exist. And the git
         # history says it never did. So this method can probably be removed.
         #
@@ -52,7 +51,7 @@ class miJHandler:
         return note
 
     def attemptFieldGenerate(
-        self, text: str, field: str, model: str, note: Note
+        self, text: str, field: str, model: str, note: notes.Note
     ) -> str:
         # TODO: @ColinKennedy - fetchParsedField doesn't exist. And the git
         # history says it never did. So this method can probably be removed.
