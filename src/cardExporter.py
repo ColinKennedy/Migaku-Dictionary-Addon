@@ -970,7 +970,7 @@ Please review your template and notetype combination."""
                         self._mw.col.addNote(note)
                         self._mw.col.save()
                 else:
-                    print("Invalid field values")
+                    _LOGGER.error("Invalid, missing field values.")
 
     def _getFieldsValuesForTextCard(
         self,
@@ -1016,7 +1016,7 @@ Please review your template and notetype combination."""
                 )
 
                 if not fieldsValues:
-                    print("Invalid field values")
+                    _LOGGER.error("Invalid, missing field values.")
 
                     return
 
