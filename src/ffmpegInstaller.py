@@ -164,13 +164,13 @@ class FFMPEGInstaller:
             )
             progressBar.setMaximum(3)
             progressBar.setValue(currentStep)
-            print("Downloading FFMPEG.")
+            _LOGGER.info("Downloading FFMPEG.")
             if not self._downloadFFMPEG():
-                print("Could not download FFMPEG.")
+                _LOGGER.error("Could not download FFMPEG.")
                 self._couldNotInstall()
                 return
             try:
-                print("Unzipping FFMPEG.")
+                _LOGGER.info("Unzipping FFMPEG.")
                 currentStep += 1
                 progressBar.setValue(currentStep)
                 self._mw.app.processEvents()
@@ -179,23 +179,22 @@ class FFMPEGInstaller:
                 )
                 self._unzipFFMPEG()
                 if not self._makeExecutable():
-                    print("FFMPEG could not be made executable.")
+                    _LOGGER.error("FFMPEG could not be made executable.")
                     self._removeFailedInstallation()
                     self._couldNotInstall()
                     return
                 if config["failedFFMPEGInstallation"]:
                     self._toggleMP3Conversion(True)
                     self._toggleFailedInstallation(False)
-                print("Successfully installed FFMPEG.")
+                _LOGGER.info("Successfully installed FFMPEG.")
             except Exception as error:
                 currentStep += 1
                 progressBar.setValue(currentStep)
                 self._mw.app.processEvents()
-                print(error)
-                print("Could not unzip FFMPEG.")
+                _LOGGER.exception("Could not unzip FFMPEG.")
                 self._couldNotInstall()
         else:
-            print("FFMPEG already installed or conversion disabled.")
+            _LOGGER.info("FFMPEG already installed or conversion disabled.")
 
 
 def _roundToKb(value: typing.Union[float, int]) -> float:
