@@ -38,9 +38,11 @@ class DictDB:
     def __init__(self) -> None:
         super().__init__()
 
-        db_file = os.path.join(
-            mw.pm.addonFolder(), addon_path, "user_files", "db", "dictionaries.sqlite"
-        )
+        directory = os.path.join(mw.pm.addonFolder(), addon_path, "user_files", "db")
+        os.makedirs(directory, exist_ok=True)
+
+        db_file = os.path.join(directory, "dictionaries.sqlite")
+
         self._conn: sqlite3.Connection = sqlite3.connect(
             db_file, check_same_thread=False
         )
@@ -52,6 +54,29 @@ class DictDB:
         self._c = cursor
         self._c.execute("PRAGMA foreign_keys = ON")
         self._c.execute("PRAGMA case_sensitive_like=ON;")
+
+        self._c.execute(
+            """
+            CREATE TABLE IF NOT EXISTS langnames (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                langname TEXT UNIQUE NOT NULL
+            )
+            """
+        )
+
+        self._c.execute(
+            """
+            CREATE TABLE IF NOT EXISTS dictnames (
+                dictname TEXT PRIMARY KEY,
+                lid INTEGER NOT NULL,
+                fields TEXT NOT NULL,
+                addtype TEXT NOT NULL,
+                termHeader TEXT,
+                duplicateHeader INTEGER DEFAULT 0,
+                FOREIGN KEY (lid) REFERENCES langnames(id)
+            )
+            """
+        )
 
     def _getDuplicateSetting(self, name: str) -> typing.Optional[tuple[int, str]]:
         self._c.execute(
@@ -258,16 +283,29 @@ class DictDB:
 
         self.commitChanges()
 
+    def hasDbLangs(self) -> bool:
+        try:
+            self._c.execute("SELECT langname FROM langnames;")
+        except sqlite3.OperationalError:
+            _LOGGER.warning(
+                "No language dictionaries were found. "
+                "Maybe the user has not added any dictionaries yet.",
+            )
+
+            return False
+
+        return True
+
     def getCurrentDbLangs(self) -> list[str]:
         self._c.execute("SELECT langname FROM langnames;")
-
-        langs: list[str] = []
 
         # TODO: @ColinKennedy add a better try / except or remove it
         try:
             allLs = self._c.fetchall()
         except:
             return []
+
+        langs: list[str] = []
 
         for l in allLs:
             langs.append(l[0])
