@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import collections
 import dataclasses
+import functools
 import io
 import json
 import logging
@@ -16,13 +17,14 @@ from collections import abc
 import aqt
 from aqt import mw, qt
 
-from . import dictdb, dictionaryWebInstallWizard, freqConjWebWindow, typer
+from . import dictdb, dictionaryWebInstallWizard, freqConjWebWindow, typer, yomitan_type
 
 _DEFINITION_TABLE_SEPARATOR = ", "
 _NOT_SET_FREQUENCY = 999999  # NOTE: This means "not frequent or frequency is not known"
 _LOGGER = logging.getLogger(__name__)
 _FrequencyDict = dict[tuple[str, str], int]
 _ADDON_PATH = os.path.dirname(os.path.realpath(__file__))
+T = typing.TypeVar("T")
 
 
 class _FrequencyEntryValue(typing.TypedDict):
@@ -59,40 +61,77 @@ class _FlatDictionary:
         self._frequency: typing.Optional[int] = None
         self._star_count: typing.Optional[str] = None
 
-    @staticmethod
-    def is_valid(data: typing.Any) -> bool:
+    @classmethod
+    def deserialize(
+        cls, data: list[typing.Union[str, int]]
+    ) -> typing.Optional[_FlatDictionary]:
+
+        def _get(type_: typing.Any) -> typing.Callable[[typing.Any], bool]:
+
+            @functools.wraps(_get)
+            def wrapper(value: T) -> typing.Optional[T]:
+                if not isinstance(value, type_):
+                    return None
+
+                return value  # type: ignore[no-any-return]
+
+            return wrapper  # type: ignore[return-value]
+
+        def _get_list_of_str(value: list[str]) -> list[str]:
+            for item in value:
+                if not isinstance(item, str):
+                    return None
+
+            return value
+
+        def _convert_list_of_str(value: typing.Any) -> typing.Optional[list[str]]:
+            if not isinstance(value, list):
+                return None
+
+            definitions: typing.Optional[list[str]] = []
+
+            if definitions := _get_list_of_str(value):
+                return definitions
+
+            if definitions := _get_yomitan_definitions(value):
+                return definitions
+
+            return None
+
         if len(data) != 8:
-            return False
+            return None
 
         # TODO: @ColinKennedy add a better example
         # Example: ['πâ╜', 'πâ╜', 'n', '', 0, ['repetition mark in katakana'], 0, '']
         index_types = {
-            0: str,
-            1: str,
-            2: str,
-            3: str,
-            4: int,
-            5: list,
-            6: int,
-            7: str,
+            0: _get(str),
+            1: _get(str),
+            2: _get(str),
+            3: _get(str),
+            4: _get(int),
+            5: _convert_list_of_str,
+            6: _get(int),
+            7: _get(str),
         }
 
-        for index, type_ in index_types.items():
-            if not isinstance(data[index], type_):
+        converted_data: list[typing.Union[list[str], int, str]] = []
+
+        for index, check in index_types.items():
+            converted = check(data[index])
+
+            if converted is None:
                 _LOGGER.debug(
-                    'Rejected "%s" data because "%s" index is not "%s" type.',
+                    'Rejected "%s" data because "%s" index failed "%s" check.',
                     data,
                     index,
-                    type_,
+                    check,
                 )
 
-                return False
+                return None
 
-        return True
+            converted_data.append(converted)
 
-    @classmethod
-    def deserialize(cls, data: list[typing.Union[str, int]]) -> _FlatDictionary:
-        return cls(*data)  # type: ignore[arg-type]
+        return cls(*converted_data)  # type: ignore[arg-type]
 
     def get_frequency(self) -> typing.Optional[int]:
         return self._frequency
@@ -268,7 +307,13 @@ class DictionaryManagerWidget(qt.QWidget):
     def _reload_tree_widget(self) -> None:
         db = dictdb.get()
 
+        if not db.hasDbLangs():
+            _LOGGER.warning("Skipped reloading because the user has no dictionaries.")
+
+            return
+
         langs = db.getCurrentDbLangs()
+
         dicts_by_langs: dict[str, list[str]] = {}
 
         for info in db.getAllDictsWithLang():
@@ -359,7 +404,10 @@ class DictionaryManagerWidget(qt.QWidget):
         try:
             db.addLanguages([name])
         except Exception as e:
-            self._info("Adding language failed.")
+            message = "Adding language failed."
+            self._info(message)
+            _LOGGER.exception(message)
+
             return
 
         lang_item = qt.QTreeWidgetItem([name])
@@ -621,13 +669,18 @@ def _read_language_dictionary(
                 )
 
             for entry in all_data:
-                if not _FlatDictionary.is_valid(entry):
-                    raise NotImplementedError(
-                        f'Entry "{entry}" is not supported yet. '
+                converted = _FlatDictionary.deserialize(entry)
+
+                if not converted:
+                    _LOGGER.warning(
+                        'Entry "%s" is not supported yet. '
                         "Please ask the maintainer to add it!",
+                        entry,
                     )
 
-                jsonDict.append(_FlatDictionary.deserialize(entry))
+                    continue
+
+                jsonDict.append(converted)
 
     return jsonDict, is_yomichan
 
@@ -901,6 +954,137 @@ def _getFrequencyDict(lang: str) -> tuple[_FrequencyDict, bool]:
         is_hyouki = False
 
     return frequencyDict, is_hyouki
+
+
+def _get_yomitan_definitions(value: typing.Any) -> typing.Optional[list[str]]:
+    """Parse ``value`` as though it is a Yomitan-style dictionary.
+
+    Yomitan dictionaries seem to have a variety of different structures. Some values are
+    "type or list[type]" and other sort of situations. This function tries to handle all
+    of them.
+
+    Args:
+        value: Some nested-but-known dict structure.
+
+    Returns:
+        If ``value`` cannot be parsed, return None. Otherwise return all found
+        vocabulary definitions.
+
+    """
+    # Yomitan dictionaries sometimes have a nested dict structure, list[dict[...]],
+    # where otherwise a list[str] would have been. This can happen if the data contains
+    # multiple definitions or definitions + examples. We need to extract the definitions
+    # that we need from that.
+    #
+    # Note:
+    #     In the full example below, we're interested only in the nested list's data.
+    #
+    # Full Example:
+    # [
+    #     'πâ╜',
+    #     'πâ╜',
+    #     'unc',
+    #     '',
+    #     -200,
+    #     [
+    #         {
+    #             'content': [
+    #                 {
+    #                     'content': {
+    #                         'content': 'repetition mark in katakana',
+    #                         'tag': 'li',
+    #                     },
+    #                     'data': {'content': 'glossary'},
+    #                     'lang': 'en',
+    #                     'style': {'listStyleType': 'circle'},
+    #                     'tag': 'ul'
+    #                 },
+    #                 {
+    #                     'content': {
+    #                         'content': [
+    #                             'see: ',
+    #                             {
+    #                                 'content': 'Σ╕Çπü«σ¡ùτé╣',
+    #                                 'href': '?query=Σ╕Çπü«σ¡ùτé╣&wildcards=off',
+    #                                 'lang': 'ja',
+    #                                 'tag': 'a',
+    #                             },
+    #                             {
+    #                                 'content': ' kana iteration mark',
+    #                                 'data': {'content': 'refGlosses'},
+    #                                 'style': {'fontSize': '65%', 'verticalAlign': 'middle'},
+    #                                 'tag': 'span',
+    #                             },
+    #                         ],
+    #                         'tag': 'li',
+    #                     },
+    #                     'data': {'content': 'references'},
+    #                     'lang': 'en',
+    #                     'style': {'listStyleType': "'Γ₧í∩╕Å '"},
+    #                     'tag': 'ul',
+    #                 },
+    #             ],
+    #             'type': 'structured-content',
+    #         },
+    #     ],
+    #     1000000,
+    #     '',
+    # ]
+    #
+
+    if not isinstance(value, list):
+        _LOGGER.debug('Value "%s" is not a sequence.', value)
+
+        return None
+
+    # IMPORTANT: ``all_content`` may not actually be this type. But our run-time checks
+    # will handle it in case it isn't.
+    #
+    all_content = typing.cast(list[yomitan_type.DictionaryEntryWithExamples], value)
+
+    definitions: list[str] = []
+
+    for item in all_content:
+        if not isinstance(item, dict):
+            _LOGGER.debug('Item "%s" is not a dict.', item)
+
+            return None
+
+        if "content" not in item:
+            _LOGGER.debug('Item "%s" does not have an expected content key.', item)
+
+            return None
+
+        inner_content = item["content"]
+
+        if not isinstance(inner_content, list):
+            _LOGGER.debug('Item "%s" does not have an expected content key.', item)
+
+            return None
+
+        for entry in inner_content:
+            try:
+                content = entry["data"]["content"]
+            except KeyError:
+                _LOGGER.debug('Unrecognized "%s" content.', item)
+
+                continue
+
+            if content != "glossary":
+                # NOTE: There's different types of content. Skip the unrelated ones,
+                _LOGGER.debug('Skipping "%s" content from "%s" entry.', content, entry)
+
+                continue
+
+            found = entry["content"]
+
+            if not isinstance(found, list):
+                found = [found]
+
+            for definition in found:
+                definitions.append(definition["content"])
+
+    return definitions
 
 
 def importDict(
