@@ -3,7 +3,8 @@ import typing
 
 import aqt
 from anki import utils
-from aqt import mw, qt
+from aqt import qt
+import aqt
 
 from . import midict, migaku_dictionary, migaku_widget_global
 
@@ -36,7 +37,7 @@ def performColSearch(text: str) -> None:
     browser = aqt.DialogManager._dialogs["Browser"][1]
 
     if not browser:
-        mw.onBrowse()
+        aqt.mw.onBrowse()
         browser = aqt.DialogManager._dialogs["Browser"][1]
 
     if not browser:
@@ -89,8 +90,8 @@ def searchTerm(self: qt.QWebEngineView) -> None:
     title = self.title()
 
     if title == "main webview":
-        if mw.state == "review":
-            dictionary.dict.setReviewer(mw.reviewer)
+        if aqt.mw.state == "review":
+            dictionary.dict.setReviewer(aqt.mw.reviewer)
     elif title == "editor":
         parent = migaku_widget_global.get_parent_editor()
         target = getTarget(type(parent.parentWindow).__name__)

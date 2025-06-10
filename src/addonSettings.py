@@ -11,7 +11,6 @@ import typing
 from anki import utils
 from anki.lang import _
 from aqt import main
-from aqt import mw as mw_
 from aqt import qt
 from aqt import utils as aqt_utils
 from aqt import webview

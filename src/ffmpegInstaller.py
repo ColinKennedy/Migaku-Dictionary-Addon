@@ -8,7 +8,6 @@ import aqt
 import requests
 from anki import hooks, utils
 from aqt import gui_hooks, main
-from aqt import mw as mw_
 from aqt import qt
 
 from . import miutils, typer
@@ -202,7 +201,7 @@ def _roundToKb(value: typing.Union[float, int]) -> float:
 
 
 def _window_loaded() -> None:
-    ffmpegInstaller = FFMPEGInstaller(mw_)
+    ffmpegInstaller = FFMPEGInstaller(aqt.mw)
     hooks.addHook("profileLoaded", ffmpegInstaller.installFFMPEG)
 
 

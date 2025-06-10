@@ -3,6 +3,7 @@
 # Also thanks to the creators of the Japanese Pronunciation/Pitch Accent, Japanese Pitch Accent Notes, and pitch accent note button  which I also borrowed marginally from
 #
 
+print("ADDING THE PLUGIN", __name__)
 import logging
 import os
 import sys

@@ -1,4 +1,3 @@
-from anki import hooks, utils
 from aqt import qt
 from aqt import utils as aqt_utils
 
@@ -6,6 +5,7 @@ from . import miutils
 
 
 def _checkForThirtyTwo() -> None:
+    from anki import utils
     if utils.is_win or utils.is_mac:
         qVer = qt.QT_VERSION_STR
         invalid = ["5.12.6", "5.9.7"]
@@ -18,4 +18,5 @@ def _checkForThirtyTwo() -> None:
 
 
 def initialize() -> None:
+    from anki import hooks
     hooks.addHook("profileLoaded", _checkForThirtyTwo)

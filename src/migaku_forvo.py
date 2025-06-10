@@ -4,7 +4,8 @@ import typing
 from os.path import join
 from urllib.request import Request, urlopen
 
-from aqt import gui_hooks, mw
+from aqt import gui_hooks
+import aqt
 
 from . import forvodl
 
@@ -15,7 +16,7 @@ _INSTANCE: typing.Optional[forvodl.Forvo] = None
 def _initialize() -> None:
     global _INSTANCE
 
-    configuration = mw.addonManager.getConfig(__name__)
+    configuration = aqt.mw.addonManager.getConfig(__name__)
 
     if not configuration:
         raise RuntimeError(f'Configuration "{__name__}" is not defined.')
@@ -39,7 +40,7 @@ def _download_audio(urls: list[tuple[str, str, str, str]], count: int) -> list[s
             )
             file = urlopen(req).read()
             filename = str(time.time()) + ".mp3"
-            open(join(mw.col.media.dir(), filename), "wb").write(file)
+            open(join(aqt.mw.col.media.dir(), filename), "wb").write(file)
             tags.append("[sound:" + filename + "]")
             success = True
         except:
@@ -59,7 +60,7 @@ def _download_audio(urls: list[tuple[str, str, str, str]], count: int) -> list[s
             )
             file = urlopen(req).read()
             filename = str(time.time()) + ".mp3"
-            open(join(mw.col.media.dir(), filename), "wb").write(file)
+            open(join(aqt.mw.col.media.dir(), filename), "wb").write(file)
             tags.append("[sound:" + filename + "]")
         except:
             continue

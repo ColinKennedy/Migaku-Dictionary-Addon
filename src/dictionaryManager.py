@@ -15,7 +15,7 @@ import zipfile
 from collections import abc
 
 import aqt
-from aqt import mw, qt
+from aqt import qt
 
 from . import dictdb, dictionaryWebInstallWizard, freqConjWebWindow, typer, yomitan_type
 

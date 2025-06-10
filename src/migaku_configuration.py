@@ -1,6 +1,6 @@
 import typing
 
-from aqt import mw
+import aqt
 
 from . import typer
 
@@ -10,7 +10,7 @@ _INSTANCE: typing.Optional[typer.Configuration] = None
 def initialize_by_namespace() -> None:
     global _INSTANCE
 
-    _INSTANCE = typing.cast(typer.Configuration, mw.addonManager.getConfig(__name__))
+    _INSTANCE = typing.cast(typer.Configuration, aqt.mw.addonManager.getConfig(__name__))
 
 
 def get() -> typer.Configuration:

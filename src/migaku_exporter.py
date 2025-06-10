@@ -2,7 +2,7 @@ import re
 import typing
 
 from anki import notes as notes_
-from aqt import mw
+import aqt
 
 from . import dictdb, google_imager, migaku_forvo, typer
 
@@ -39,7 +39,7 @@ def addDefinitionsToCardExporterNote(
     term: str,
     dictionaryConfigurations: typing.Iterable[typer.DictionaryConfiguration],
 ) -> notes_.Note:
-    config = typing.cast(typer.Configuration, mw.addonManager.getConfig(__name__))
+    config = typing.cast(typer.Configuration, aqt.mw.addonManager.getConfig(__name__))
     fb = config["frontBracket"]
     bb = config["backBracket"]
     lang = config["ForvoLanguage"]
@@ -48,7 +48,7 @@ def addDefinitionsToCardExporterNote(
     if not note_type:
         raise RuntimeError(f'Note "{note}" has no note type.')
 
-    fields = mw.col.models.field_names(note_type)
+    fields = aqt.mw.col.models.field_names(note_type)
     database = dictdb.get()
 
     for dictionary in dictionaryConfigurations:

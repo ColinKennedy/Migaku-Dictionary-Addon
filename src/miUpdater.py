@@ -2,7 +2,7 @@ import time
 import typing
 
 from anki import hooks, httpclient
-from aqt import addons, mw, qt
+from aqt import addons, qt
 
 from . import dictdb, migaku_dictionary, miutils
 

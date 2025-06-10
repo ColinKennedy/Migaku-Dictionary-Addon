@@ -15,7 +15,6 @@ import tornado.web
 from anki import collection as collection_
 from anki import utils
 from aqt import main
-from aqt import mw as mw_
 from aqt import qt
 from tornado import httputil
 
@@ -576,21 +575,21 @@ class MigakuServerThread(qt.QThread):
 
 
 def addCondensedAudioInProgressMessage() -> None:
-    title = mw_.windowTitle()
+    title = aqt.mw.windowTitle()
     msg = " (Condensed Audio Exporting in Progress)"
     if msg not in title:
-        mw_.setWindowTitle(title + msg)
+        aqt.mw.setWindowTitle(title + msg)
 
 
 def removeCondensedAudioInProgressMessage() -> None:
-    title = mw_.windowTitle()
+    title = aqt.mw.windowTitle()
     msg = " (Condensed Audio Exporting in Progress)"
     if msg in title:
-        mw_.setWindowTitle(title.replace(msg, ""))
+        aqt.mw.setWindowTitle(title.replace(msg, ""))
 
 
 def initialize() -> None:
-    serverThread = MigakuServerThread(mw_)
+    serverThread = MigakuServerThread(aqt.mw)
     serverThread.alertUser.connect(miInfo)
     serverThread.exportingCondensed.connect(addCondensedAudioInProgressMessage)
     serverThread.notExportingCondensed.connect(removeCondensedAudioInProgressMessage)

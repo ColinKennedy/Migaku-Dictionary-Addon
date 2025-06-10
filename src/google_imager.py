@@ -3,7 +3,6 @@ import typing
 from urllib import request
 
 import aqt
-from aqt import mw
 from PyQt6.QtCore import Qt
 
 from . import googleimages
@@ -15,7 +14,7 @@ def _initialize() -> None:
     global _INSTANCE
 
     _INSTANCE = googleimages.Google()
-    config = mw.addonManager.getConfig(__name__)
+    config = aqt.mw.addonManager.getConfig(__name__)
 
     if not config:
         raise RuntimeError(f'Namespace "{__name__}" has no configuration.')
@@ -55,7 +54,7 @@ def _download_image(
 def export_images(term: str, howMany: int) -> str:
     global _INSTANCE
 
-    config = mw.addonManager.getConfig(__name__)
+    config = aqt.mw.addonManager.getConfig(__name__)
 
     if not config:
         raise RuntimeError(f'Namespace "{__name__}" has no configuration.')

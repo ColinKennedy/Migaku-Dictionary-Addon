@@ -20,13 +20,14 @@ from anki import notes as notes_
 from anki import utils
 from aqt import editcurrent
 from aqt import editor as editor_
-from aqt import gui_hooks, mw, qt
+from aqt import gui_hooks, qt
 from aqt import reviewer as reviewer_
 from aqt import tagedit
 from aqt.addcards import AddCards
 from aqt.browser import browser as browser_
 from aqt.browser import previewer as previewer_
 from PyQt6.QtCore import Qt
+import aqt
 
 from . import (
     addonSettings,
@@ -92,7 +93,69 @@ class _ProgressWidget(_ExporterBaseWidget):
 
 
 def _get_configuration() -> typer.Configuration:
-    return typing.cast(typer.Configuration, mw.addonManager.getConfig(__name__))
+    return typing.cast(typer.Configuration, aqt.mw.addonManager.getConfig(__name__))
+
+
+def _set_default_configuration() -> None:
+    _CURRENT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
+
+    with open(os.path.join(_CURRENT_DIRECTORY, "config.json"), "r") as handler:
+        data = json.load(handler)
+
+    # addonManager.writeConfig
+    print("RUNNING WRITE CONFI")
+    aqt.mw.addonManager.writeConfig(__name__, data)
+
+    #     {
+    #         autoAddCards: bool
+    #         autoAddDefinitions: bool
+    #         autoDefinitionSettings: typing.Optional[list[DefinitionSetting]]
+    #         backBracket: str
+    #         condensedAudioDirectory: typing.Optional[str]
+    #         currentDeck: typing.Optional[str]
+    #         currentGroup: GroupName
+    #         currentTemplate: typing.Optional[str]
+    #         day: bool
+    #         deinflect: bool
+    #         dictAlwaysOnTop: bool
+    #         dictOnStart: bool
+    #         dictSearch: int
+    #         dictSizePos: typing.Union[tuple[int, int, int, int], typing.Literal[False]]
+    #         disableCondensed: bool
+    #         displayAgain: bool
+    #         exporterLastTags: str
+    #         exporterSizePos: typing.Union[tuple[int, int, int, int], typing.Literal[False]]
+    #         failedFFMPEGInstallation: bool
+    #         fontSizes: tuple[int, int]
+    #         frontBracket: str
+    #         globalHotkeys: bool
+    #         googleSearchRegion: str
+    #         highlightSentences: bool
+    #         highlightTarget: bool
+    #         jReadingCards: bool
+    #         jReadingEdit: bool
+    #         massGenerationPreferences: _GenerationPreferences
+    #         maxHeight: int
+    #         maxSearch: int
+    #         maxWidth: int
+    #         mp3Convert: bool
+    #         onetab: bool
+    #         openOnGlobal: bool
+    #         safeSearch: bool
+    #         searchMode: SearchMode
+    #         showTarget: bool
+    #         tooltips: bool
+    #         unknownsToSearch: int
+    #
+    #         DictionaryGroups: dict[str, DictionaryGroup]
+    #         ExportTemplates: dict[str, ExportTemplate]
+    #         GoogleImageFields: list[str]
+    #         ForvoFields: list[str]
+    #         ForvoAddType: AddType
+    #         ForvoLanguage: str  # typing.Literal["Japanese"]  # TODO: @ColinKennedy add more languages later
+    #         GoogleImageAddType: AddType
+    #     },
+    # )
 
 
 def _verify(item: typing.Optional[T]) -> T:
@@ -103,6 +166,7 @@ def _verify(item: typing.Optional[T]) -> T:
 
 
 def window_loaded() -> None:
+    print("WINDOWLOADED IS RUNNING", aqt.mw)
     migaku_configuration.initialize_by_namespace()
     _IS_EXPORTING_DEFINITIONS = False
     migaku_settings.clear()
@@ -195,7 +259,7 @@ def window_loaded() -> None:
         if audio:
             dictionary.dict.exportAudio(
                 (
-                    os.path.join(mw.col.media.dir(), audio),
+                    os.path.join(aqt.mw.col.media.dir(), audio),
                     "[sound:" + audio + "]",
                     audio,
                 )
@@ -203,7 +267,7 @@ def window_loaded() -> None:
 
         if image:
             dictionary.dict.exportImage(
-                (os.path.join(mw.col.media.dir(), image), image)
+                (os.path.join(aqt.mw.col.media.dir(), image), image)
             )
 
         dictionary.dict.exportSentence(primary, secondary)
@@ -254,7 +318,7 @@ def window_loaded() -> None:
     def openDictionarySettings() -> None:
         if not migaku_settings.get_unsafe():
             migaku_settings.initialize(
-                addonSettings.SettingsGui(mw, addon_path, openDictionarySettings)
+                addonSettings.SettingsGui(aqt.mw, addon_path, openDictionarySettings)
             )
 
         settings = migaku_settings.get()
@@ -267,9 +331,10 @@ def window_loaded() -> None:
         settings.activateWindow()
 
     def initialize_menu() -> None:
-        menu = qt.QMenu("Migaku", mw)
+        print(f"DEBUGPRINT[5]: main.py:270: mw={aqt.mw}")
+        menu = qt.QMenu("Migaku", aqt.mw)
 
-        settings_action = qt.QAction("Dictionary Settings", mw)
+        settings_action = qt.QAction("Dictionary Settings", aqt.mw)
         settings_action.triggered.connect(openDictionarySettings)
         menu.addAction(settings_action)
 
@@ -278,11 +343,11 @@ def window_loaded() -> None:
         if utils.is_mac:
             shortcut = "⌘W"
 
-        open_dictionary_action = qt.QAction(f"Open Dictionary {shortcut}", mw)
+        open_dictionary_action = qt.QAction(f"Open Dictionary {shortcut}", aqt.mw)
         open_dictionary_action.triggered.connect(midict.dictionaryInit)
         menu.addAction(open_dictionary_action)
 
-        mw.form.menubar.insertMenu(mw.form.menuHelp.menuAction(), menu)
+        aqt.mw.form.menubar.insertMenu(aqt.mw.form.menuHelp.menuAction(), menu)
 
     initialize_menu()
 
@@ -309,7 +374,7 @@ def window_loaded() -> None:
         )
 
     def initGlobalHotkeys() -> None:
-        thread = threader.initialize(midict.ClipThread(mw, addon_path))
+        thread = threader.initialize(midict.ClipThread(aqt.mw, addon_path))
         thread.sentence.connect(exportSentence)
         thread.search.connect(trySearch)
         thread.colSearch.connect(migaku_search.performColSearch)
@@ -325,16 +390,21 @@ def window_loaded() -> None:
         thread.extensionFileNotFound.connect(extensionFileNotFound)
         thread.run()
 
+    configuration = _get_configuration()
+
+    if not configuration:
+        _set_default_configuration()
+
     if _get_configuration()["globalHotkeys"]:
         initGlobalHotkeys()
 
-    hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+W"), mw)
+    hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+W"), aqt.mw)
     hotkey.activated.connect(midict.dictionaryInit)
 
-    hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+S"), mw)
-    hotkey.activated.connect(lambda: migaku_search.searchTerm(mw.web))
-    hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+Shift+B"), mw)
-    hotkey.activated.connect(lambda: migaku_search.searchCol(mw.web))
+    hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+S"), aqt.mw)
+    hotkey.activated.connect(lambda: migaku_search.searchTerm(aqt.mw.web))
+    hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+Shift+B"), aqt.mw)
+    hotkey.activated.connect(lambda: migaku_search.searchCol(aqt.mw.web))
 
     def addToContextMenu(self: editor_.EditorWebView, menu: qt.QMenu) -> None:
         def _add_action(menu: qt.QMenu, text: str) -> qt.QAction:
@@ -355,7 +425,7 @@ def window_loaded() -> None:
         notes = list(browser.selectedNotes())
 
         if notes:
-            fields = anki.find.fieldNamesForNotes(mw.col, notes)
+            fields = anki.find.fieldNamesForNotes(aqt.mw.col, notes)
             generateWidget = qt.QDialog(None, Qt.WindowType.Window)
             layout = qt.QHBoxLayout()
             origin = qt.QComboBox()
@@ -507,11 +577,11 @@ def window_loaded() -> None:
             "addType": addType,
             "limit": howMany,
         }
-        mw.addonManager.writeConfig(
+        aqt.mw.addonManager.writeConfig(
             __name__,
             typing.cast(dict[typing.Any, typing.Any], config),
         )
-        mw.checkpoint("Definition Export")
+        aqt.mw.checkpoint("Definition Export")
 
         if not miutils.miAsk(
             'Are you sure you want to export definitions for the "'
@@ -539,13 +609,13 @@ def window_loaded() -> None:
             if not _IS_EXPORTING_DEFINITIONS:
                 break
 
-            note = mw.col.get_note(nid)
+            note = aqt.mw.col.get_note(nid)
             note_type = note.note_type()
 
             if not note_type:
                 raise RuntimeError(f'Note "{note}" has no note type.')
 
-            fields = mw.col.models.field_names(note_type)
+            fields = aqt.mw.col.models.field_names(note_type)
 
             if og in fields and dest in fields:
                 term = re.sub(r"<[^>]+>", "", note[og])
@@ -590,10 +660,10 @@ def window_loaded() -> None:
 
             val += 1
             progress.set_value(val)
-            mw.app.processEvents()
+            aqt.mw.app.processEvents()
 
-        mw.progress.finish()
-        mw.reset()
+        aqt.mw.progress.finish()
+        aqt.mw.reset()
         generateWidget.hide()
         generateWidget.deleteLater()
 
@@ -642,7 +712,7 @@ def window_loaded() -> None:
 
             dictionary.dict.setCurrentEditor(self, target)
 
-            if hasattr(mw, "migakuEditorLoaded"):
+            if hasattr(aqt.mw, "migakuEditorLoaded"):
                 ogReroute(self, cmd)
 
             return

@@ -10,10 +10,11 @@ import sqlite3
 import typing
 from collections import abc
 
+import aqt
+
 from . import typer
 
 addon_path = os.path.dirname(__file__)
-from aqt import mw
 
 _DictionaryHeader = tuple[str, ...]
 _INSTANCE: typing.Optional[DictDB] = None
@@ -38,7 +39,7 @@ class DictDB:
     def __init__(self) -> None:
         super().__init__()
 
-        directory = os.path.join(mw.pm.addonFolder(), addon_path, "user_files", "db")
+        directory = os.path.join(aqt.mw.pm.addonFolder(), addon_path, "user_files", "db")
         os.makedirs(directory, exist_ok=True)
 
         db_file = os.path.join(directory, "dictionaries.sqlite")

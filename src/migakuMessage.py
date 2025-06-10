@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import logging
 import os
 import re
 import typing
@@ -7,10 +8,12 @@ import typing
 import aqt
 import requests as req
 from anki.hooks import addHook
-from aqt import mw, qt, utils, webview
+from aqt import qt, utils, webview
+import aqt
 
 _MIGAKU_SHOULD_NOT_SHOW_MESSAGE = False
 T = typing.TypeVar("T")
+_LOGGER = logging.getLogger(__name__)
 
 
 class _Config(typing.TypedDict):
@@ -25,6 +28,14 @@ def attemptOpenLink(cmd: str) -> None:
 addon_path = os.path.dirname(__file__)
 
 
+def _getConfig() -> typing.Optional[_Config]:
+    return typing.cast(typing.Optional[_Config], aqt.mw.addonManager.getConfig(__name__))
+
+
+def _getDefaultConfiguration() -> _Config:
+    return {"displayAgain": True}
+
+
 def _verify(value: typing.Optional[T]) -> T:
     if value is None:
         raise TypeError("Got empty value. Cannot continue.")
@@ -32,12 +43,8 @@ def _verify(value: typing.Optional[T]) -> T:
     return value
 
 
-def getConfig() -> _Config:
-    return typing.cast(_Config, mw.addonManager.getConfig(__name__))
-
-
 def saveConfiguration(newConf: dict[str, typing.Any]) -> None:
-    mw.addonManager.writeConfig(__name__, newConf)
+    aqt.mw.addonManager.writeConfig(__name__, newConf)
 
 
 # TODO: @ColinKennedy remove try/except
@@ -200,7 +207,11 @@ def displayMessageMaybeDisableMessage(content: str, config: _Config) -> None:
 def attemptShowMigakuBrandUpdateMessage() -> None:
     global _MIGAKU_SHOULD_NOT_SHOW_MESSAGE
 
-    config = getConfig()
+    config = _getConfig()
+
+    if not config:
+        config = _getDefaultConfiguration()
+
     shouldShow = config["displayAgain"]
     if shouldShow and not _MIGAKU_SHOULD_NOT_SHOW_MESSAGE:
         videoIds, videoId = getLatestVideos()
