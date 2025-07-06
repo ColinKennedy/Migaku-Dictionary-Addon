@@ -3,6 +3,7 @@
 import codecs
 import functools
 import json
+import logging
 import os
 import platform
 import re
@@ -50,6 +51,7 @@ from . import (
 
 _IS_EXPORTING_DEFINITIONS = False
 _MENU = None
+_LOGGER = logging.getLogger(__name__)
 T = typing.TypeVar("T")
 
 
@@ -688,7 +690,9 @@ def window_loaded() -> None:
         dictionary = migaku_dictionary.get_visible_dictionary()
 
         if not dictionary:
-            raise RuntimeError("No visible dictionary found. Cannot edit activated.")
+            _LOGGER.error("No visible dictionary found. Cannot edit activated.")
+
+            return
 
         widget = type(self).__name__
         target = migaku_search.getTarget(widget)
