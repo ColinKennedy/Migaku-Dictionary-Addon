@@ -713,7 +713,6 @@ def window_loaded() -> None:
         self.web.eval(bodyClick)
 
     AddCards.addCards = hooks.wrap(AddCards.addCards, addEditActivated)
-    AddCards.onHistory = hooks.wrap(AddCards.onHistory, addEditActivated)  # type: ignore[method-assign]
 
     def addHotkeys(self: editor_.Editor) -> None:
         hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+S"), self.parentWindow)
