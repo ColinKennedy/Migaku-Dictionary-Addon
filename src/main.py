@@ -3,6 +3,7 @@
 import codecs
 import functools
 import json
+import logging
 import os
 import platform
 import re
@@ -50,6 +51,7 @@ from . import (
 
 _IS_EXPORTING_DEFINITIONS = False
 _MENU = None
+_LOGGER = logging.getLogger(__name__)
 T = typing.TypeVar("T")
 
 
@@ -681,6 +683,40 @@ def window_loaded() -> None:
         setBrowserEditor,
     )
 
+    def addHistoryActivated(
+        caller: typing.Callable[[AddCards], None],
+        *args: typing.Any,
+        **kwargs: typing.Any,
+    ) -> None:
+        widget = qt.QApplication.focusWidget()
+
+        while widget:
+            if isinstance(widget, AddCards):
+                break
+
+            widget = typing.cast(typing.Optional[qt.QWidget], widget.parent())
+
+        widget = typing.cast(AddCards, _verify(widget))
+        caller(widget)
+
+        dictionary = migaku_dictionary.get_visible_dictionary()
+
+        if not dictionary:
+            _LOGGER.error("No visible dictionary found. Cannot edit activated.")
+
+            return
+
+        name = type(widget).__name__
+        target = migaku_search.getTarget(name)
+
+        if not target:
+            raise RuntimeError(
+                f'No target found for "{name}". '
+                "Cannot set the current dictionary editor to it.",
+            )
+
+        dictionary.dict.setCurrentEditor(widget.editor, target)
+
     def addEditActivated(
         self: typing.Union[AddCards, editcurrent.EditCurrent],
         event: typing.Optional[qt.QMouseEvent] = None,
@@ -688,7 +724,9 @@ def window_loaded() -> None:
         dictionary = migaku_dictionary.get_visible_dictionary()
 
         if not dictionary:
-            raise RuntimeError("No visible dictionary found. Cannot edit activated.")
+            _LOGGER.error("No visible dictionary found. Cannot edit activated.")
+
+            return
 
         widget = type(self).__name__
         target = migaku_search.getTarget(widget)
@@ -709,7 +747,7 @@ def window_loaded() -> None:
         self.web.eval(bodyClick)
 
     AddCards.addCards = hooks.wrap(AddCards.addCards, addEditActivated)
-    AddCards.onHistory = hooks.wrap(AddCards.onHistory, addEditActivated)  # type: ignore[method-assign]
+    AddCards.onHistory = functools.partial(addHistoryActivated, AddCards.onHistory)  # type: ignore
 
     def addHotkeys(self: editor_.Editor) -> None:
         hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+S"), self.parentWindow)
