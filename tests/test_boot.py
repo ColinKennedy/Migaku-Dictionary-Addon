@@ -46,7 +46,9 @@ class Boot(unittest.TestCase):
         ]
         self.assertTrue(
             lines,
-            f"Anki never finished starting.\n{result.stdout[-2000:]}\n{result.stderr[-2000:]}",
+            "Anki never finished starting.\n"
+            + result.stdout[-3500:]
+            + f"\n--- stderr ---\n{result.stderr[-1500:]}",
         )
         report = json.loads(lines[-1][len("REPORT ") :])
 
@@ -62,6 +64,7 @@ class Boot(unittest.TestCase):
             self.assertNotIn("new_editor_error", report)
             # The experimental editor must map to the same dictionary targets.
             self.assertEqual(
-                [["NewEditor", "Add"]], report["new_editor_bodyClick_targets"]
+                [["NewEditor", "Add"]],
+                report["new_editor_bodyClick_targets"],
             )
             self.assertTrue(report["new_editor_add_mode_edit_tooltip"])

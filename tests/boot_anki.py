@@ -145,8 +145,19 @@ def _hook() -> None:
     import aqt.errors
 
     def _record(self):  # type: ignore[no-untyped-def]
-        uncaught.append(self.pool[-1500:])
+        text = self.pool[-1500:]
         self.pool = ""
+
+        # NOTE: The add-on's HTTP server uses a fixed port. If the developer
+        # already has Anki open, binding it fails. That isn't a bug.
+        if "sock.bind(sockaddr)" in text and (
+            "10048" in text or "Address already in use" in text
+        ):
+            report["server_port_in_use"] = True
+
+            return
+
+        uncaught.append(text)
 
     # Anki would show an "Anki encountered a problem" dialog; record it instead.
     aqt.errors.ErrorHandler.onTimeout = _record  # type: ignore[method-assign]
@@ -157,6 +168,9 @@ def _hook() -> None:
 
 
 import aqt
+
+# NOTE: Don't collide with (or reuse) any Anki the developer already has open.
+aqt.AnkiApp.KEY = f"migaku-boot-test-{os.getpid()}"
 
 _orig_init = aqt.AnkiApp.__init__
 
@@ -174,6 +188,11 @@ def _init(self, *args, **kwargs):  # type: ignore[no-untyped-def]
                 ]
                 found.append([type(widget).__name__, widget.windowTitle(), texts])
         print("STALLED " + json.dumps([found, uncaught]), flush=True)
+
+        import faulthandler
+
+        faulthandler.dump_traceback(file=sys.stdout, all_threads=True)
+        sys.stdout.flush()
         os._exit(3)
 
     QTimer.singleShot(90000, _watchdog)
