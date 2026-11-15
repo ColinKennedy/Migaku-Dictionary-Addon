@@ -73,7 +73,7 @@ class _FlatDictionary:
                 if not isinstance(value, type_):
                     return None
 
-                return value  # type: ignore[no-any-return]
+                return value
 
             return wrapper  # type: ignore[return-value]
 

@@ -9,6 +9,8 @@ import requests as req
 from anki.hooks import addHook
 from aqt import mw, qt, utils, webview
 
+from . import miutils
+
 _MIGAKU_SHOULD_NOT_SHOW_MESSAGE = False
 T = typing.TypeVar("T")
 
@@ -33,11 +35,13 @@ def _verify(value: typing.Optional[T]) -> T:
 
 
 def getConfig() -> _Config:
-    return typing.cast(_Config, mw.addonManager.getConfig(__name__))
+    return typing.cast(
+        _Config, miutils.get_main_window().addonManager.getConfig(__name__)
+    )
 
 
 def saveConfiguration(newConf: dict[str, typing.Any]) -> None:
-    mw.addonManager.writeConfig(__name__, newConf)
+    miutils.get_main_window().addonManager.writeConfig(__name__, newConf)
 
 
 # TODO: @ColinKennedy remove try/except
@@ -83,7 +87,11 @@ def getLatestVideos() -> tuple[typing.Optional[str], typing.Optional[str]]:
 def miMessage(text: str, parent: typing.Optional[qt.QWidget] = None) -> bool:
     title = "Migaku"
 
-    parent = parent or aqt.mw.app.activeWindow() or aqt.mw
+    parent = (
+        parent
+        or miutils.get_main_window().app.activeWindow()
+        or miutils.get_main_window()
+    )
 
     icon = qt.QIcon(os.path.join(addon_path, "icons", "migaku.png"))
     mb = qt.QMessageBox(parent)
@@ -92,7 +100,7 @@ def miMessage(text: str, parent: typing.Optional[qt.QWidget] = None) -> bool:
     cb = qt.QCheckBox("Don't show me the welcome screen again.")
     wv = webview.AnkiWebView()
     page = _verify(wv.page())
-    page._bridge.onCmd = attemptOpenLink
+    page._bridge.onCmd = attemptOpenLink  # type: ignore[attr-defined,unused-ignore]
     wv.setFixedSize(680, 450)
     page.setHtml(text)
     wide = qt.QWidget()

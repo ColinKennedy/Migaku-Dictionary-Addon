@@ -1,11 +1,11 @@
 import typing
 
-from aqt import editor
+from . import editor_compat
 
-PARENT_EDITOR: typing.Optional[editor.Editor] = None
+PARENT_EDITOR: typing.Optional[editor_compat.AnyEditor] = None
 
 
-def get_parent_editor() -> editor.Editor:
+def get_parent_editor() -> editor_compat.AnyEditor:
     if PARENT_EDITOR:
         return PARENT_EDITOR
 

@@ -15,6 +15,8 @@ from . import typer
 addon_path = os.path.dirname(__file__)
 from aqt import mw
 
+from . import miutils
+
 _DictionaryHeader = tuple[str, ...]
 _INSTANCE: typing.Optional[DictDB] = None
 DictSearchResults = dict[str, list[typer.DictionaryResult]]
@@ -38,7 +40,9 @@ class DictDB:
     def __init__(self) -> None:
         super().__init__()
 
-        directory = os.path.join(mw.pm.addonFolder(), addon_path, "user_files", "db")
+        directory = os.path.join(
+            miutils.get_main_window().pm.addonFolder(), addon_path, "user_files", "db"
+        )
         os.makedirs(directory, exist_ok=True)
 
         db_file = os.path.join(directory, "dictionaries.sqlite")
@@ -55,17 +59,14 @@ class DictDB:
         self._c.execute("PRAGMA foreign_keys = ON")
         self._c.execute("PRAGMA case_sensitive_like=ON;")
 
-        self._c.execute(
-            """
+        self._c.execute("""
             CREATE TABLE IF NOT EXISTS langnames (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 langname TEXT UNIQUE NOT NULL
             )
-            """
-        )
+            """)
 
-        self._c.execute(
-            """
+        self._c.execute("""
             CREATE TABLE IF NOT EXISTS dictnames (
                 dictname TEXT PRIMARY KEY,
                 lid INTEGER NOT NULL,
@@ -75,8 +76,7 @@ class DictDB:
                 duplicateHeader INTEGER DEFAULT 0,
                 FOREIGN KEY (lid) REFERENCES langnames(id)
             )
-            """
-        )
+            """)
 
     def _getDuplicateSetting(self, name: str) -> typing.Optional[tuple[int, str]]:
         self._c.execute(
@@ -84,7 +84,7 @@ class DictDB:
             (name,),
         )
         try:
-            (duplicateHeader, termHeader) = self._c.fetchone()
+            duplicateHeader, termHeader = self._c.fetchone()
             return duplicateHeader, json.loads(termHeader)
         except:
             return None
@@ -541,7 +541,7 @@ class DictDB:
 
         # TODO: Remove try/except
         try:
-            (fields, addType) = self._c.fetchone()
+            fields, addType = self._c.fetchone()
 
             return json.loads(fields), addType
         except:

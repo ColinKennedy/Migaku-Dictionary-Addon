@@ -2,7 +2,7 @@ import typing
 
 from aqt import mw
 
-from . import typer
+from . import miutils, typer
 
 _INSTANCE: typing.Optional[typer.Configuration] = None
 
@@ -10,7 +10,9 @@ _INSTANCE: typing.Optional[typer.Configuration] = None
 def initialize_by_namespace() -> None:
     global _INSTANCE
 
-    _INSTANCE = typing.cast(typer.Configuration, mw.addonManager.getConfig(__name__))
+    _INSTANCE = typing.cast(
+        typer.Configuration, miutils.get_main_window().addonManager.getConfig(__name__)
+    )
 
 
 def get() -> typer.Configuration:

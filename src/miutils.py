@@ -5,7 +5,7 @@ import typing
 from os.path import dirname, join
 
 import aqt
-from aqt import qt
+from aqt import main, qt
 
 T = typing.TypeVar("T")
 addon_path = dirname(__file__)
@@ -16,6 +16,12 @@ def _verify(item: typing.Optional[T]) -> T:
         return item
 
     raise RuntimeError("Expected item to exist but got none.")
+
+
+def get_main_window() -> main.AnkiQt:
+    """Get the Anki main window, which is None until Anki finishes starting."""
+
+    return _verify(aqt.mw)
 
 
 def miInfo(
@@ -34,7 +40,7 @@ def miInfo(
         title = "Migaku Dictionary"
 
     if not parent:
-        parent = aqt.mw.app.activeWindow() or aqt.mw
+        parent = get_main_window().app.activeWindow() or get_main_window()
 
     icon = qt.QIcon(join(addon_path, "icons", "migaku.png"))
     mb = qt.QMessageBox(parent)

@@ -32,6 +32,7 @@ from PyQt6.QtCore import Qt
 from . import (
     addonSettings,
     dictdb,
+    editor_compat,
     global_state,
     google_imager,
     googleimages,
@@ -94,7 +95,9 @@ class _ProgressWidget(_ExporterBaseWidget):
 
 
 def _get_configuration() -> typer.Configuration:
-    return typing.cast(typer.Configuration, mw.addonManager.getConfig(__name__))
+    return typing.cast(
+        typer.Configuration, miutils.get_main_window().addonManager.getConfig(__name__)
+    )
 
 
 def _verify(item: typing.Optional[T]) -> T:
@@ -102,6 +105,17 @@ def _verify(item: typing.Optional[T]) -> T:
         return item
 
     raise RuntimeError("Expected item to exist but got none.")
+
+
+def _get_original(
+    originals: dict[type, typing.Callable[..., typing.Any]],
+    instance: object,
+) -> typing.Callable[..., typing.Any]:
+    for class_, function in originals.items():
+        if isinstance(instance, class_):
+            return function
+
+    raise RuntimeError(f'No original function found for "{instance}".')
 
 
 def window_loaded() -> None:
@@ -197,7 +211,7 @@ def window_loaded() -> None:
         if audio:
             dictionary.dict.exportAudio(
                 (
-                    os.path.join(mw.col.media.dir(), audio),
+                    os.path.join(miutils.get_main_window().col.media.dir(), audio),
                     "[sound:" + audio + "]",
                     audio,
                 )
@@ -205,7 +219,7 @@ def window_loaded() -> None:
 
         if image:
             dictionary.dict.exportImage(
-                (os.path.join(mw.col.media.dir(), image), image)
+                (os.path.join(miutils.get_main_window().col.media.dir(), image), image)
             )
 
         dictionary.dict.exportSentence(primary, secondary)
@@ -256,7 +270,9 @@ def window_loaded() -> None:
     def openDictionarySettings() -> None:
         if not migaku_settings.get_unsafe():
             migaku_settings.initialize(
-                addonSettings.SettingsGui(mw, addon_path, openDictionarySettings)
+                addonSettings.SettingsGui(
+                    miutils.get_main_window(), addon_path, openDictionarySettings
+                )
             )
 
         settings = migaku_settings.get()
@@ -284,7 +300,9 @@ def window_loaded() -> None:
         open_dictionary_action.triggered.connect(midict.dictionaryInit)
         menu.addAction(open_dictionary_action)
 
-        mw.form.menubar.insertMenu(mw.form.menuHelp.menuAction(), menu)
+        miutils.get_main_window().form.menubar.insertMenu(
+            miutils.get_main_window().form.menuHelp.menuAction(), menu
+        )
 
     initialize_menu()
 
@@ -311,7 +329,9 @@ def window_loaded() -> None:
         )
 
     def initGlobalHotkeys() -> None:
-        thread = threader.initialize(midict.ClipThread(mw, addon_path))
+        thread = threader.initialize(
+            midict.ClipThread(miutils.get_main_window(), addon_path)
+        )
         thread.sentence.connect(exportSentence)
         thread.search.connect(trySearch)
         thread.colSearch.connect(migaku_search.performColSearch)
@@ -334,9 +354,13 @@ def window_loaded() -> None:
     hotkey.activated.connect(midict.dictionaryInit)
 
     hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+S"), mw)
-    hotkey.activated.connect(lambda: migaku_search.searchTerm(mw.web))
+    hotkey.activated.connect(
+        lambda: migaku_search.searchTerm(miutils.get_main_window().web)
+    )
     hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+Shift+B"), mw)
-    hotkey.activated.connect(lambda: migaku_search.searchCol(mw.web))
+    hotkey.activated.connect(
+        lambda: migaku_search.searchCol(miutils.get_main_window().web)
+    )
 
     def addToContextMenu(self: editor_.EditorWebView, menu: qt.QMenu) -> None:
         def _add_action(menu: qt.QMenu, text: str) -> qt.QAction:
@@ -357,7 +381,7 @@ def window_loaded() -> None:
         notes = list(browser.selectedNotes())
 
         if notes:
-            fields = anki.find.fieldNamesForNotes(mw.col, notes)
+            fields = anki.find.fieldNamesForNotes(miutils.get_main_window().col, notes)
             generateWidget = qt.QDialog(None, Qt.WindowType.Window)
             layout = qt.QHBoxLayout()
             origin = qt.QComboBox()
@@ -509,11 +533,11 @@ def window_loaded() -> None:
             "addType": addType,
             "limit": howMany,
         }
-        mw.addonManager.writeConfig(
+        miutils.get_main_window().addonManager.writeConfig(
             __name__,
             typing.cast(dict[typing.Any, typing.Any], config),
         )
-        mw.checkpoint("Definition Export")
+        miutils.get_main_window().checkpoint("Definition Export")
 
         if not miutils.miAsk(
             'Are you sure you want to export definitions for the "'
@@ -541,13 +565,13 @@ def window_loaded() -> None:
             if not _IS_EXPORTING_DEFINITIONS:
                 break
 
-            note = mw.col.get_note(nid)
+            note = miutils.get_main_window().col.get_note(nid)
             note_type = note.note_type()
 
             if not note_type:
                 raise RuntimeError(f'Note "{note}" has no note type.')
 
-            fields = mw.col.models.field_names(note_type)
+            fields = miutils.get_main_window().col.models.field_names(note_type)
 
             if og in fields and dest in fields:
                 term = re.sub(r"<[^>]+>", "", note[og])
@@ -592,10 +616,10 @@ def window_loaded() -> None:
 
             val += 1
             progress.set_value(val)
-            mw.app.processEvents()
+            miutils.get_main_window().app.processEvents()
 
-        mw.progress.finish()
-        mw.reset()
+        miutils.get_main_window().progress.finish()
+        miutils.get_main_window().reset()
         generateWidget.hide()
         generateWidget.deleteLater()
 
@@ -622,20 +646,19 @@ def window_loaded() -> None:
     hooks.addHook("profileLoaded", dictOnStart)
     hooks.addHook("browser.setupMenus", setupMenu)
 
-    def bridgeReroute(self: editor_.Editor, cmd: str) -> None:
+    def bridgeReroute(self: editor_compat.AnyEditor, cmd: str) -> None:
+        ogReroute = _get_original(ogReroutes, self)
+
         if cmd == "bodyClick":
             dictionary = migaku_dictionary.get_visible_dictionary()
 
             if not dictionary:
                 return
 
-            if not self.note:
+            if not editor_compat.has_note(self):
                 return
 
-            widget = type(self.widget.parentWidget()).__name__
-
-            if widget == "QWidget":
-                widget = "Browser"
+            widget = editor_compat.get_window_name(self)
 
             target = migaku_search.getTarget(widget)
 
@@ -651,11 +674,8 @@ def window_loaded() -> None:
 
         if cmd.startswith("focus"):
             if dictionary := migaku_dictionary.get_visible_dictionary():
-                if self.note:
-                    widget = type(self.widget.parentWidget()).__name__
-
-                    if widget == "QWidget":
-                        widget = "Browser"
+                if editor_compat.has_note(self):
+                    widget = editor_compat.get_window_name(self)
 
                     target = migaku_search.getTarget(widget)
 
@@ -668,12 +688,16 @@ def window_loaded() -> None:
                     dictionary.dict.setCurrentEditor(self, target)
         ogReroute(self, cmd)
 
-    ogReroute = editor_.Editor.onBridgeCmd
-    editor_.Editor.onBridgeCmd = bridgeReroute  # type: ignore[method-assign]
+    # NOTE: Anki can have more than one editor class (e.g. ``Editor`` and ``NewEditor``).
+    ogReroutes: dict[type, typing.Callable[..., typing.Any]] = {}
+
+    for editor_class in editor_compat.editor_classes():
+        ogReroutes[editor_class] = editor_class.onBridgeCmd
+        editor_class.onBridgeCmd = bridgeReroute
 
     def setBrowserEditor(self: browser_.Browser) -> None:
         if dictionary := migaku_dictionary.get_visible_dictionary():
-            if self.editor and self.editor.note:
+            if self.editor and editor_compat.has_note(self.editor):
                 dictionary.dict.setCurrentEditor(self.editor, "Browser")
             else:
                 dictionary.dict.closeEditor()
@@ -743,13 +767,13 @@ def window_loaded() -> None:
             pycmd("bodyClick")
         }, false);"""
 
-    def addBodyClick(self: editor_.Editor) -> None:
+    def addBodyClick(self: editor_compat.AnyEditor) -> None:
         self.web.eval(bodyClick)
 
     AddCards.addCards = hooks.wrap(AddCards.addCards, addEditActivated)
     AddCards.onHistory = functools.partial(addHistoryActivated, AddCards.onHistory)  # type: ignore
 
-    def addHotkeys(self: editor_.Editor) -> None:
+    def addHotkeys(self: editor_compat.AnyEditor) -> None:
         hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+S"), self.parentWindow)
         hotkey.activated.connect(lambda: migaku_search.searchTerm(self.web))
         hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+Shift+B"), self.parentWindow)
@@ -773,7 +797,7 @@ def window_loaded() -> None:
     def _get_parent_widget(widget: qt.QWidget) -> qt.QWidget:
         return _verify(widget.parentWidget())
 
-    def addEditorFunctionality(self: editor_.Editor) -> None:
+    def addEditorFunctionality(self: editor_compat.AnyEditor) -> None:
         migaku_widget_global.PARENT_EDITOR = self
         addBodyClick(self)
         addHotkeys(self)
@@ -793,7 +817,12 @@ def window_loaded() -> None:
         parent = typing.cast(browser_.Browser, get(get(self)))
         pName = gt(parent)
 
-        if gt(parent) not in ["AddCards", "EditCurrent"]:
+        if gt(parent) not in [
+            "AddCards",
+            "EditCurrent",
+            "NewAddCards",
+            "NewEditCurrent",
+        ]:
             parent = typing.cast(
                 browser_.Browser,
                 aqt.DialogManager._dialogs["Browser"][1],
@@ -812,9 +841,16 @@ def window_loaded() -> None:
         )
 
     tagedit.TagEdit.focusInEvent = hooks.wrap(tagedit.TagEdit.focusInEvent, announceParent)  # type: ignore[method-assign]
-    editor_.Editor.setupWeb = hooks.wrap(editor_.Editor.setupWeb, addEditorFunctionality)  # type: ignore[method-assign]
+    for editor_class in editor_compat.editor_classes():
+        editor_class.setupWeb = hooks.wrap(
+            editor_class.setupWeb, addEditorFunctionality
+        )
+
     AddCards.mousePressEvent = addEditActivated  # type: ignore[method-assign,assignment]
     editcurrent.EditCurrent.mousePressEvent = addEditActivated  # type: ignore[method-assign,assignment]
+
+    for new_dialog in editor_compat.new_dialog_classes():
+        new_dialog.mousePressEvent = addEditActivated
 
     # TODO: @ColinKennedy - replace with functools.partial
     def miLinks(self: reviewer_.Reviewer, cmd: str) -> None:
