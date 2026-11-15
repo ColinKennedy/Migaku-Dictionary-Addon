@@ -18,7 +18,9 @@ shutil.rmtree(base, ignore_errors=True)
 shutil.copytree(
     source,
     os.path.join(base, "addons21", "foobar"),
-    ignore=shutil.ignore_patterns("__pycache__", "user_files*", ".mypy_cache"),
+    ignore=shutil.ignore_patterns(
+        "__pycache__", "user_files*", ".mypy_cache", "meta.json"
+    ),
 )
 
 # Skip Anki's first-run "Language" dialog by creating the prefs database up front.
@@ -32,6 +34,7 @@ del _pm
 
 warnings: list[str] = []
 uncaught: list[str] = []
+dismissed: list[str] = []
 report: dict = {}
 
 
@@ -40,6 +43,7 @@ def _finish() -> None:
         _collect()
     finally:
         report["uncaught_exceptions"] = list(uncaught)
+        report["dismissed_dialogs"] = list(dismissed)
         print("REPORT " + json.dumps(report), flush=True)
         os._exit(0)
 
@@ -196,6 +200,19 @@ def _init(self, *args, **kwargs):  # type: ignore[no-untyped-def]
         os._exit(3)
 
     QTimer.singleShot(90000, _watchdog)
+
+    # Act like a user: click "OK" on any modal dialog (e.g. the add-on's welcome
+    # message, which blocks Anki's startup until dismissed).
+    def _dismiss() -> None:
+        modal = QApplication.activeModalWidget()
+
+        if modal is not None:
+            dismissed.append(modal.windowTitle())
+            modal.accept() if hasattr(modal, "accept") else modal.close()
+
+    dismisser = QTimer(self)
+    dismisser.timeout.connect(_dismiss)
+    dismisser.start(1000)
 
 
 aqt.AnkiApp.__init__ = _init
