@@ -133,6 +133,9 @@ def window_loaded() -> None:
     global_state.IS_BULK_MEDIA_EXPORT_CANCELLED = False
 
     def removeTempFiles() -> None:
+        # NOTE: ``temp/`` isn't part of the add-on package, so it doesn't exist
+        # on a fresh install. Other modules also write into it.
+        os.makedirs(tmpdir, exist_ok=True)
         filelist = [f for f in os.listdir(tmpdir)]
         for f in filelist:
             path = os.path.join(tmpdir, f)

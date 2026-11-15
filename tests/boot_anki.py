@@ -19,7 +19,7 @@ shutil.copytree(
     source,
     os.path.join(base, "addons21", "foobar"),
     ignore=shutil.ignore_patterns(
-        "__pycache__", "user_files*", ".mypy_cache", "meta.json"
+        "__pycache__", "user_files*", ".mypy_cache", "meta.json", "temp"
     ),
 )
 
