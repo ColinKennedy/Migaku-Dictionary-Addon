@@ -20,7 +20,10 @@ def load_addon() -> types.ModuleType:
         return sys.modules[_NAME]
 
     import aqt
-    from aqt.qt import QApplication  # Needs a QApplication before most aqt imports.
+    from aqt.qt import (  # Needs a QApplication before most aqt imports.
+        QApplication,
+        QThread,
+    )
 
     if QApplication.instance() is None:
         QApplication([])
@@ -37,6 +40,10 @@ def load_addon() -> types.ModuleType:
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     sys.modules[_NAME] = module
-    spec.loader.exec_module(module)
+    # NOTE: Don't start the add-on's real HTTP server thread in unit tests. In
+    # Anki it is owned by the real main window; here it would be torn down while
+    # running, which aborts the whole process.
+    with mock.patch.object(QThread, "start", lambda *args, **kwargs: None):
+        spec.loader.exec_module(module)
 
     return module

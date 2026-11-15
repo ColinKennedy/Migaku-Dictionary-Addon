@@ -50,6 +50,7 @@ class Boot(unittest.TestCase):
         )
         report = json.loads(lines[-1][len("REPORT ") :])
 
+        self.assertEqual([], report["uncaught_exceptions"])
         self.assertEqual([], report["startup_warnings"])
         self.assertTrue(report["foobar_main_loaded"])
         self.assertNotIn("add_cards_error", report)

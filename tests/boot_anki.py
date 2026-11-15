@@ -31,10 +31,20 @@ _pm.db.close()
 del _pm
 
 warnings: list[str] = []
+uncaught: list[str] = []
 report: dict = {}
 
 
 def _finish() -> None:
+    try:
+        _collect()
+    finally:
+        report["uncaught_exceptions"] = list(uncaught)
+        print("REPORT " + json.dumps(report), flush=True)
+        os._exit(0)
+
+
+def _collect() -> None:
     import aqt
     from aqt import editor as editor_
 
@@ -114,9 +124,6 @@ def _finish() -> None:
                 repr(error) + " " + traceback.format_exc()[-400:]
             )
 
-    print("REPORT " + json.dumps(report), flush=True)
-    os._exit(0)
-
 
 def _hook() -> None:
     import aqt
@@ -134,6 +141,15 @@ def _hook() -> None:
 
     def _capture(text: str, *args: object, **kwargs: object) -> None:
         warnings.append(str(text)[:300])
+
+    import aqt.errors
+
+    def _record(self):  # type: ignore[no-untyped-def]
+        uncaught.append(self.pool[-1500:])
+        self.pool = ""
+
+    # Anki would show an "Anki encountered a problem" dialog; record it instead.
+    aqt.errors.ErrorHandler.onTimeout = _record  # type: ignore[method-assign]
 
     aqt.addons.showWarning = _capture  # type: ignore[attr-defined]
     aqt.utils.showWarning = _capture  # type: ignore[assignment]
@@ -157,7 +173,7 @@ def _init(self, *args, **kwargs):  # type: ignore[no-untyped-def]
                     :4
                 ]
                 found.append([type(widget).__name__, widget.windowTitle(), texts])
-        print("STALLED " + json.dumps(found), flush=True)
+        print("STALLED " + json.dumps([found, uncaught]), flush=True)
         os._exit(3)
 
     QTimer.singleShot(90000, _watchdog)
