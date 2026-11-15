@@ -10,8 +10,8 @@ import typing
 import uuid
 
 import aqt
-import tornado.ioloop
-import tornado.web
+import tornado.ioloop  # type: ignore[import-not-found,unused-ignore]
+import tornado.web  # type: ignore[import-not-found,unused-ignore]
 from anki import collection as collection_
 from anki import utils
 from aqt import main
@@ -19,7 +19,7 @@ from aqt import mw as mw_
 from aqt import qt
 from tornado import httputil
 
-from . import global_state, threader, typer
+from . import global_state, miutils, threader, typer
 from .miutils import miInfo
 
 _LOGGER = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ def getNextBatchOfCards(
     )
 
 
-class MigakuHTTPHandler(tornado.web.RequestHandler):
+class MigakuHTTPHandler(tornado.web.RequestHandler):  # type: ignore[misc,unused-ignore]
 
     def __init__(
         self,
@@ -166,16 +166,12 @@ class ImportHandler(MigakuHTTPHandler):
             )
             self.removeTempFiles()
             if not config.get("disableCondensed", False):
-                self.alert(
-                    textwrap.dedent(
-                        f"""\
+                self.alert(textwrap.dedent(f"""\
                         A Condensed Audio File has been generated.
 
                         The file: "{filename or '<No filename found>'}"
                         has been created in dir: {mp3dir}
-                        """
-                    )
-                )
+                        """))
 
     def cleanFilename(self, filename: str) -> str:
         return re.sub(r"[\n:'\":/\|?*><!]", "", filename).strip()
@@ -500,7 +496,7 @@ class SearchHandler(MigakuHTTPHandler):
         self.finish("Invalid Request")
 
 
-class MigakuHTTPServer(tornado.web.Application):
+class MigakuHTTPServer(tornado.web.Application):  # type: ignore[misc,unused-ignore]
 
     PROTOCOL_VERSION = 2
 
@@ -520,7 +516,7 @@ class MigakuHTTPServer(tornado.web.Application):
         # TODO: @ColinKennedy - This type is complicated and probably fine to ignore for
         # the long-term. Come back to it later
         #
-        super().__init__(handlers, **settings)  # type: ignore[arg-type]
+        super().__init__(handlers, **settings)  # type: ignore[arg-type,unused-ignore]
 
     def run(self, port: int = 12345) -> None:
         self.listen(port)
@@ -576,21 +572,21 @@ class MigakuServerThread(qt.QThread):
 
 
 def addCondensedAudioInProgressMessage() -> None:
-    title = mw_.windowTitle()
+    title = miutils.get_main_window().windowTitle()
     msg = " (Condensed Audio Exporting in Progress)"
     if msg not in title:
-        mw_.setWindowTitle(title + msg)
+        miutils.get_main_window().setWindowTitle(title + msg)
 
 
 def removeCondensedAudioInProgressMessage() -> None:
-    title = mw_.windowTitle()
+    title = miutils.get_main_window().windowTitle()
     msg = " (Condensed Audio Exporting in Progress)"
     if msg in title:
-        mw_.setWindowTitle(title.replace(msg, ""))
+        miutils.get_main_window().setWindowTitle(title.replace(msg, ""))
 
 
 def initialize() -> None:
-    serverThread = MigakuServerThread(mw_)
+    serverThread = MigakuServerThread(miutils.get_main_window())
     serverThread.alertUser.connect(miInfo)
     serverThread.exportingCondensed.connect(addCondensedAudioInProgressMessage)
     serverThread.notExportingCondensed.connect(removeCondensedAudioInProgressMessage)

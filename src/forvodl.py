@@ -106,10 +106,8 @@ class Forvo(qt.QRunnable):
         )  # ◳r
         self._session = requests.session()
         self._session.headers.update(
-            {
-                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:10.0) \
-                    Gecko/20100101 Firefox/10.0"
-            }
+            {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:10.0) \
+                    Gecko/20100101 Firefox/10.0"}
         )
         self.signals = ForvoSignals()
 

@@ -1,2 +1,4 @@
-anki>=25.2.4,<26
-aqt>=25.2,<26
+# Only used for local development outside of tox. tox pins exact versions per
+# supported Anki release, see tox.ini.
+anki>=24.4,<27
+aqt[qt6]>=24.4,<27

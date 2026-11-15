@@ -202,7 +202,7 @@ def _roundToKb(value: typing.Union[float, int]) -> float:
 
 
 def _window_loaded() -> None:
-    ffmpegInstaller = FFMPEGInstaller(mw_)
+    ffmpegInstaller = FFMPEGInstaller(miutils.get_main_window())
     hooks.addHook("profileLoaded", ffmpegInstaller.installFFMPEG)
 
 

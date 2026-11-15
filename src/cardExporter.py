@@ -359,12 +359,10 @@ class CardExporter:
         cards = self._mw.col.addNote(note)
         if not cards:
             miutils.miInfo(
-                (
-                    """\
+                ("""\
 The current input and template combination \
 will lead to a blank card and therefore has not been added. \
-Please review your template and notetype combination."""
-                ),
+Please review your template and notetype combination."""),
                 level="wrn",
                 day=self._dictInt.nightModeToggler.day,
             )

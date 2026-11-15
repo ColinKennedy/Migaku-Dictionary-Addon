@@ -17,6 +17,7 @@
 
 - [Installation](#installation)
 - [Documentation](#documentation)
+- [Development](#development)
 - [Contributing](#contributing)
 - [License and Credits](#license-and-credits)
 
@@ -24,6 +25,23 @@
 
 1. Install the version of Anki that is listed under the "Migaku Development Cycles" section of the AnkiWeb add-on [page](https://ankiweb.net/shared/info/1655992655)
 2. Download the latest version of the addon from [AnkiWeb](https://ankiweb.net/shared/info/1655992655)
+
+### Development
+
+Supported: **Anki 24.04 (Python 3.9)** and **Anki 26.09.4 (Python 3.13)**. CI tests both.
+See [AGENTS.md](./AGENTS.md) for full details.
+
+```sh
+python -m pip install tox      # one-time setup
+tox -e check-black             # check formatting
+tox -e check-isort             # check import order
+tox -e black && tox -e isort   # auto-format
+tox -e mypy-anki2404           # type-check against Anki 24.04
+tox -e mypy-anki2609           # type-check against Anki 26.09.4
+tox -e test-anki2404           # tests on Anki 24.04
+tox -e test-anki2609           # tests on Anki 26.09.4
+tox                            # everything CI runs
+```
 
 ### Contributing
 

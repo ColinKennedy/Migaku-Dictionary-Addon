@@ -20,6 +20,7 @@ from urllib import request as request_
 
 import aqt
 import requests
+from anki import notes as notes_
 from anki import utils
 from anki.lang import _
 from aqt import editor as editor_
@@ -36,6 +37,7 @@ from . import (
 )
 from . import dictdb as dictdb_
 from . import (
+    editor_compat,
     forvodl,
     googleimages,
     history,
@@ -111,16 +113,16 @@ class MIDict(webview.AnkiWebView):
         self.deinflect = True
         self.onBridgeCmd = self._handleDictAction  # NOTE: This name comes from aqt
         self.addWindow: typing.Optional[cardExporter.CardExporter] = None
-        self.currentEditor: typing.Optional[editor_.Editor] = None
+        self.currentEditor: typing.Optional[editor_compat.AnyEditor] = None
         self.reviewer: typing.Optional[reviewer_.Reviewer] = None
 
         gui_hooks.editor_did_init.append(self._on_editor_loaded)
 
-    def _checkEditorClose(self, editor: editor_.Editor) -> None:
+    def _checkEditorClose(self, editor: editor_compat.AnyEditor) -> None:
         if self.currentEditor == editor:
             self.closeEditor()
 
-    def _on_editor_loaded(self, editor: editor_.Editor) -> None:
+    def _on_editor_loaded(self, editor: editor_compat.AnyEditor) -> None:
         self.currentEditor = editor
 
     def _resetConfiguration(self, config: typer.Configuration) -> None:
@@ -821,7 +823,7 @@ class MIDict(webview.AnkiWebView):
 
     def _sendImgToField(self, json_urls: str) -> None:
         if (self.reviewer and self.reviewer.card) or (
-            self.currentEditor and self.currentEditor.note
+            self.currentEditor and editor_compat.has_note(self.currentEditor)
         ):
             urlsList: list[str] = []
             imgSeparator = ""
@@ -898,7 +900,7 @@ class MIDict(webview.AnkiWebView):
                 self.reviewer._showQuestion()
             if hasattr(self._dictInt.mw, "migakuReloadEditorAndBrowser"):
                 self._dictInt.mw.migakuReloadEditorAndBrowser(note)
-        if self.currentEditor and self.currentEditor.note:
+        if self.currentEditor and editor_compat.has_note(self.currentEditor):
             if name == "Google Images":
                 tFields = self.config["GoogleImageFields"]
                 addType = self.config["GoogleImageAddType"]
@@ -913,28 +915,28 @@ class MIDict(webview.AnkiWebView):
 
                 tFields, addType = result
 
-            note = self.currentEditor.note
+            def _edit(note: notes_.Note) -> None:
+                for field_name in tFields:
+                    field_index = next(
+                        (i for i, f in enumerate(note.keys()) if f == field_name), None
+                    )
+                    if field_index is not None:
+                        current_value = note.fields[field_index]
 
-            for field_name in tFields:
-                field_index = next(
-                    (i for i, f in enumerate(note.keys()) if f == field_name), None
-                )
-                if field_index is not None:
-                    current_value = note.fields[field_index]
-
-                    if addType == "overwrite":
-                        new_value = definition
-                    elif addType == "add":
-                        new_value = current_value + "<br><br>" + definition
-                    elif addType == "no":
-                        if current_value.strip():
-                            new_value = current_value
+                        if addType == "overwrite":
+                            new_value = definition
+                        elif addType == "add":
+                            new_value = current_value + "<br><br>" + definition
+                        elif addType == "no":
+                            if current_value.strip():
+                                new_value = current_value
+                            else:
+                                new_value = definition
                         else:
                             new_value = definition
-                    else:
-                        new_value = definition
-                    note.fields[field_index] = new_value
-            self.currentEditor.loadNote()
+                        note.fields[field_index] = new_value
+
+            editor_compat.edit_note(self.currentEditor, _edit)
 
     def _getOverwriteChecks(self, dictCount: int, dictName: str) -> str:
         addType: typer.AddType
@@ -1163,7 +1165,11 @@ class MIDict(webview.AnkiWebView):
     def loadHTMLURL(self, html: str, url: qt.QUrl) -> None:
         _verify(self.page()).setHtml(html, url)
 
-    def setCurrentEditor(self, editor: editor_.Editor, target: str = "") -> None:
+    def setCurrentEditor(
+        self,
+        editor: editor_compat.AnyEditor,
+        target: str = "",
+    ) -> None:
         if editor == self.currentEditor:
             return
 
@@ -1244,10 +1250,7 @@ class ClipThread(qt.QObject):
 
     def _darwinIntercept(
         self,
-        event_type: typing.Union[  # type: ignore[valid-type]
-            typing.Literal[Quartz.kCGEventKeyDown],
-            typing.Literal[Quartz.kCGEventKeyUp],
-        ],
+        event_type: int,
         event: _CGEventRef,
     ) -> typing.Optional[_CGEventRef]:
         # TODO: @ColinKennedy - cyclic import
@@ -2803,7 +2806,7 @@ def dictionaryInit(terms: typing.Union[list[str], str, None] = None) -> None:
         migaku_dictionary.set(
             DictInterface(
                 dictdb_.get(),
-                aqt.mw,
+                miutils.get_main_window(),
                 _CURRENT_DIRECTORY,
                 welcomer.welcomeScreen(),
                 terms=terms,

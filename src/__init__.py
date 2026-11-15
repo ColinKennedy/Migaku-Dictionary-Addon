@@ -31,7 +31,7 @@ if utils.is_mac:
     # NOTE: midict.py needs this so we can import `Quartz` Python package.
     import ssl
 
-    ssl._create_default_https_context = ssl._create_unverified_context
+    ssl._create_default_https_context = ssl._create_unverified_context  # type: ignore[assignment]
     sys.path.insert(0, os.path.join(_VENDORS_DIRECTORY, "keyboardMac"))
 elif utils.is_lin:
     sys.path.insert(0, os.path.join(_VENDORS_DIRECTORY, "linux"))

@@ -5,7 +5,7 @@ import aqt
 from anki import utils
 from aqt import mw, qt
 
-from . import midict, migaku_dictionary, migaku_widget_global
+from . import midict, migaku_dictionary, migaku_widget_global, miutils
 
 
 def _selectedText(page: qt.QWebEngineView) -> typing.Optional[str]:
@@ -18,9 +18,9 @@ def _selectedText(page: qt.QWebEngineView) -> typing.Optional[str]:
 
 
 def getTarget(name: str) -> typing.Optional[str]:
-    if name == "AddCards":
+    if name in ("AddCards", "NewAddCards"):
         return "Add"
-    elif name == "EditCurrent" or name == "MigakuEditCurrent":
+    elif name in ("EditCurrent", "NewEditCurrent", "MigakuEditCurrent"):
         return "Edit"
     elif name == "Browser":
         return name
@@ -36,7 +36,7 @@ def performColSearch(text: str) -> None:
     browser = aqt.DialogManager._dialogs["Browser"][1]
 
     if not browser:
-        mw.onBrowse()
+        miutils.get_main_window().onBrowse()
         browser = aqt.DialogManager._dialogs["Browser"][1]
 
     if not browser:
@@ -89,8 +89,8 @@ def searchTerm(self: qt.QWebEngineView) -> None:
     title = self.title()
 
     if title == "main webview":
-        if mw.state == "review":
-            dictionary.dict.setReviewer(mw.reviewer)
+        if miutils.get_main_window().state == "review":
+            dictionary.dict.setReviewer(miutils.get_main_window().reviewer)
     elif title == "editor":
         parent = migaku_widget_global.get_parent_editor()
         target = getTarget(type(parent.parentWindow).__name__)

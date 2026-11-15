@@ -548,7 +548,10 @@ class SettingsGui(qt.QTabWidget):
         self._convertToMp3.setChecked(config["mp3Convert"])
         self._disableCondensedMessages.setChecked(config["disableCondensed"])
         self._dictOnTop.setChecked(config["dictAlwaysOnTop"])
-        if config.get("condensedAudioDirectory", False) is not False:
+        if (
+            typing.cast(typing.Any, config.get("condensedAudioDirectory", False))
+            is not False
+        ):
             self._chooseAudioDirectory.setText(config["condensedAudioDirectory"])
         else:
             self._chooseAudioDirectory.setText("Choose Directory")
@@ -985,7 +988,7 @@ class SettingsGui(qt.QTabWidget):
         profile.setHttpUserAgent(
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36"
         )
-        _verify(guide.page())._bridge.onCmd = attemptOpenLink
+        _verify(guide.page())._bridge.onCmd = attemptOpenLink  # type: ignore[attr-defined,unused-ignore]
         html, url = self._getHTML()
         _verify(guide.page()).setHtml(html, url)
         guide.setObjectName("tab_4")

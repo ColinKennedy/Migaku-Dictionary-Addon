@@ -4,7 +4,7 @@ import typing
 from anki import notes as notes_
 from aqt import mw
 
-from . import dictdb, google_imager, migaku_forvo, typer
+from . import dictdb, google_imager, migaku_forvo, miutils, typer
 
 
 def _getTermHeaderText(
@@ -39,7 +39,9 @@ def addDefinitionsToCardExporterNote(
     term: str,
     dictionaryConfigurations: typing.Iterable[typer.DictionaryConfiguration],
 ) -> notes_.Note:
-    config = typing.cast(typer.Configuration, mw.addonManager.getConfig(__name__))
+    config = typing.cast(
+        typer.Configuration, miutils.get_main_window().addonManager.getConfig(__name__)
+    )
     fb = config["frontBracket"]
     bb = config["backBracket"]
     lang = config["ForvoLanguage"]
@@ -48,7 +50,7 @@ def addDefinitionsToCardExporterNote(
     if not note_type:
         raise RuntimeError(f'Note "{note}" has no note type.')
 
-    fields = mw.col.models.field_names(note_type)
+    fields = miutils.get_main_window().col.models.field_names(note_type)
     database = dictdb.get()
 
     for dictionary in dictionaryConfigurations:

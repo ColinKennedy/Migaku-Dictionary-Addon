@@ -6,7 +6,7 @@ import aqt
 from aqt import mw
 from PyQt6.QtCore import Qt
 
-from . import googleimages
+from . import googleimages, miutils
 
 _INSTANCE: typing.Optional[googleimages.Google] = None
 
@@ -15,7 +15,7 @@ def _initialize() -> None:
     global _INSTANCE
 
     _INSTANCE = googleimages.Google()
-    config = mw.addonManager.getConfig(__name__)
+    config = miutils.get_main_window().addonManager.getConfig(__name__)
 
     if not config:
         raise RuntimeError(f'Namespace "{__name__}" has no configuration.')
@@ -55,7 +55,7 @@ def _download_image(
 def export_images(term: str, howMany: int) -> str:
     global _INSTANCE
 
-    config = mw.addonManager.getConfig(__name__)
+    config = miutils.get_main_window().addonManager.getConfig(__name__)
 
     if not config:
         raise RuntimeError(f'Namespace "{__name__}" has no configuration.')
