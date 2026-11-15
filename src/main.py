@@ -683,16 +683,20 @@ def window_loaded() -> None:
         setBrowserEditor,
     )
 
-    def addHistoryActivated(caller, *args: typing.Any, **kwargs: typing.Any) -> None:
-        widget = _verify(qt.QApplication.focusWidget())
+    def addHistoryActivated(
+        caller: typing.Callable[[AddCards], None],
+        *args: typing.Any,
+        **kwargs: typing.Any,
+    ) -> None:
+        widget = qt.QApplication.focusWidget()
 
         while widget:
             if isinstance(widget, AddCards):
                 break
 
-            widget = widget.parent()
+            widget = typing.cast(typing.Optional[qt.QWidget], widget.parent())
 
-        widget = _verify(widget)
+        widget = typing.cast(AddCards, _verify(widget))
         caller(widget)
 
         dictionary = migaku_dictionary.get_visible_dictionary()
@@ -743,7 +747,7 @@ def window_loaded() -> None:
         self.web.eval(bodyClick)
 
     AddCards.addCards = hooks.wrap(AddCards.addCards, addEditActivated)
-    AddCards.onHistory = functools.partial(addHistoryActivated, AddCards.onHistory)
+    AddCards.onHistory = functools.partial(addHistoryActivated, AddCards.onHistory)  # type: ignore
 
     def addHotkeys(self: editor_.Editor) -> None:
         hotkey = qt.QShortcut(qt.QKeySequence("Ctrl+S"), self.parentWindow)
