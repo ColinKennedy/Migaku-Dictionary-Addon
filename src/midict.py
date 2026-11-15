@@ -38,6 +38,7 @@ from . import (
 from . import dictdb as dictdb_
 from . import (
     editor_compat,
+    field_merge,
     forvodl,
     googleimages,
     history,
@@ -768,22 +769,16 @@ class MIDict(webview.AnkiWebView):
         if not self.addWindow:
             self.addWindow = cardExporter.CardExporter(self._dictInt)
 
-    def _getFieldContent(self, fContent: str, definition: str, addType: str) -> str:
-        fieldText = ""
+    def _definitionFor(
+        self, definition: str, field: str, model: str, note: notes_.Note
+    ) -> str:
+        """Get ``definition`` ready for ``field``, adding readings if it is Japanese."""
+        if not self._jSend:
+            return definition
 
-        if addType == "overwrite":
-            fieldText = definition
-
-        elif addType == "add":
-            if fContent == "":
-                fieldText = definition
-            else:
-                fieldText = fContent + "<br><br>" + definition
-        elif addType == "no":
-            if fContent == "":
-                fieldText = definition
-
-        return fieldText
+        return self._dictInt.jHandler.attemptFieldGenerate(
+            definition, field, model, note
+        )
 
     def _addAudioToExportWindow(self, word: str, urls: str) -> None:
         self._initCardExporterIfNeeded()
@@ -873,22 +868,14 @@ class MIDict(webview.AnkiWebView):
             changed = False
             for field in fields:
                 if field["name"] in tFields:
-                    newField = self._getFieldContent(
-                        note[field["name"]], definition, addType
+                    current = note[field["name"]]
+                    text = self._definitionFor(
+                        definition, field["name"], model["name"], note
                     )
-                    if newField:
+                    newField = field_merge.merge(current, text, addType)
+                    if newField != current:
                         changed = True
-                        if self._jSend:
-                            note[field["name"]] = (
-                                self._dictInt.jHandler.attemptFieldGenerate(
-                                    newField,
-                                    field["name"],
-                                    model["name"],
-                                    note,
-                                )
-                            )
-                        else:
-                            note[field["name"]] = newField
+                        note[field["name"]] = newField
             if not changed:
                 return
             note.flush()
@@ -916,25 +903,20 @@ class MIDict(webview.AnkiWebView):
                 tFields, addType = result
 
             def _edit(note: notes_.Note) -> None:
+                note_type = note.note_type()
+                model_name = note_type["name"] if note_type else ""
+
                 for field_name in tFields:
                     field_index = next(
                         (i for i, f in enumerate(note.keys()) if f == field_name), None
                     )
                     if field_index is not None:
-                        current_value = note.fields[field_index]
-
-                        if addType == "overwrite":
-                            new_value = definition
-                        elif addType == "add":
-                            new_value = current_value + "<br><br>" + definition
-                        elif addType == "no":
-                            if current_value.strip():
-                                new_value = current_value
-                            else:
-                                new_value = definition
-                        else:
-                            new_value = definition
-                        note.fields[field_index] = new_value
+                        text = self._definitionFor(
+                            definition, field_name, model_name, note
+                        )
+                        note.fields[field_index] = field_merge.merge(
+                            note.fields[field_index], text, addType
+                        )
 
             editor_compat.edit_note(self.currentEditor, _edit)
 

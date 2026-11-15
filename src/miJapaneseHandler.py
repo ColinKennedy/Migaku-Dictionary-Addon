@@ -5,6 +5,8 @@ import typing
 from anki import notes
 from aqt import main
 
+from . import japanese_fields, readings
+
 
 class miJHandler:
 
@@ -53,12 +55,18 @@ class miJHandler:
     def attemptFieldGenerate(
         self, text: str, field: str, model: str, note: notes.Note
     ) -> str:
-        # TODO: @ColinKennedy - fetchParsedField doesn't exist. And the git
-        # history says it never did. So this method can probably be removed.
-        #
-        # if self._activeNotes:
-        # 	if model in self._activeNotes:
-        # 		if field in self._activeNotes[model]:
-        # 			text = self._mw.Exporter.fetchParsedField(text, note)
-        #
-        return text
+        """Add readings and pitch accents to ``text`` if ``field`` is Japanese.
+
+        English fields (and everything, if the readings add-on isn't installed)
+        are returned unchanged.
+
+        """
+        note_type = note.note_type()
+
+        if not note_type or not text.strip():
+            return text
+
+        if field not in japanese_fields.get_japanese_fields(self._mw, note_type):
+            return text
+
+        return readings.generate_migaku_syntax(text) or text
