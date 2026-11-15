@@ -52,28 +52,46 @@ class _Modules(unittest.TestCase):
 
 
 class Merge(_Modules):
+    def setUp(self) -> None:
+        super().setUp()
+        self.ADD = self.field_merge.AddType.ADD
+        self.NO = self.field_merge.AddType.NO
+        self.OVERWRITE = self.field_merge.AddType.OVERWRITE
+
+    def test_parse(self) -> None:
+        parse = self.field_merge.AddType.parse
+
+        self.assertIs(self.ADD, parse("add"))
+        self.assertIs(self.NO, parse("no"))
+        self.assertIs(self.OVERWRITE, parse("overwrite"))
+        self.assertIsNone(parse(None))
+        self.assertIsNone(parse("bogus"))
+
+    def test_unknown_type_overwrites(self) -> None:
+        self.assertEqual("new", self.field_merge.merge("old", "new", None))
+
     def test_add_to_blank_field_has_no_leading_newlines(self) -> None:
         for blank in ("", " ", "<br>", "<br/>", "&nbsp;", "<br><br>", " \n<br> "):
             with self.subTest(blank=blank):
                 self.assertEqual(
                     "【髪型】かみがた<br>hair style",
                     self.field_merge.merge(
-                        blank, "【髪型】かみがた<br>hair style", "add"
+                        blank, "【髪型】かみがた<br>hair style", self.ADD
                     ),
                 )
 
     def test_add_to_existing_text_uses_two_newlines(self) -> None:
         self.assertEqual(
             "first<br><br>second",
-            self.field_merge.merge("first", "second", "add"),
+            self.field_merge.merge("first", "second", self.ADD),
         )
 
     def test_overwrite(self) -> None:
-        self.assertEqual("new", self.field_merge.merge("old", "new", "overwrite"))
+        self.assertEqual("new", self.field_merge.merge("old", "new", self.OVERWRITE))
 
     def test_no_only_fills_blank_fields(self) -> None:
-        self.assertEqual("old", self.field_merge.merge("old", "new", "no"))
-        self.assertEqual("new", self.field_merge.merge("<br>", "new", "no"))
+        self.assertEqual("old", self.field_merge.merge("old", "new", self.NO))
+        self.assertEqual("new", self.field_merge.merge("<br>", "new", self.NO))
 
 
 class JapaneseFields(_Modules):

@@ -872,7 +872,9 @@ class MIDict(webview.AnkiWebView):
                     text = self._definitionFor(
                         definition, field["name"], model["name"], note
                     )
-                    newField = field_merge.merge(current, text, addType)
+                    newField = field_merge.merge(
+                        current, text, field_merge.AddType.parse(addType)
+                    )
                     if newField != current:
                         changed = True
                         note[field["name"]] = newField
@@ -915,7 +917,9 @@ class MIDict(webview.AnkiWebView):
                             definition, field_name, model_name, note
                         )
                         note.fields[field_index] = field_merge.merge(
-                            note.fields[field_index], text, addType
+                            note.fields[field_index],
+                            text,
+                            field_merge.AddType.parse(addType),
                         )
 
             editor_compat.edit_note(self.currentEditor, _edit)

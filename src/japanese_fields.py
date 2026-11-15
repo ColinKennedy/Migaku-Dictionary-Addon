@@ -16,6 +16,12 @@ import typing
 
 _LOGGER = logging.getLogger(__name__)
 
+# NOTE: ``wrapped-japanese`` is specific to the "MIA Japanese" note templates
+# (which ship Migaku's Japanese support script). It is not a standard Anki or
+# Migaku class, so other note types won't necessarily have it. For those,
+# Migaku's own field registration (see ``_from_migaku_registration``) is used
+# when available.
+#
 _WRAPPED = re.compile(
     r"<(?P<tag>\w+)\b[^>]*\bclass\s*=\s*[\"'][^\"']*\bwrapped-japanese\b[^\"']*[\"'][^>]*>"
     r"(?P<body>.*?)</(?P=tag)>",
