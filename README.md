@@ -26,6 +26,15 @@
 1. Install the version of Anki that is listed under the "Migaku Development Cycles" section of the AnkiWeb add-on [page](https://ankiweb.net/shared/info/1655992655)
 2. Download the latest version of the addon from [AnkiWeb](https://ankiweb.net/shared/info/1655992655)
 
+### Custom profile
+
+Set `"custom_profile": "Colin"` in the add-on's config to enable a personal
+shortcut. Sending a J-J definition to a *blank* `MIA Japanese Vocabulary J-J`
+note then also copies `Expression` to `Target` (readings removed), fills
+`Examples` using "Japanese Example Sentences", and adds readings and pitch
+accents to `J-J Meaning`. If `Target`, `Examples` or `J-J Meaning` already have
+content, nothing extra happens. Any other value (the default is `""`) disables it.
+
 ### Development
 
 Supported: **Anki 24.04 (Python 3.9)** and **Anki 26.09.4 (Python 3.13)**. CI tests both.
