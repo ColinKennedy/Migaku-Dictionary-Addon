@@ -70,6 +70,7 @@ class Configuration(typing.TypedDict):
     dictSearch: int
     dictSizePos: typing.Union[tuple[int, int, int, int], typing.Literal[False]]
     disableCondensed: bool
+    custom_profile: str
     displayAgain: bool
     exporterLastTags: str
     exporterSizePos: typing.Union[tuple[int, int, int, int], typing.Literal[False]]

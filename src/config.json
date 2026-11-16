@@ -44,5 +44,6 @@
     "massGenerationPreferences": false,
     "safeSearch": true,
     "condensedAudioDirectory" : false,
-    "disableCondensed": false
+    "disableCondensed": false,
+    "custom_profile": ""
 }

@@ -34,6 +34,7 @@ from PyQt6 import QtSvgWidgets
 from . import (
     addonSettings,
     cardExporter,
+    custom_profile,
 )
 from . import dictdb as dictdb_
 from . import (
@@ -866,6 +867,9 @@ class MIDict(webview.AnkiWebView):
 
             fields = model["flds"]
             changed = False
+            profile = custom_profile.should_fill(
+                self.config, note, [f["name"] for f in fields if f["name"] in tFields]
+            )
             for field in fields:
                 if field["name"] in tFields:
                     current = note[field["name"]]
@@ -880,6 +884,8 @@ class MIDict(webview.AnkiWebView):
                         note[field["name"]] = newField
             if not changed:
                 return
+            if profile:
+                custom_profile.fill(note)
             note.flush()
             self._dictInt.mw.col.save()
             self.reviewer.card.load()
@@ -907,6 +913,7 @@ class MIDict(webview.AnkiWebView):
             def _edit(note: notes_.Note) -> None:
                 note_type = note.note_type()
                 model_name = note_type["name"] if note_type else ""
+                profile = custom_profile.should_fill(self.config, note, tFields)
 
                 for field_name in tFields:
                     field_index = next(
@@ -921,6 +928,9 @@ class MIDict(webview.AnkiWebView):
                             text,
                             field_merge.AddType.parse(addType),
                         )
+
+                if profile:
+                    custom_profile.fill(note)
 
             editor_compat.edit_note(self.currentEditor, _edit)
 
